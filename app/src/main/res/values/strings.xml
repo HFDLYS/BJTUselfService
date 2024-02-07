@@ -1,0 +1,28 @@
+<resources>
+    <string name="app_name">北交自由行</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="nav_header_title">同学你好！</string>
+    <string name="nav_header_subtitle">xxx@bjtu.edu.cn</string>
+    <string name="nav_header_desc">Navigation header</string>
+    <string name="action_settings">Settings</string>
+
+    <string name="menu_home">主页</string>
+    <string name="menu_login">登录</string>
+    <string name="menu_grade">主修成绩</string>
+    <string name="menu_course">课程表</string>
+    <string name="menu_exam">考试安排</string>
+    <string name="menu_building">教室人数评估</string>
+    <!-- Strings related to login -->
+    <string name="prompt_id">学号</string>
+    <string name="prompt_email">学号</string>
+    <string name="prompt_password">密码</string>
+    <string name="action_sign_in">启动！</string>
+    <string name="action_sign_in_short"></string>
+    <string name="welcome">"同学你好！"</string>
+    <string name="invalid_username">id会不会不太对</string>
+    <string name="invalid_password">密码会不会太短了</string>
+    <string name="login_failed">"Login failed"</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+</resources>
