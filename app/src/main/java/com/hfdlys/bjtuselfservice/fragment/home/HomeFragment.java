@@ -42,7 +42,6 @@ public class HomeFragment extends Fragment {
             String Introduce = "你好";
             textView.setText(Introduce);
         });
-        Toast.makeText(getContext(), "正在加载", Toast.LENGTH_SHORT).show();
         homeViewModel.getStatus().observe(getViewLifecycleOwner(), status -> {
             String EcardBalance = "校园卡余额：" + status.EcardBalance;
             String NetBalance = "校园网余额：" + status.NetBalance;

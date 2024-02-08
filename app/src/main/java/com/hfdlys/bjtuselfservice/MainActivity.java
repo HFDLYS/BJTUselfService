@@ -7,13 +7,11 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.Menu;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.navigation.NavigationView;
 
 
-import androidx.annotation.NonNull;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
@@ -23,18 +21,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.hfdlys.bjtuselfservice.databinding.ActivityMainBinding;
 import com.hfdlys.bjtuselfservice.fragment.login.ui.login.LoginFragment;
-import com.hfdlys.bjtuselfservice.Model;
-import com.hfdlys.bjtuselfservice.web.NetworkDataManager;
-import com.hfdlys.bjtuselfservice.utils.Utils.InMemoryCookieJar;
-
-import java.util.List;
-import java.util.ArrayList;
-import java.util.HashMap;
-import okhttp3.Cookie;
-import okhttp3.CookieJar;
-import okhttp3.HttpUrl;
-
-import okhttp3.OkHttpClient;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -86,7 +72,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
 
-                Snackbar.make(view, "Replace with your own action"
+                Snackbar.make(view, "💤💤💤"
                                 , Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
             }

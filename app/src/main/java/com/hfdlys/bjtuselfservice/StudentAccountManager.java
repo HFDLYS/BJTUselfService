@@ -2,20 +2,15 @@ package com.hfdlys.bjtuselfservice;
 
 
 
-import androidx.annotation.NonNull;
 import androidx.lifecycle.MutableLiveData;
 
 import com.hfdlys.bjtuselfservice.utils.Utils;
-import com.hfdlys.bjtuselfservice.web.NetworkDataManager;
+import com.hfdlys.bjtuselfservice.web.MisDataManager;
 
 import java.util.List;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 
-import okhttp3.Cookie;
-import okhttp3.CookieJar;
-import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 
 public class StudentAccountManager {
@@ -73,9 +68,10 @@ public class StudentAccountManager {
             .build();
     private StudentAccountManager() {
     }
+    // 检测登录状态
     public CompletableFuture<Boolean> checkIsLogin() {
         CompletableFuture<Boolean> loginFuture = new CompletableFuture<>();
-        NetworkDataManager.WebCallback<String> loginCallback = new NetworkDataManager.WebCallback<String>() {
+        MisDataManager.WebCallback<String> loginCallback = new MisDataManager.WebCallback<String>() {
             @Override
             public void onResponse(String code) {
                 loginFuture.complete(true);
@@ -86,10 +82,11 @@ public class StudentAccountManager {
             }
         };
 
-        NetworkDataManager.checkCookie(client, loginCallback);
+        MisDataManager.checkCookie(client, loginCallback);
 
         return loginFuture;
     }
+    // 单例模式
     public static StudentAccountManager getInstance() {
         return Holder.INSTANCE;
     }
@@ -102,7 +99,7 @@ public class StudentAccountManager {
             } else {
                 this.stuId = stuId;
                 this.password = password;
-                NetworkDataManager.login(client, stuId, password, new NetworkDataManager.WebCallback<String>() {
+                MisDataManager.login(client, stuId, password, new MisDataManager.WebCallback<String>() {
                     @Override
                     public void onResponse(String code) {
                         setStudentInfo(code.split(";")[0], stuId, code.split(";")[2], code.split(";")[1]);
@@ -115,7 +112,7 @@ public class StudentAccountManager {
                         });
                     }
                     public void onFailure(int code) {
-                        NetworkDataManager.login(client, stuId, password, new NetworkDataManager.WebCallback<String>() {
+                        MisDataManager.login(client, stuId, password, new MisDataManager.WebCallback<String>() {
                             @Override
                             public void onResponse(String code) {
                                 setStudentInfo(code.split(";")[0], stuId, code.split(";")[2], code.split(";")[1]);
@@ -137,12 +134,12 @@ public class StudentAccountManager {
         });
         return loginFuture;
     }
-
+    // 登录教务系统
     public CompletableFuture<Boolean> loginAa() {
         CompletableFuture<Boolean> loginFuture = new CompletableFuture<>();
         checkIsLogin().thenAccept(isLogin -> {
             if (isLogin) {
-                NetworkDataManager.aaLogin(client, new NetworkDataManager.WebCallback<String>() {
+                MisDataManager.aaLogin(client, new MisDataManager.WebCallback<String>() {
                     @Override
                     public void onResponse(String code) {
                         setAaLogin(true);
@@ -160,12 +157,12 @@ public class StudentAccountManager {
         });
         return loginFuture;
     }
-
+    // 获得成绩
     public CompletableFuture<List<Grade>> getGrade() {
         CompletableFuture<List<Grade>> gradeFuture = new CompletableFuture<>();
         checkIsLogin().thenAccept(isLogin -> {
             if (isLogin) {
-                NetworkDataManager.getGrade(client, new NetworkDataManager.WebCallback<List<Grade>>() {
+                MisDataManager.getGrade(client, new MisDataManager.WebCallback<List<Grade>>() {
                     @Override
                     public void onResponse(List<Grade> resp) {
                         List<Grade> grades = new ArrayList<>();
@@ -185,12 +182,12 @@ public class StudentAccountManager {
         });
         return gradeFuture;
     }
-
+    // 获得基础状态
     public CompletableFuture<Status> getStatus() {
         CompletableFuture<Status> statusFuture = new CompletableFuture<>();
         checkIsLogin().thenAccept(isLogin -> {
             if (isLogin) {
-                NetworkDataManager.getStatus(client, new NetworkDataManager.WebCallback<Status>() {
+                MisDataManager.getStatus(client, new MisDataManager.WebCallback<Status>() {
                     @Override
                     public void onResponse(Status resp) {
                         statusFuture.complete(resp);
