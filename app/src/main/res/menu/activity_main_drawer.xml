@@ -21,5 +21,9 @@
             android:id="@+id/nav_course"
             android:icon="@android:drawable/ic_menu_today"
             android:title="@string/menu_course" />
+        <item
+            android:id="@+id/nav_building"
+            android:icon="@android:drawable/ic_menu_mylocation"
+            android:title="@string/menu_building" />
     </group>
 </menu>

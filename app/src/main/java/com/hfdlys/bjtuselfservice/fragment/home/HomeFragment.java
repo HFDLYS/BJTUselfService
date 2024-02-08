@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -18,13 +19,18 @@ import com.hfdlys.bjtuselfservice.databinding.FragmentHomeBinding;
 public class HomeFragment extends Fragment {
 
     private FragmentHomeBinding binding;
+    private HomeViewModel homeViewModel;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
-        HomeViewModel homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
-
+        homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
         binding = FragmentHomeBinding.inflate(inflater, container, false);
-        View root = binding.getRoot();
+        return binding.getRoot();
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
         StudentAccountManager Instance = StudentAccountManager.getInstance();
         final TextView textView = binding.textHome;
         final MaterialCardView CardView = binding.cardView;
@@ -36,7 +42,7 @@ public class HomeFragment extends Fragment {
             String Introduce = "你好";
             textView.setText(Introduce);
         });
-
+        Toast.makeText(getContext(), "正在加载", Toast.LENGTH_SHORT).show();
         homeViewModel.getStatus().observe(getViewLifecycleOwner(), status -> {
             String EcardBalance = "校园卡余额：" + status.EcardBalance;
             String NetBalance = "校园网余额：" + status.NetBalance;
@@ -57,22 +63,16 @@ public class HomeFragment extends Fragment {
 
         homeViewModel.getIsLogin().observe(getViewLifecycleOwner(), aBoolean -> {
             if (aBoolean) {
-                CardView.setVisibility(View.VISIBLE);
                 Instance.getStatus().thenAccept(status -> {
                     homeViewModel.setStatus(status);
                     loadingStatus.setVisibility(View.GONE);
                 });
+                CardView.setVisibility(View.VISIBLE);
             } else {
                 CardView.setVisibility(View.GONE);
             }
         });
 
-        return root;
     }
 
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        binding = null;
-    }
 }
