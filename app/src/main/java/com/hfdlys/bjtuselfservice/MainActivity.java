@@ -1,5 +1,8 @@
 package com.hfdlys.bjtuselfservice;
 
+import android.app.Dialog;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 import android.view.Menu;
@@ -47,8 +50,37 @@ public class MainActivity extends AppCompatActivity {
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        LoginFragment loginFragment = new LoginFragment();
-        loginFragment.show(getSupportFragmentManager(), "login");
+
+        SharedPreferences Pref = getSharedPreferences("StuAccount", Context.MODE_PRIVATE);
+
+        String StuId = Pref.getString("StuId", null);
+        String StuPwd = Pref.getString("StuPwd", null);
+        StudentAccountManager Instance = StudentAccountManager.getInstance();
+        if (StuId != null && StuPwd != null) {
+            Dialog loadingDialog = new Dialog(this);
+            loadingDialog.setContentView(R.layout.dialog_loading);
+            loadingDialog.setCancelable(false);
+            loadingDialog.show();
+            Instance.init(StuId, StuPwd).thenAccept( isLogin -> {
+                if (isLogin) {
+                    Snackbar.make(binding.appBarMain.fab, "欢迎回来," + Instance.getStuName() + "同学！"
+                                , Snackbar.LENGTH_LONG)
+                        .setAction("Action", null).show();
+                    loadingDialog.dismiss();
+                } else {
+                    Snackbar.make(binding.appBarMain.fab, "预料之外的，登录失败？你再试试"
+                                    , Snackbar.LENGTH_LONG)
+                            .setAction("Action", null).show();
+                    LoginFragment loginFragment = new LoginFragment();
+                    loginFragment.show(getSupportFragmentManager(), "login");
+                    loadingDialog.dismiss();
+                }
+            });
+        } else {
+            LoginFragment loginFragment = new LoginFragment();
+            loginFragment.show(getSupportFragmentManager(), "login");
+        }
+
         setSupportActionBar(binding.appBarMain.toolbar);
         binding.appBarMain.fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -72,8 +104,6 @@ public class MainActivity extends AppCompatActivity {
             }
 
         });
-        // Passing each menu ID as a set of Ids because each
-        // menu should be considered as top level destinations.
         mAppBarConfiguration = new AppBarConfiguration.Builder(
                 R.id.nav_home, R.id.nav_grade, R.id.nav_exam, R.id.nav_course)
                 .setOpenableLayout(drawer)
@@ -85,8 +115,12 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
+        menu.findItem(R.id.action_settings).setOnMenuItemClickListener(item -> {
+            LoginFragment loginFragment = new LoginFragment();
+            loginFragment.show(getSupportFragmentManager(), "login");
+            return true;
+        });
         return true;
     }
 

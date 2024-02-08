@@ -7,6 +7,8 @@ import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -131,12 +133,18 @@ public class LoginFragment extends BottomSheetDialogFragment {
                     loadingProgressBar.setVisibility(View.VISIBLE);
 
                     StudentAccountManager Instance = StudentAccountManager.getInstance();
-                    Instance.init(usernameEditText.getText().toString(), passwordEditText.getText().toString()).thenAccept(isLogin -> {
+                    String StuId = usernameEditText.getText().toString();
+                    String StuPwd = passwordEditText.getText().toString();
+                    Instance.init(StuId, StuPwd).thenAccept(isLogin -> {
                         getActivity().runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
                                 if (isLogin) {
                                     Toast.makeText(getContext(), "登录成功，你好" + Instance.getStuName(), Toast.LENGTH_LONG).show();
+                                    SharedPreferences.Editor editor = getActivity().getSharedPreferences("StuAccount", Context.MODE_PRIVATE).edit();
+                                    editor.putString("StuId", StuId);
+                                    editor.putString("StuPwd", StuPwd);
+                                    editor.apply();
                                     loadingProgressBar.setVisibility(View.GONE);
                                     dismiss();
                                 } else {
@@ -157,12 +165,18 @@ public class LoginFragment extends BottomSheetDialogFragment {
                 loadingProgressBar.setVisibility(View.VISIBLE);
 
                 StudentAccountManager Instance = StudentAccountManager.getInstance();
-                Instance.init(usernameEditText.getText().toString(), passwordEditText.getText().toString()).thenAccept(isLogin -> {
+                String StuId = usernameEditText.getText().toString();
+                String StuPwd = passwordEditText.getText().toString();
+                Instance.init(StuId, StuPwd).thenAccept(isLogin -> {
                     getActivity().runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                             if (isLogin) {
                                 Toast.makeText(getContext(), "登录成功，你好" + Instance.getStuName(), Toast.LENGTH_LONG).show();
+                                SharedPreferences.Editor editor = getActivity().getSharedPreferences("StuAccount", Context.MODE_PRIVATE).edit();
+                                editor.putString("StuId", StuId);
+                                editor.putString("StuPwd", StuPwd);
+                                editor.apply();
                                 loadingProgressBar.setVisibility(View.GONE);
                                 dismiss();
                             } else {
@@ -172,9 +186,7 @@ public class LoginFragment extends BottomSheetDialogFragment {
                         }
                     });
                 });
-
             }
-
         });
     }
 
