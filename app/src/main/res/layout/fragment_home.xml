@@ -6,64 +6,119 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     tools:context=".fragment.home.HomeFragment">
-
-    <TextView
-        android:id="@+id/text_home"
+    <androidx.appcompat.widget.LinearLayoutCompat
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="你好，陌生的同学！"
-        android:layout_marginTop="64dp"
-        android:textAlignment="center"
-        android:textSize="20sp" />
+        android:layout_marginTop="24dp"
+        android:gravity="center_vertical">
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/logo_bjtu" />
 
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/cardView"
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+    <androidx.appcompat.widget.LinearLayoutCompat
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:foreground="@color/teal_200"
-        app:cardCornerRadius="8dp">
-
-        <androidx.appcompat.widget.LinearLayoutCompat
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:layout_marginTop="12dp"
+        android:gravity="center_vertical">
+        <TextView
+            android:id="@+id/text_home"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
+            android:layout_height="wrap_content"
+            android:text="你好，陌生的同学！"
+            android:textAlignment="center"
+            android:textSize="20sp" />
 
+
+
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="96dp"
+            android:visibility="visible"
+            android:layout_gravity="center_vertical"
+            app:cardBackgroundColor="@color/white_blue"
+            app:cardCornerRadius="8dp">
+            <ProgressBar
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:id="@+id/loadingStatus"
+                android:indeterminate="true" />
             <androidx.appcompat.widget.LinearLayoutCompat
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:orientation="horizontal">
+                android:layout_height="match_parent"
+                android:orientation="vertical">
 
-                <ImageView
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:src="@android:drawable/sym_action_email" />
-
-                <TextView
-                    android:id="@+id/textMail"
-                    android:layout_width="wrap_content"
+                <androidx.appcompat.widget.LinearLayoutCompat
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="邮件" />
-            </androidx.appcompat.widget.LinearLayoutCompat>
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
+                    <ImageView
+                        android:layout_marginStart="16dp"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:src="@android:drawable/sym_action_email" />
 
-            <androidx.appcompat.widget.LinearLayoutCompat
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:orientation="horizontal">
+                    <TextView
+                        android:id="@+id/textMail"
+                        android:layout_marginStart="32dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="16sp"
+                        android:text="邮件" />
+                </androidx.appcompat.widget.LinearLayoutCompat>
 
-                <ImageView
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:src="@android:drawable/star_off" />
-
-                <TextView
-                    android:id="@+id/textMoney"
-                    android:layout_width="wrap_content"
+                <androidx.appcompat.widget.LinearLayoutCompat
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="余额" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="48dp"
+                        android:layout_marginStart="16dp"
+                        android:layout_height="48dp"
+                        android:src="@android:drawable/star_off" />
+
+                    <TextView
+                        android:id="@+id/textEcard"
+                        android:layout_marginStart="32dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="16sp"
+                        android:text="余额" />
+                </androidx.appcompat.widget.LinearLayoutCompat>
+
+                <androidx.appcompat.widget.LinearLayoutCompat
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="48dp"
+                        android:layout_marginStart="16dp"
+                        android:layout_height="48dp"
+                        android:src="@android:drawable/ic_menu_mapmode" />
+
+                    <TextView
+                        android:id="@+id/textNet"
+                        android:layout_marginStart="32dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="16sp"
+                        android:text="网费" />
+                </androidx.appcompat.widget.LinearLayoutCompat>
             </androidx.appcompat.widget.LinearLayoutCompat>
-        </androidx.appcompat.widget.LinearLayoutCompat>
-    </com.google.android.material.card.MaterialCardView>
+        </com.google.android.material.card.MaterialCardView>
+    </androidx.appcompat.widget.LinearLayoutCompat>
 </androidx.appcompat.widget.LinearLayoutCompat>

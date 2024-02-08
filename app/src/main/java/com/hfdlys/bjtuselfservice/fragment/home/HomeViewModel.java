@@ -4,16 +4,28 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import com.hfdlys.bjtuselfservice.StudentAccountManager;
+import com.hfdlys.bjtuselfservice.StudentAccountManager.Status;
+
 public class HomeViewModel extends ViewModel {
 
-    private final MutableLiveData<String> mText;
-
+    MutableLiveData<Status> status = new MutableLiveData<>();
+    StudentAccountManager studentAccountManager = StudentAccountManager.getInstance();
     public HomeViewModel() {
-        mText = new MutableLiveData<>();
-        mText.setValue("This is home fragment");
+
+    }
+    public MutableLiveData<Status> getStatus() {
+        return status;
     }
 
-    public LiveData<String> getText() {
-        return mText;
+    public void setStatus(Status s) {
+        status.postValue(s);
+    }
+
+    public MutableLiveData<StudentAccountManager.StudentInfo> getStuInfo() {
+        return studentAccountManager.getStudentInfo();
+    }
+    public MutableLiveData<Boolean> getIsLogin() {
+        return studentAccountManager.getIsAaLogin();
     }
 }

@@ -26,6 +26,7 @@ import org.jsoup.select.Elements;
 
 import com.hfdlys.bjtuselfservice.Model;
 import com.hfdlys.bjtuselfservice.StudentAccountManager;
+import com.hfdlys.bjtuselfservice.StudentAccountManager.Status;
 import com.hfdlys.bjtuselfservice.utils.ImageToTensorConverter;
 import com.hfdlys.bjtuselfservice.utils.Utils;
 
@@ -246,7 +247,7 @@ public class NetworkDataManager {
         });
     }
 
-    public static void getStatus(OkHttpClient client, WebCallback<JSONObject> ResCallback) {
+    public static void getStatus(OkHttpClient client, WebCallback<Status> ResCallback) {
         Request request = new Request.Builder()
                 .url("https://mis.bjtu.edu.cn/osys_ajax_wrap/")
                 .header("Host", "mis.bjtu.edu.cn")
@@ -262,7 +263,11 @@ public class NetworkDataManager {
                 JSONObject jsonObject = null;
                 try {
                     jsonObject = new JSONObject(response.body().string());
-                    ResCallback.onResponse(jsonObject);
+                    String netFee = jsonObject.getString("net_fee");
+                    double ecardYuer = jsonObject.getDouble("ecard_yuer");
+                    String newmailCount = jsonObject.getString("newmail_count");
+                    Status status = new Status(newmailCount, ecardYuer, netFee);
+                    ResCallback.onResponse(status);
                 } catch (JSONException e) {
                     ResCallback.onFailure(1);
                     throw new RuntimeException(e);

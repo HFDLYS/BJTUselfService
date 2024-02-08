@@ -4,6 +4,8 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
+import androidx.annotation.NonNull;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -89,16 +91,28 @@ public class Utils {
         }
     }
 
-    public class InMemoryCookieJar implements CookieJar {
+    public static class InMemoryCookieJar implements CookieJar {
         private final HashMap<String, List<Cookie>> cookieStore = new HashMap<>();
-
         @Override
-        public void saveFromResponse(HttpUrl url, List<Cookie> cookies) {
-            cookieStore.put(url.host(), cookies);
+        public void saveFromResponse(@NonNull HttpUrl url, @NonNull List<Cookie> cookies) {
+            List<Cookie> oldCookies = cookieStore.get(url.host());
+            if (oldCookies != null) {
+                HashMap<String, Cookie> newCookies = new HashMap<>();
+                for (Cookie cookie : oldCookies) {
+                    newCookies.put(cookie.name(), cookie);
+                }
+                for (Cookie cookie : cookies) {
+                    newCookies.put(cookie.name(), cookie);
+                }
+                cookieStore.put(url.host(), new ArrayList<>(newCookies.values()));
+            } else {
+                cookieStore.put(url.host(), cookies);
+            }
         }
 
+        @NonNull
         @Override
-        public List<Cookie> loadForRequest(HttpUrl url) {
+        public List<Cookie> loadForRequest(@NonNull HttpUrl url) {
             List<Cookie> cookies = cookieStore.get(url.host());
             return cookies != null ? cookies : new ArrayList<Cookie>();
         }

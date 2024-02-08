@@ -5,6 +5,7 @@ package com.hfdlys.bjtuselfservice;
 import androidx.annotation.NonNull;
 import androidx.lifecycle.MutableLiveData;
 
+import com.hfdlys.bjtuselfservice.utils.Utils;
 import com.hfdlys.bjtuselfservice.web.NetworkDataManager;
 
 import java.util.List;
@@ -18,7 +19,9 @@ import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 
 public class StudentAccountManager {
-    private static StudentAccountManager instance;
+    private static class Holder {
+        private static final StudentAccountManager INSTANCE = new StudentAccountManager();
+    }
     public static class StudentInfo {
         public String stuName;
         public String stuClass;
@@ -47,40 +50,26 @@ public class StudentAccountManager {
         public Grade() {}
 
     }
+    public static class Status {
+        public String NewMailCount;
+        public double EcardBalance;
+        public String NetBalance;
+        public Status(String NewMailCount, double EcardBalance, String NetBalance) {
+            this.NewMailCount = NewMailCount;
+            this.EcardBalance = EcardBalance;
+            this.NetBalance = NetBalance;
+        }
+    }
     private StudentInfo stuInfo;
     private String stuId;
     private String password;
     private boolean isAaLogin = false;
     private MutableLiveData<StudentInfo> stuInfoLiveData = new MutableLiveData<>();
+    private MutableLiveData<Boolean> isAaLoginLiveData = new MutableLiveData<>(false);
 
     // 永续cookie的客户端
     private OkHttpClient client = new OkHttpClient.Builder()
-            .cookieJar(new CookieJar() {
-                private final HashMap<String, List<Cookie>> cookieStore = new HashMap<>();
-                @Override
-                public void saveFromResponse(@NonNull HttpUrl url, @NonNull List<Cookie> cookies) {
-                    List<Cookie> oldCookies = cookieStore.get(url.host());
-                    if (oldCookies != null) {
-                        HashMap<String, Cookie> newCookies = new HashMap<>();
-                        for (Cookie cookie : oldCookies) {
-                            newCookies.put(cookie.name(), cookie);
-                        }
-                        for (Cookie cookie : cookies) {
-                            newCookies.put(cookie.name(), cookie);
-                        }
-                        cookieStore.put(url.host(), new ArrayList<>(newCookies.values()));
-                    } else {
-                        cookieStore.put(url.host(), cookies);
-                    }
-                }
-
-                @NonNull
-                @Override
-                public List<Cookie> loadForRequest(@NonNull HttpUrl url) {
-                    List<Cookie> cookies = cookieStore.get(url.host());
-                    return cookies != null ? cookies : new ArrayList<Cookie>();
-                }
-            })
+            .cookieJar(new Utils.InMemoryCookieJar())
             .build();
     private StudentAccountManager() {
     }
@@ -102,11 +91,7 @@ public class StudentAccountManager {
         return loginFuture;
     }
     public static StudentAccountManager getInstance() {
-        if (instance == null) {
-            instance = new StudentAccountManager();
-            instance.setStudentInfo("陌生人", "1008611", "不晓得", "未知");
-        }
-        return instance;
+        return Holder.INSTANCE;
     }
     // 初始化登录 或 重载登录
     public CompletableFuture<Boolean> init(String stuId, String password) {
@@ -160,12 +145,12 @@ public class StudentAccountManager {
                 NetworkDataManager.aaLogin(client, new NetworkDataManager.WebCallback<String>() {
                     @Override
                     public void onResponse(String code) {
-                        isAaLogin = true;
+                        setAaLogin(true);
                         loginFuture.complete(true);
                     }
                     @Override
                     public void onFailure(int code) {
-                        isAaLogin = false;
+                        setAaLogin(false);
                         loginFuture.complete(false);
                     }
                 });
@@ -201,10 +186,25 @@ public class StudentAccountManager {
         return gradeFuture;
     }
 
-
-
-    public boolean isAaAccess() {
-        return isAaLogin;
+    public CompletableFuture<Status> getStatus() {
+        CompletableFuture<Status> statusFuture = new CompletableFuture<>();
+        checkIsLogin().thenAccept(isLogin -> {
+            if (isLogin) {
+                NetworkDataManager.getStatus(client, new NetworkDataManager.WebCallback<Status>() {
+                    @Override
+                    public void onResponse(Status resp) {
+                        statusFuture.complete(resp);
+                    }
+                    @Override
+                    public void onFailure(int code) {
+                        statusFuture.complete(new Status("0", 0D, "0"));
+                    }
+                });
+            } else {
+                statusFuture.complete(new Status("0", 0D, "0"));
+            }
+        });
+        return statusFuture;
     }
 
     public String getStuId() {
@@ -216,8 +216,15 @@ public class StudentAccountManager {
     public MutableLiveData<StudentInfo> getStudentInfo() {
         return stuInfoLiveData;
     }
+    public MutableLiveData<Boolean> getIsAaLogin() {
+        return isAaLoginLiveData;
+    }
     public void setStudentInfo(String Name, String Id, String Department, String Class) {
         stuInfo = new StudentInfo(Name, Id, Department, Class);
         stuInfoLiveData.postValue(stuInfo);
+    }
+    public void setAaLogin(boolean isAa) {
+        isAaLogin = isAa;
+        isAaLoginLiveData.postValue(isAa);
     }
 }

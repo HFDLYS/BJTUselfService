@@ -97,12 +97,11 @@ public class MainActivity extends AppCompatActivity {
         NavigationView navigationView = binding.navView;
         TextView username = binding.navView.getHeaderView(0).findViewById(R.id.header_text_name);
         TextView stuId = binding.navView.getHeaderView(0).findViewById(R.id.header_text_mail);
-        StudentAccountManager.getInstance().getStudentInfo().observe(this, studentInfo -> {
+        Instance.getStudentInfo().observe(this, studentInfo -> {
             if (studentInfo != null) {
                 username.setText(studentInfo.stuName);
                 stuId.setText(studentInfo.stuId + "@bjtu.edu.cn");
             }
-
         });
         mAppBarConfiguration = new AppBarConfiguration.Builder(
                 R.id.nav_home, R.id.nav_grade, R.id.nav_exam, R.id.nav_course)
