@@ -12,6 +12,7 @@ import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.navigation.NavigationView;
 
 
+import androidx.fragment.app.DialogFragment;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
@@ -20,6 +21,7 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.hfdlys.bjtuselfservice.databinding.ActivityMainBinding;
+import com.hfdlys.bjtuselfservice.fragment.loading.LoadingFragment;
 import com.hfdlys.bjtuselfservice.fragment.login.ui.login.LoginFragment;
 
 public class MainActivity extends AppCompatActivity {
@@ -43,10 +45,8 @@ public class MainActivity extends AppCompatActivity {
         String StuPwd = Pref.getString("StuPwd", null);
         StudentAccountManager Instance = StudentAccountManager.getInstance();
         if (StuId != null && StuPwd != null) {
-            Dialog loadingDialog = new Dialog(this);
-            loadingDialog.setContentView(R.layout.dialog_loading);
-            loadingDialog.setCancelable(false);
-            loadingDialog.show();
+            LoadingFragment loadingDialog = new LoadingFragment();
+            loadingDialog.show(getSupportFragmentManager(), "loading");
             Instance.init(StuId, StuPwd).thenAccept( isLogin -> {
                 if (isLogin) {
                     Snackbar.make(binding.appBarMain.fab, "欢迎回来," + Instance.getStuName() + "同学！"
@@ -54,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
                         .setAction("Action", null).show();
                     loadingDialog.dismiss();
                 } else {
-                    Snackbar.make(binding.appBarMain.fab, "预料之外的，登录失败？你再试试"
+                    Snackbar.make(binding.appBarMain.fab, "登录失败:密码被修改或网络错误"
                                     , Snackbar.LENGTH_LONG)
                             .setAction("Action", null).show();
                     LoginFragment loginFragment = new LoginFragment();

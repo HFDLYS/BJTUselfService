@@ -17,6 +17,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.google.android.material.snackbar.Snackbar;
 import com.hfdlys.bjtuselfservice.R;
 import com.hfdlys.bjtuselfservice.databinding.FragmentGradeBinding;
 
@@ -45,9 +46,21 @@ public class GradeFragment extends Fragment {
         progressBar.setVisibility(View.VISIBLE);
         recyclerView.setLayoutManager(new LinearLayoutManager(this.getContext()));
         gradeViewModel.getGradeList().observe(getViewLifecycleOwner(), grades -> {
+            if (grades == null) {
+                Snackbar.make(view, "成绩加载失败", Snackbar.LENGTH_LONG)
+                        .setAction("Action", null).show();
+                progressBar.setVisibility(View.GONE);
+                return;
+            } else if (grades.size() == 0) {
+                Snackbar.make(view, "你好像还没有成绩", Snackbar.LENGTH_LONG)
+                        .setAction("Action", null).show();
+                progressBar.setVisibility(View.GONE);
+                return;
+            }
+            Snackbar.make(view, "成绩加载完成", Snackbar.LENGTH_LONG)
+                    .setAction("Action", null).show();
             progressBar.setVisibility(View.GONE);
             recyclerView.setAdapter(new GradeAdapter(grades));
-
         });
     }
 }

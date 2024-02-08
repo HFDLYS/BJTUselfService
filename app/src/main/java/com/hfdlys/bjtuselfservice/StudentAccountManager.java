@@ -173,11 +173,11 @@ public class StudentAccountManager {
                     }
                     @Override
                     public void onFailure(int code) {
-                        gradeFuture.complete(new ArrayList<Grade>());
+                        gradeFuture.complete(null);
                     }
                 });
             } else {
-                gradeFuture.complete(new ArrayList<Grade>());
+                gradeFuture.complete(null);
             }
         });
         return gradeFuture;

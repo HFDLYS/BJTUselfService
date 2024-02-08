@@ -23,7 +23,6 @@ public class HomeFragment extends Fragment {
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
-        homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
         binding = FragmentHomeBinding.inflate(inflater, container, false);
         return binding.getRoot();
     }
@@ -32,6 +31,7 @@ public class HomeFragment extends Fragment {
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         StudentAccountManager Instance = StudentAccountManager.getInstance();
+        homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
         final TextView textView = binding.textHome;
         final MaterialCardView CardView = binding.cardView;
         final ProgressBar loadingStatus = binding.loadingStatus;
@@ -42,36 +42,36 @@ public class HomeFragment extends Fragment {
             String Introduce = "你好";
             textView.setText(Introduce);
         });
+
         homeViewModel.getStatus().observe(getViewLifecycleOwner(), status -> {
-            String EcardBalance = "校园卡余额：" + status.EcardBalance;
-            String NetBalance = "校园网余额：" + status.NetBalance;
-            String NewMailCount = "新邮件：" + status.NewMailCount;
-            if (status.EcardBalance < 20) {
-                EcardBalance += "，会不会不够用了";
-            }
-            if (!status.NewMailCount.equals("0")) {
-                NewMailCount += "，记得去看哦";
-            }
-            if (status.NetBalance.equals("0")) {
-                NetBalance += "，😱下个月要没网了";
-            }
-            textMail.setText(NewMailCount);
-            textEcard.setText(EcardBalance);
-            textNet.setText(NetBalance);
+            getActivity().runOnUiThread(() -> {
+                String EcardBalance = "校园卡余额：" + status.EcardBalance;
+                String NetBalance = "校园网余额：" + status.NetBalance;
+                String NewMailCount = "新邮件：" + status.NewMailCount;
+                if (status.EcardBalance < 20) {
+                    EcardBalance += "，会不会不够用了";
+                }
+                if (!status.NewMailCount.equals("0")) {
+                    NewMailCount += "，记得去看哦";
+                }
+                if (status.NetBalance.equals("0")) {
+                    NetBalance += "，😱下个月要没网了";
+                }
+                textMail.setText(NewMailCount);
+                textEcard.setText(EcardBalance);
+                textNet.setText(NetBalance);
+                loadingStatus.setVisibility(View.GONE);
+            });
         });
 
         homeViewModel.getIsLogin().observe(getViewLifecycleOwner(), aBoolean -> {
             if (aBoolean) {
                 Instance.getStatus().thenAccept(status -> {
                     homeViewModel.setStatus(status);
-                    loadingStatus.setVisibility(View.GONE);
                 });
-                CardView.setVisibility(View.VISIBLE);
             } else {
-                CardView.setVisibility(View.GONE);
             }
         });
 
     }
-
 }
