@@ -53,8 +53,8 @@ public class ExamAdapter extends RecyclerView.Adapter<ExamAdapter.ExamViewHolder
             examType.setText("考试类型:" + examSchedule.ExamType);
             examCourse.setText(examSchedule.CourseName);
             examTime.setText(examSchedule.ExamTimeAndPlace);
-            examStatus.setText("备注:" + examSchedule.ExamStatus);
-            examDetail.setText(examSchedule.Detail);
+            examStatus.setText(examSchedule.ExamStatus);
+            examDetail.setText("备注:" + examSchedule.Detail);
         }
     }
 }
