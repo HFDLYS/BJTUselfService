@@ -53,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
                                 , Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
                     loadingDialog.dismiss();
+                    Instance.loginAa();
                 } else {
                     Snackbar.make(binding.appBarMain.fab, "登录失败:密码被修改或网络错误"
                                     , Snackbar.LENGTH_LONG)

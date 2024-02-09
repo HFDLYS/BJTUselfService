@@ -10,11 +10,14 @@ import java.util.List;
 
 public class GradeViewModel extends ViewModel {
     final private MutableLiveData<List<StudentAccountManager.Grade>> gradeList = new MutableLiveData<>();
+    StudentAccountManager studentAccountManager = StudentAccountManager.getInstance();
     public LiveData<List<StudentAccountManager.Grade>> getGradeList() {
         return gradeList;
     }
     public void loadGradeList() {
-        StudentAccountManager studentAccountManager = StudentAccountManager.getInstance();
         studentAccountManager.getGrade().thenAccept(gradeList::postValue);
+    }
+    public MutableLiveData<Boolean> getIsAaLogin() {
+        return studentAccountManager.getIsAaLogin();
     }
 }

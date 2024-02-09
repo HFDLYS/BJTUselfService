@@ -10,11 +10,14 @@ import java.util.List;
 
 public class ExamViewModel extends ViewModel {
     final private MutableLiveData<List<StudentAccountManager.ExamSchedule>> examList = new MutableLiveData<>();
+    StudentAccountManager studentAccountManager = StudentAccountManager.getInstance();
     public LiveData<List<StudentAccountManager.ExamSchedule>> getExamList() {
         return examList;
     }
     public void loadExamList() {
-        StudentAccountManager studentAccountManager = StudentAccountManager.getInstance();
         studentAccountManager.getExamSchedule().thenAccept(examList::postValue);
+    }
+    public MutableLiveData<Boolean> getIsAaLogin() {
+        return studentAccountManager.getIsAaLogin();
     }
 }

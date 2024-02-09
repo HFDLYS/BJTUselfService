@@ -62,6 +62,14 @@ public class GradeFragment extends Fragment {
             progressBar.setVisibility(View.GONE);
             recyclerView.setAdapter(new GradeAdapter(grades));
         });
-        gradeViewModel.loadGradeList();
+        if (gradeViewModel.getIsAaLogin().getValue()) {
+            gradeViewModel.loadGradeList();
+        } else {
+            gradeViewModel.getIsAaLogin().observe(getViewLifecycleOwner(), isLogin -> {
+                if (isLogin) {
+                    gradeViewModel.loadGradeList();
+                }
+            });
+        }
     }
 }

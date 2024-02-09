@@ -72,9 +72,11 @@ public class StudentAccountManager {
     private StudentInfo stuInfo;
     private String stuId;
     private String password;
+    private boolean isMisLogin = false;
     private boolean isAaLogin = false;
     private MutableLiveData<StudentInfo> stuInfoLiveData = new MutableLiveData<>();
     private MutableLiveData<Boolean> isAaLoginLiveData = new MutableLiveData<>(false);
+    private MutableLiveData<Boolean> isMisLoginLiveData = new MutableLiveData<>(false);
 
     // 永续cookie的客户端
     final private OkHttpClient client = new OkHttpClient.Builder()
@@ -117,26 +119,16 @@ public class StudentAccountManager {
                     @Override
                     public void onResponse(String code) {
                         setStudentInfo(code.split(";")[0], stuId, code.split(";")[2], code.split(";")[1]);
-                        loginAa().thenAccept(isAa -> {
-                            if (isAa) {
-                                loginFuture.complete(true);
-                            } else {
-                                loginFuture.complete(false);
-                            }
-                        });
+                        setMisLogin(true);
+                        loginFuture.complete(true);
                     }
                     public void onFailure(int code) {
                         MisDataManager.login(client, stuId, password, new WebCallback<String>() {
                             @Override
                             public void onResponse(String code) {
                                 setStudentInfo(code.split(";")[0], stuId, code.split(";")[2], code.split(";")[1]);
-                                loginAa().thenAccept(isAa -> {
-                                    if (isAa) {
-                                        loginFuture.complete(true);
-                                    } else {
-                                        loginFuture.complete(false);
-                                    }
-                                });
+                                setMisLogin(true);
+                                loginFuture.complete(true);
                             }
                             public void onFailure(int code) {
                                 loginFuture.complete(false);
@@ -175,7 +167,7 @@ public class StudentAccountManager {
     public CompletableFuture<List<Grade>> getGrade() {
         CompletableFuture<List<Grade>> gradeFuture = new CompletableFuture<>();
         checkIsLogin().thenAccept(isLogin -> {
-            if (isLogin) {
+            if (isLogin && isAaLogin) {
                 MisDataManager.getGrade(client, new WebCallback<List<Grade>>() {
                     @Override
                     public void onResponse(List<Grade> resp) {
@@ -200,7 +192,7 @@ public class StudentAccountManager {
     public CompletableFuture<List<ExamSchedule>> getExamSchedule() {
         CompletableFuture<List<ExamSchedule>> Future = new CompletableFuture<>();
         checkIsLogin().thenAccept(isLogin -> {
-            if (isLogin) {
+            if (isLogin && isAaLogin) {
                 MisDataManager.getExamSchedule(client, new WebCallback<List<ExamSchedule>>() {
                     @Override
                     public void onResponse(List<ExamSchedule> obj) {
@@ -250,6 +242,9 @@ public class StudentAccountManager {
     public MutableLiveData<Boolean> getIsAaLogin() {
         return isAaLoginLiveData;
     }
+    public MutableLiveData<Boolean> getIsMisLogin() {
+        return isMisLoginLiveData;
+    }
     public void setStudentInfo(String Name, String Id, String Department, String Class) {
         stuInfo = new StudentInfo(Name, Id, Department, Class);
         stuInfoLiveData.postValue(stuInfo);
@@ -257,5 +252,9 @@ public class StudentAccountManager {
     public void setAaLogin(boolean isAa) {
         isAaLogin = isAa;
         isAaLoginLiveData.postValue(isAa);
+    }
+    public void setMisLogin(boolean isMis) {
+        isMisLogin = isMis;
+        isMisLoginLiveData.postValue(isMis);
     }
 }

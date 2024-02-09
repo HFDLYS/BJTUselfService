@@ -141,6 +141,7 @@ public class LoginFragment extends BottomSheetDialogFragment {
                             public void run() {
                                 if (isLogin) {
                                     Toast.makeText(getContext(), "登录成功，你好" + Instance.getStuName(), Toast.LENGTH_LONG).show();
+                                    Instance.loginAa();
                                     SharedPreferences.Editor editor = getActivity().getSharedPreferences("StuAccount", Context.MODE_PRIVATE).edit();
                                     editor.putString("StuId", StuId);
                                     editor.putString("StuPwd", StuPwd);
@@ -173,6 +174,7 @@ public class LoginFragment extends BottomSheetDialogFragment {
                         public void run() {
                             if (isLogin) {
                                 Toast.makeText(getContext(), "登录成功，你好" + Instance.getStuName(), Toast.LENGTH_LONG).show();
+                                Instance.loginAa();
                                 SharedPreferences.Editor editor = getActivity().getSharedPreferences("StuAccount", Context.MODE_PRIVATE).edit();
                                 editor.putString("StuId", StuId);
                                 editor.putString("StuPwd", StuPwd);

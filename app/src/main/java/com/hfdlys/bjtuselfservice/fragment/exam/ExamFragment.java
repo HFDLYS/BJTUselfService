@@ -58,7 +58,15 @@ public class ExamFragment extends Fragment {
                 progressBar.setVisibility(View.GONE);
             }
         });
-        examViewModel.loadExamList();
+        if (examViewModel.getIsAaLogin().getValue()) {
+            examViewModel.loadExamList();
+        } else {
+            examViewModel.getIsAaLogin().observe(getViewLifecycleOwner(), isLogin -> {
+                if (isLogin) {
+                    examViewModel.loadExamList();
+                }
+            });
+        }
     }
 
 }

@@ -26,6 +26,6 @@ public class HomeViewModel extends ViewModel {
         return studentAccountManager.getStudentInfo();
     }
     public MutableLiveData<Boolean> getIsLogin() {
-        return studentAccountManager.getIsAaLogin();
+        return studentAccountManager.getIsMisLogin();
     }
 }
