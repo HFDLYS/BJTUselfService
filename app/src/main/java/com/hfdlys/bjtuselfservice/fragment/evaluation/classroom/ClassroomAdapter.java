@@ -57,6 +57,9 @@ public class ClassroomAdapter extends RecyclerView.Adapter<ClassroomAdapter.View
             holder.percentageBar.setVisibility(View.GONE);
             holder.errorText.setVisibility(View.VISIBLE);
             holder.errorText.setText("无法获取该教室信息");
+        } else {
+            holder.percentageBar.setVisibility(View.VISIBLE);
+            holder.errorText.setVisibility(View.GONE);
         }
     }
 
