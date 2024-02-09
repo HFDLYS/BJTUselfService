@@ -65,5 +65,4 @@ dependencies {
     implementation("org.jsoup:jsoup:1.14.3")
 
     implementation("org.pytorch:pytorch_android:2.1.0")
-    implementation("org.pytorch:pytorch_android_torchvision:2.1.0")
 }
