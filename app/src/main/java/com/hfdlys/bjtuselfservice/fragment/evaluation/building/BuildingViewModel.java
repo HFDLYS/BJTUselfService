@@ -1,4 +1,4 @@
-package com.hfdlys.bjtuselfservice.fragment.evaluation;
+package com.hfdlys.bjtuselfservice.fragment.evaluation.building;
 
 import androidx.lifecycle.ViewModel;
 

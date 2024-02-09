@@ -32,7 +32,18 @@
 
     <fragment
         android:id="@+id/nav_building"
-        android:name="com.hfdlys.bjtuselfservice.fragment.evaluation.BuildingFragment"
+        android:name="com.hfdlys.bjtuselfservice.fragment.evaluation.building.BuildingFragment"
         android:label="@string/menu_building"
-        tools:layout="@layout/fragment_building" />
+        tools:layout="@layout/fragment_building">
+        <action
+            android:id="@+id/action_buildingFragment_to_classroomFragment"
+            app:destination="@id/nav_classroom" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_classroom"
+        android:name="com.hfdlys.bjtuselfservice.fragment.evaluation.classroom.ClassroomFragment"
+        android:label="@string/menu_building"
+        tools:layout="@layout/fragment_classroom" />
+
 </navigation>

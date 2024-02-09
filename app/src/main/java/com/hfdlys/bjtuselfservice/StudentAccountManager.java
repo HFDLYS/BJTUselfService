@@ -4,7 +4,8 @@ package com.hfdlys.bjtuselfservice;
 
 import androidx.lifecycle.MutableLiveData;
 
-import com.hfdlys.bjtuselfservice.utils.Utils;
+import com.hfdlys.bjtuselfservice.utils.Network;
+import com.hfdlys.bjtuselfservice.utils.Network.WebCallback;
 import com.hfdlys.bjtuselfservice.web.MisDataManager;
 
 import java.util.List;
@@ -64,14 +65,14 @@ public class StudentAccountManager {
 
     // 永续cookie的客户端
     private OkHttpClient client = new OkHttpClient.Builder()
-            .cookieJar(new Utils.InMemoryCookieJar())
+            .cookieJar(new Network.InMemoryCookieJar())
             .build();
     private StudentAccountManager() {
     }
     // 检测登录状态
     public CompletableFuture<Boolean> checkIsLogin() {
         CompletableFuture<Boolean> loginFuture = new CompletableFuture<>();
-        MisDataManager.WebCallback<String> loginCallback = new MisDataManager.WebCallback<String>() {
+        WebCallback<String> loginCallback = new WebCallback<String>() {
             @Override
             public void onResponse(String code) {
                 loginFuture.complete(true);
@@ -99,7 +100,7 @@ public class StudentAccountManager {
             } else {
                 this.stuId = stuId;
                 this.password = password;
-                MisDataManager.login(client, stuId, password, new MisDataManager.WebCallback<String>() {
+                MisDataManager.login(client, stuId, password, new WebCallback<String>() {
                     @Override
                     public void onResponse(String code) {
                         setStudentInfo(code.split(";")[0], stuId, code.split(";")[2], code.split(";")[1]);
@@ -112,7 +113,7 @@ public class StudentAccountManager {
                         });
                     }
                     public void onFailure(int code) {
-                        MisDataManager.login(client, stuId, password, new MisDataManager.WebCallback<String>() {
+                        MisDataManager.login(client, stuId, password, new WebCallback<String>() {
                             @Override
                             public void onResponse(String code) {
                                 setStudentInfo(code.split(";")[0], stuId, code.split(";")[2], code.split(";")[1]);
@@ -139,7 +140,7 @@ public class StudentAccountManager {
         CompletableFuture<Boolean> loginFuture = new CompletableFuture<>();
         checkIsLogin().thenAccept(isLogin -> {
             if (isLogin) {
-                MisDataManager.aaLogin(client, new MisDataManager.WebCallback<String>() {
+                MisDataManager.aaLogin(client, new WebCallback<String>() {
                     @Override
                     public void onResponse(String code) {
                         setAaLogin(true);
@@ -162,7 +163,7 @@ public class StudentAccountManager {
         CompletableFuture<List<Grade>> gradeFuture = new CompletableFuture<>();
         checkIsLogin().thenAccept(isLogin -> {
             if (isLogin) {
-                MisDataManager.getGrade(client, new MisDataManager.WebCallback<List<Grade>>() {
+                MisDataManager.getGrade(client, new WebCallback<List<Grade>>() {
                     @Override
                     public void onResponse(List<Grade> resp) {
                         List<Grade> grades = new ArrayList<>();
@@ -187,7 +188,7 @@ public class StudentAccountManager {
         CompletableFuture<Status> statusFuture = new CompletableFuture<>();
         checkIsLogin().thenAccept(isLogin -> {
             if (isLogin) {
-                MisDataManager.getStatus(client, new MisDataManager.WebCallback<Status>() {
+                MisDataManager.getStatus(client, new WebCallback<Status>() {
                     @Override
                     public void onResponse(Status resp) {
                         statusFuture.complete(resp);

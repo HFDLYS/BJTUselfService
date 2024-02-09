@@ -44,7 +44,6 @@ public class HomeFragment extends Fragment {
         });
 
         homeViewModel.getStatus().observe(getViewLifecycleOwner(), status -> {
-            getActivity().runOnUiThread(() -> {
                 String EcardBalance = "校园卡余额：" + status.EcardBalance;
                 String NetBalance = "校园网余额：" + status.NetBalance;
                 String NewMailCount = "新邮件：" + status.NewMailCount;
@@ -61,7 +60,6 @@ public class HomeFragment extends Fragment {
                 textEcard.setText(EcardBalance);
                 textNet.setText(NetBalance);
                 loadingStatus.setVisibility(View.GONE);
-            });
         });
 
         homeViewModel.getIsLogin().observe(getViewLifecycleOwner(), aBoolean -> {

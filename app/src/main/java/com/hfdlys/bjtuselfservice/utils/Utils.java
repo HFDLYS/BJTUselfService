@@ -91,30 +91,4 @@ public class Utils {
         }
     }
 
-    public static class InMemoryCookieJar implements CookieJar {
-        private final HashMap<String, List<Cookie>> cookieStore = new HashMap<>();
-        @Override
-        public void saveFromResponse(@NonNull HttpUrl url, @NonNull List<Cookie> cookies) {
-            List<Cookie> oldCookies = cookieStore.get(url.host());
-            if (oldCookies != null) {
-                HashMap<String, Cookie> newCookies = new HashMap<>();
-                for (Cookie cookie : oldCookies) {
-                    newCookies.put(cookie.name(), cookie);
-                }
-                for (Cookie cookie : cookies) {
-                    newCookies.put(cookie.name(), cookie);
-                }
-                cookieStore.put(url.host(), new ArrayList<>(newCookies.values()));
-            } else {
-                cookieStore.put(url.host(), cookies);
-            }
-        }
-
-        @NonNull
-        @Override
-        public List<Cookie> loadForRequest(@NonNull HttpUrl url) {
-            List<Cookie> cookies = cookieStore.get(url.host());
-            return cookies != null ? cookies : new ArrayList<Cookie>();
-        }
-    }
 }

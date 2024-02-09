@@ -23,6 +23,11 @@
     <string name="invalid_username">id会不会不太对</string>
     <string name="invalid_password">密码会不会太短了</string>
     <string name="login_failed">"Login failed"</string>
-    <!-- TODO: Remove or change this placeholder text -->
+
     <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <string name="building">决定欲知之教学楼</string>
+    <string name="classroom">教学楼名</string>
+    <string name="begin_time">起始时间</string>
+    <string name="end_time">结束时间</string>
 </resources>

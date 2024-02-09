@@ -52,7 +52,7 @@ public class GradeFragment extends Fragment {
                 progressBar.setVisibility(View.GONE);
                 return;
             } else if (grades.size() == 0) {
-                Snackbar.make(view, "你好像还没有成绩", Snackbar.LENGTH_LONG)
+                Snackbar.make(view, "你好像还没有成绩😮", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
                 progressBar.setVisibility(View.GONE);
                 return;
@@ -62,5 +62,6 @@ public class GradeFragment extends Fragment {
             progressBar.setVisibility(View.GONE);
             recyclerView.setAdapter(new GradeAdapter(grades));
         });
+        gradeViewModel.loadGradeList();
     }
 }

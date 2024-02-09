@@ -13,11 +13,10 @@ public class GradeViewModel extends ViewModel {
     public LiveData<List<StudentAccountManager.Grade>> getGradeList() {
         if (gradeList == null) {
             gradeList = new MutableLiveData<>();
-            loadGradeList();
         }
         return gradeList;
     }
-    private void loadGradeList() {
+    public void loadGradeList() {
         StudentAccountManager studentAccountManager = StudentAccountManager.getInstance();
         studentAccountManager.getGrade().thenAccept(grades -> {
             gradeList.postValue(grades);

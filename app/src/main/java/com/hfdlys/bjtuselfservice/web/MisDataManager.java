@@ -26,6 +26,7 @@ import com.hfdlys.bjtuselfservice.StudentAccountManager;
 import com.hfdlys.bjtuselfservice.StudentAccountManager.Status;
 import com.hfdlys.bjtuselfservice.utils.ImageToTensorConverter;
 import com.hfdlys.bjtuselfservice.utils.Utils;
+import com.hfdlys.bjtuselfservice.utils.Network.WebCallback;
 
 public class MisDataManager {
     public static void login(OkHttpClient client,String stuId, String stuPasswd, WebCallback loginCallback) {
@@ -273,8 +274,4 @@ public class MisDataManager {
         });
     }
 
-    public interface WebCallback<T> {
-        void onResponse(T obj);
-        void onFailure(int errcode);
-    }
 }
