@@ -9,17 +9,12 @@ import com.hfdlys.bjtuselfservice.StudentAccountManager;
 import java.util.List;
 
 public class GradeViewModel extends ViewModel {
-    private MutableLiveData<List<StudentAccountManager.Grade>> gradeList;
+    final private MutableLiveData<List<StudentAccountManager.Grade>> gradeList = new MutableLiveData<>();
     public LiveData<List<StudentAccountManager.Grade>> getGradeList() {
-        if (gradeList == null) {
-            gradeList = new MutableLiveData<>();
-        }
         return gradeList;
     }
     public void loadGradeList() {
         StudentAccountManager studentAccountManager = StudentAccountManager.getInstance();
-        studentAccountManager.getGrade().thenAccept(grades -> {
-            gradeList.postValue(grades);
-        });
+        studentAccountManager.getGrade().thenAccept(gradeList::postValue);
     }
 }

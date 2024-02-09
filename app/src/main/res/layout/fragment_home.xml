@@ -28,9 +28,8 @@
             android:id="@+id/text_home"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="你好，陌生的同学！"
-            android:textAlignment="center"
-            android:textSize="20sp" />
+            android:text=""
+            android:textSize="12sp" />
 
 
 

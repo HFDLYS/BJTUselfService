@@ -24,6 +24,7 @@ import org.jsoup.select.Elements;
 import com.hfdlys.bjtuselfservice.Model;
 import com.hfdlys.bjtuselfservice.StudentAccountManager;
 import com.hfdlys.bjtuselfservice.StudentAccountManager.Status;
+import com.hfdlys.bjtuselfservice.StudentAccountManager.ExamSchedule;
 import com.hfdlys.bjtuselfservice.utils.ImageToTensorConverter;
 import com.hfdlys.bjtuselfservice.utils.Utils;
 import com.hfdlys.bjtuselfservice.utils.Network.WebCallback;
@@ -244,6 +245,40 @@ public class MisDataManager {
             }
         });
     }
+
+    public static void getExamSchedule(OkHttpClient client, WebCallback<List<ExamSchedule>> ResCallback) {
+        Request request = new Request.Builder()
+                .url("https://aa.bjtu.edu.cn/examine/examplanstudent/stulist/")
+                .header("Host", "aa.bjtu.edu.cn")
+                .build();
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                ResCallback.onFailure(0);
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                Document doc = Jsoup.parse(response.body().string());
+                Element table = doc.selectFirst("tbody");
+                Elements rows = table.select("tr");
+                List<ExamSchedule> examScheduleList = new ArrayList<>();
+                for (Element row : rows) {
+                    Elements cols = row.select("td");
+                    String type = cols.get(1).text();
+                    String CourseName = cols.get(2).text();
+                    String ExamTime = cols.get(3).text();
+                    String ExamStatus = cols.get(4).text();
+                    String Detail = cols.get(5).text();
+
+
+                    examScheduleList.add(new ExamSchedule(type, CourseName, ExamTime, ExamStatus, Detail));
+                }
+                ResCallback.onResponse(examScheduleList);
+            }
+        });
+    }
+
 
     public static void getStatus(OkHttpClient client, WebCallback<Status> ResCallback) {
         Request request = new Request.Builder()

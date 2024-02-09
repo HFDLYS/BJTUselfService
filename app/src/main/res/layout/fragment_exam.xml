@@ -5,9 +5,18 @@
     android:layout_height="match_parent"
     tools:context=".fragment.exam.ExamFragment">
 
-    <TextView
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/exam_recycler"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:text="Hello" />
-
+        android:layout_height="match_parent"/>
+    <ProgressBar
+        android:id="@+id/loading"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginStart="32dp"
+        android:layout_marginTop="64dp"
+        android:layout_marginEnd="32dp"
+        android:layout_marginBottom="64dp"
+        android:visibility="gone" />
 </FrameLayout>

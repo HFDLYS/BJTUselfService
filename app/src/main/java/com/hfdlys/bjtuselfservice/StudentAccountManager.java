@@ -43,8 +43,6 @@ public class StudentAccountManager {
             this.courseGPA = courseGPA;
             this.courseYear = courseYear;
         }
-        public Grade() {}
-
     }
     public static class Status {
         public String NewMailCount;
@@ -56,6 +54,21 @@ public class StudentAccountManager {
             this.NetBalance = NetBalance;
         }
     }
+    public static class ExamSchedule {
+        public String ExamType;
+        public String CourseName;
+        public String ExamTimeAndPlace;
+        public String ExamStatus;
+        public String Detail;
+        public ExamSchedule(String ExamType, String CourseName, String ExamTimeAndPlace, String ExamStatus, String Detail) {
+            this.ExamType = ExamType;
+            this.CourseName = CourseName;
+            this.ExamTimeAndPlace = ExamTimeAndPlace;
+            this.ExamStatus = ExamStatus;
+            this.Detail = Detail;
+        }
+    }
+
     private StudentInfo stuInfo;
     private String stuId;
     private String password;
@@ -64,7 +77,7 @@ public class StudentAccountManager {
     private MutableLiveData<Boolean> isAaLoginLiveData = new MutableLiveData<>(false);
 
     // 永续cookie的客户端
-    private OkHttpClient client = new OkHttpClient.Builder()
+    final private OkHttpClient client = new OkHttpClient.Builder()
             .cookieJar(new Network.InMemoryCookieJar())
             .build();
     private StudentAccountManager() {
@@ -183,6 +196,26 @@ public class StudentAccountManager {
         });
         return gradeFuture;
     }
+
+    public CompletableFuture<List<ExamSchedule>> getExamSchedule() {
+        CompletableFuture<List<ExamSchedule>> Future = new CompletableFuture<>();
+        checkIsLogin().thenAccept(isLogin -> {
+            if (isLogin) {
+                MisDataManager.getExamSchedule(client, new WebCallback<List<ExamSchedule>>() {
+                    @Override
+                    public void onResponse(List<ExamSchedule> obj) {
+                        Future.complete(obj);
+                    }
+                    @Override
+                    public void onFailure(int errcode) {
+                        Future.completeExceptionally(new Exception("No connection"));
+                    }
+                });
+            }
+        });
+        return Future;
+    }
+
     // 获得基础状态
     public CompletableFuture<Status> getStatus() {
         CompletableFuture<Status> statusFuture = new CompletableFuture<>();

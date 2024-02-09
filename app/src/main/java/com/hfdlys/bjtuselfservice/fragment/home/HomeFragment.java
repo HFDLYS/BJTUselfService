@@ -6,7 +6,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -33,13 +32,17 @@ public class HomeFragment extends Fragment {
         StudentAccountManager Instance = StudentAccountManager.getInstance();
         homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
         final TextView textView = binding.textHome;
-        final MaterialCardView CardView = binding.cardView;
         final ProgressBar loadingStatus = binding.loadingStatus;
         final TextView textMail = binding.textMail;
         final TextView textEcard = binding.textEcard;
         final TextView textNet = binding.textNet;
         homeViewModel.getStuInfo().observe(getViewLifecycleOwner(), studentInfo -> {
-            String Introduce = "你好";
+            String Introduce = studentInfo.stuName + "同学\n" +
+                    "\t您好，\n" +
+                    "\t欢迎使用交大自由行，这里是你的微型个人信息中心，你可以在这里查看你的成绩、考试安排、校园卡余额、校园网余额、新邮件等信息。\n" +
+                    "你可以在左侧的菜单中选择你想要查看的信息。\n" +
+                    "\t虽然很简陋，但是...!" +
+                    "\t祝你使用愉快!";
             textView.setText(Introduce);
         });
 
@@ -64,10 +67,7 @@ public class HomeFragment extends Fragment {
 
         homeViewModel.getIsLogin().observe(getViewLifecycleOwner(), aBoolean -> {
             if (aBoolean) {
-                Instance.getStatus().thenAccept(status -> {
-                    homeViewModel.setStatus(status);
-                });
-            } else {
+                Instance.getStatus().thenAccept(homeViewModel::setStatus);
             }
         });
 
