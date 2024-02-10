@@ -24,8 +24,9 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginLeft="18dp"
+                android:layout_marginStart="18dp"
                 android:text="课程名"
+                android:textColor="@color/royal_blue_700"
                 android:textSize="20sp" />
             <TextView
                 android:id="@+id/way_to_exam"
@@ -42,6 +43,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
+            android:textColor="@color/material_dynamic_secondary70"
             android:text="考试" />
 
         <TextView
@@ -49,6 +51,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
+            android:textColor="@color/material_dynamic_secondary70"
             android:text="备注" />
 
         <TextView
@@ -57,6 +60,7 @@
             android:layout_height="wrap_content"
             android:layout_marginEnd="12dp"
             android:text="时间地点"
+            android:textColor="@color/red"
             android:textSize="18sp"
             android:gravity="end" />
     </LinearLayout>
