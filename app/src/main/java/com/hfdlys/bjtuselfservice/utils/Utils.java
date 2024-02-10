@@ -14,6 +14,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 import okhttp3.Cookie;
@@ -78,6 +79,64 @@ public class Utils {
         }
     }
 
+    private static final Map<String, Integer> gradeToScoreMap = new HashMap<>();
+    static {
+        gradeToScoreMap.put("A", 95);
+        gradeToScoreMap.put("A-", 87);
+        gradeToScoreMap.put("B+", 83);
+        gradeToScoreMap.put("B", 79);
+        gradeToScoreMap.put("B-", 76);
+        gradeToScoreMap.put("C+", 73);
+        gradeToScoreMap.put("C", 69);
+        gradeToScoreMap.put("C-", 66);
+        gradeToScoreMap.put("D+", 63);
+        gradeToScoreMap.put("D", 60);
+        gradeToScoreMap.put("F", 30);
+    }
+
+    private static String scoreToGrade(int score) {
+        if (score >= 90) return "A";
+        else if (score >= 85) return "A-";
+        else if (score >= 81) return "B+";
+        else if (score >= 78) return "B";
+        else if (score >= 75) return "B-";
+        else if (score >= 71) return "C+";
+        else if (score >= 68) return "C";
+        else if (score >= 65) return "C-";
+        else if (score >= 61) return "D+";
+        else if (score == 60) return "D";
+        else return "F";
+    }
+
+    public static String convertAndFormatGradeScore(String input) {
+        try {
+            int score = Integer.parseInt(input);
+            String grade = scoreToGrade(score);
+            return grade + "," + score;
+        } catch (NumberFormatException e) {
+            if (gradeToScoreMap.containsKey(input)) {
+                int score = gradeToScoreMap.get(input);
+                return input + "," + score;
+            } else {
+                return "Invalid input";
+            }
+        }
+    }
+
+    public static int calculateGradeColor(int grade) {
+        int red = 0;
+        int green = 0;
+
+        if (grade >= 60) {
+            float proportion = (float) (grade - 60) / 40;
+            green = (int) (255 * proportion);
+            red = 255 - green;
+        } else {
+            green = 255;
+        }
+        return 0xFF000000 | (red << 16) | (green << 8);
+    }
+
     public class StudentInfo {
         public String stuName;
         public String stuClass;
@@ -90,5 +149,4 @@ public class Utils {
             this.stuId = stuId;
         }
     }
-
 }

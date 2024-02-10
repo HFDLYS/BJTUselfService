@@ -1,5 +1,7 @@
 package com.hfdlys.bjtuselfservice.fragment.grade;
 
+import static com.hfdlys.bjtuselfservice.utils.Utils.calculateGradeColor;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -51,6 +53,12 @@ public class GradeAdapter extends RecyclerView.Adapter<GradeAdapter.GradeViewHol
             gradeCourse.setText(grade.courseName + "/(" + grade.courseGPA + ")" + grade.courseTeacher);
             gradeYear.setText(grade.courseYear);
             gradeScore.setText(grade.courseScore);
+            gradeScore.setTextColor(0xFFFF0000);
+            try {
+                gradeScore.setTextColor(calculateGradeColor(Integer.parseInt(grade.courseScore.split(",")[1])));
+            } catch (NumberFormatException e) {
+                gradeScore.setTextColor(0xFF000000);
+            }
         }
     }
 }

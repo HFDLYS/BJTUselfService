@@ -1,5 +1,7 @@
 package com.hfdlys.bjtuselfservice.web;
 
+import static com.hfdlys.bjtuselfservice.utils.Utils.convertAndFormatGradeScore;
+
 import androidx.annotation.NonNull;
 
 import java.io.IOException;
@@ -237,6 +239,7 @@ public class MisDataManager {
                     String courseName = cols.get(2).text().replace("\n","").replace("\t","").replace(" ","");
                     String courseGPA = cols.get(3).text().replace("\n","").replace("\t","").replace(" ","");
                     String courseScore = cols.get(4).text().replace("\n","").replace("\t","").replace(" ","");
+                    courseScore = convertAndFormatGradeScore(courseScore);
                     String teacher = cols.get(6).text().replace("\n","").replace("\t","").replace(" ","");
                     StudentAccountManager.Grade grade = new StudentAccountManager.Grade(courseName, teacher, courseScore, courseGPA, year);
                     gradeList.add(grade);
