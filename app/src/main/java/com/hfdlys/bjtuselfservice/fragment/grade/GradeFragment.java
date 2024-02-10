@@ -70,7 +70,7 @@ public class GradeFragment extends Fragment {
                 allScore += Double.parseDouble(grade.courseScore.split(",")[1]) * Double.parseDouble(grade.courseCredits);
             }
             double gpa = allScore / allCredit;
-            String info = "您的平均绩点是" + String.format("%.1f", gpa) + "\n";
+            String info = "您的加权平均分是" + String.format("%.1f", gpa) + "\n";
             gradeInfo.setText(info);
             String greeting;
             if (gpa >= 90) {
