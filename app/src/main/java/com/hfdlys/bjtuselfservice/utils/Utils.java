@@ -123,12 +123,12 @@ public class Utils {
         }
     }
 
-    public static int calculateGradeColor(int grade) {
+    public static int calculateGradeColor(double grade) {
         int red = 0;
         int green = 0;
 
         if (grade >= 60) {
-            float proportion = (float) (grade - 60) / 40;
+            double proportion = (double) (grade - 60) / 40;
             green = (int) (255 * proportion);
             red = 255 - green;
         } else {

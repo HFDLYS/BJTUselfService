@@ -31,7 +31,7 @@ tools:context=".fragment.evaluation.classroom.ClassroomFragment">
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:text="@string/classroom"
-                android:textColor="@color/royal_blue_700"
+                android:textColor="@color/deep_blue_500"
                 android:id="@+id/title"
                 android:textSize="24sp" />
             <TextView

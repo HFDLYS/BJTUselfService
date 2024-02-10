@@ -34,13 +34,13 @@ public class StudentAccountManager {
         public String courseName;
         public String courseTeacher;
         public String courseScore;
-        public String courseGPA;
+        public String courseCredits;
         public String courseYear;
-        public Grade(String courseName, String courseTeacher, String courseScore, String courseGPA, String courseYear) {
+        public Grade(String courseName, String courseTeacher, String courseScore, String courseCredits, String courseYear) {
             this.courseName = courseName;
             this.courseTeacher = courseTeacher;
             this.courseScore = courseScore;
-            this.courseGPA = courseGPA;
+            this.courseCredits = courseCredits;
             this.courseYear = courseYear;
         }
     }

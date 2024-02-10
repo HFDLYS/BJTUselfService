@@ -50,7 +50,7 @@ public class GradeAdapter extends RecyclerView.Adapter<GradeAdapter.GradeViewHol
         }
 
         public void bind(StudentAccountManager.Grade grade) {
-            gradeCourse.setText(grade.courseName + "/(" + grade.courseGPA + ")" + grade.courseTeacher);
+            gradeCourse.setText(grade.courseName + "/(" + grade.courseCredits + ")" + grade.courseTeacher);
             gradeYear.setText(grade.courseYear);
             gradeScore.setText(grade.courseScore);
             gradeScore.setTextColor(0xFFFF0000);

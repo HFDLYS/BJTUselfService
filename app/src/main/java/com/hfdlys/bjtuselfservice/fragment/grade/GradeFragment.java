@@ -16,9 +16,11 @@ import android.widget.ProgressBar;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import com.google.android.material.snackbar.Snackbar;
 import com.hfdlys.bjtuselfservice.R;
+import com.hfdlys.bjtuselfservice.StudentAccountManager;
 import com.hfdlys.bjtuselfservice.databinding.FragmentGradeBinding;
 
 public class GradeFragment extends Fragment {
@@ -43,6 +45,8 @@ public class GradeFragment extends Fragment {
 
         final RecyclerView recyclerView = binding.gradeRecycler;
         final ProgressBar progressBar = binding.loading;
+        final TextView gradeInfo = binding.gradeInfo;
+        final TextView greetInfo = binding.greetInfo;
         progressBar.setVisibility(View.VISIBLE);
         recyclerView.setLayoutManager(new LinearLayoutManager(this.getContext()));
         gradeViewModel.getGradeList().observe(getViewLifecycleOwner(), grades -> {
@@ -59,6 +63,29 @@ public class GradeFragment extends Fragment {
             }
             Snackbar.make(view, "成绩加载完成", Snackbar.LENGTH_LONG)
                     .setAction("Action", null).show();
+            double allCredit = 0;
+            double allScore = 0;
+            for (StudentAccountManager.Grade grade : grades) {
+                allCredit += Double.parseDouble(grade.courseCredits);
+                allScore += Double.parseDouble(grade.courseScore.split(",")[1]) * Double.parseDouble(grade.courseCredits);
+            }
+            double gpa = allScore / allCredit;
+            String info = "您的平均绩点是" + String.format("%.1f", gpa) + "\n";
+            gradeInfo.setText(info);
+            String greeting;
+            if (gpa >= 90) {
+                greeting = "😮这位学霸太猛了";
+            } else if (gpa >= 80) {
+                greeting = "🥹鼓足干劲，力争上游，多快好省地，加油吧！！！";
+            } else if (gpa >= 70) {
+                greeting = "🫡不错哦，继续努力";
+            } else if (gpa >= 60) {
+                greeting = "☺️得加把劲了，但或许已经够了？";
+            } else {
+                greeting = "😱😱😱同学你真得加油了啊";
+            }
+            greetInfo.setVisibility(View.VISIBLE);
+            greetInfo.setText(greeting);
             progressBar.setVisibility(View.GONE);
             recyclerView.setAdapter(new GradeAdapter(grades));
         });
