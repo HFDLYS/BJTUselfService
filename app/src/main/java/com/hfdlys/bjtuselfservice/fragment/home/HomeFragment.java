@@ -65,7 +65,7 @@ public class HomeFragment extends Fragment {
             AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
             builder.setTitle("即将转跳至“完美校园”app......");
             builder.setMessage("确定转跳吗，同时确保你已经下载“完美校园”app。");
-            builder.setPositiveButton("是是是是，我马上照搬", new DialogInterface.OnClickListener() {
+            builder.setPositiveButton("是是是是，我马上照办", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
                     Intent intent = new Intent();
@@ -80,7 +80,25 @@ public class HomeFragment extends Fragment {
             dialog.show();
                 });
         cardNet.setOnClickListener(v -> {
-
+            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+            builder.setTitle("网络续费转跳");
+            builder.setMessage("不好意思直接转跳微信成本还是太高，不过\n注意：以下操作需微信绑定学校企业号\n请分享至微信，后打开（莫吐槽🙏）哦");
+            builder.setPositiveButton("这也行，试试", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    Intent shareIntent = new Intent();
+                    shareIntent.setAction(Intent.ACTION_SEND);
+                    shareIntent.setType("text/plain");
+                    shareIntent.putExtra(Intent.EXTRA_TEXT, "https://weixin.bjtu.edu.cn/pay/wap/network/recharge.html");
+                    Intent chooser = Intent.createChooser(shareIntent, "请选择：“微信：发送给朋友”");
+                    try {
+                        startActivity(chooser);
+                    } catch (Exception e) {
+                        Snackbar.make(binding.getRoot(), "未找到“微信”app？？？？", Snackbar.LENGTH_LONG).show();
+                    }
+                }});
+            AlertDialog dialog = builder.create();
+            dialog.show();
                 });
 
         homeViewModel.getStatus().observe(getViewLifecycleOwner(), status -> {
