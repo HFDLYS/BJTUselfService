@@ -12,6 +12,9 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 
+import okhttp3.Cookie;
+import okhttp3.CookieJar;
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 
 public class StudentAccountManager {
@@ -263,6 +266,9 @@ public class StudentAccountManager {
     }
     public MutableLiveData<Boolean> getIsMisLogin() {
         return isMisLoginLiveData;
+    }
+    public OkHttpClient getClient() {
+        return client;
     }
     public void setStudentInfo(String Name, String Id, String Department, String Class) {
         stuInfo = new StudentInfo(Name, Id, Department, Class);

@@ -16,9 +16,12 @@ import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.NavController;
+import androidx.navigation.Navigation;
 
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.snackbar.Snackbar;
+import com.hfdlys.bjtuselfservice.R;
 import com.hfdlys.bjtuselfservice.StudentAccountManager;
 import com.hfdlys.bjtuselfservice.databinding.FragmentHomeBinding;
 
@@ -59,8 +62,12 @@ public class HomeFragment extends Fragment {
         });
 
         cardMail.setOnClickListener(v -> {
-
-                });
+            showDialog("新邮件", "要看看新邮件吗",
+                    (dialog, which) -> {
+                NavController navController = Navigation.findNavController(getActivity(), R.id.nav_host_fragment_content_main);
+                navController.navigate(R.id.action_homeFragment_to_mailFragment);
+            });
+        });
         cardEcard.setOnClickListener(v -> {
             showDialog("校园卡充值", "不好意思直接转跳微信成本还是太高，不过\n注意：以下操作需微信绑定学校企业号\n请分享至微信，后打开（莫吐槽🙏）哦",
                     (dialog, which) -> {
