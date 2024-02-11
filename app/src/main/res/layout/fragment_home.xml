@@ -46,8 +46,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:id="@+id/loadingStatus"
-                android:visibility="gone"
                 android:indeterminate="true" />
+
             <androidx.appcompat.widget.LinearLayoutCompat
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -57,6 +57,7 @@
                     android:layout_height="wrap_content"
                     android:clickable="true"
                     android:focusable="true"
+                    android:id="@+id/cardMail"
                     android:foreground="?attr/selectableItemBackground"
                     app:cardBackgroundColor="@color/white_blue"
                     app:cardElevation="4dp"
@@ -88,6 +89,7 @@
                     android:layout_height="wrap_content"
                     android:clickable="true"
                     android:focusable="true"
+                    android:id="@+id/cardEcard"
                     android:foreground="?attr/selectableItemBackground"
                     app:cardBackgroundColor="@color/white_blue"
                     app:cardElevation="4dp"
@@ -119,7 +121,7 @@
                     android:layout_height="wrap_content"
                     android:clickable="true"
                     android:focusable="true"
-                    android:layout_marginBottom="2dp"
+                    android:id="@+id/cardNet"
                     android:foreground="?attr/selectableItemBackground"
                     app:cardBackgroundColor="@color/white_blue"
                     app:cardElevation="4dp"

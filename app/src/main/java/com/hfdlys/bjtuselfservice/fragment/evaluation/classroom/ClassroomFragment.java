@@ -65,8 +65,8 @@ public class ClassroomFragment extends Fragment {
                         progressBar.setVisibility(View.GONE);
                         return;
                     } else {
-                        beginTime.setText(data.EffectiveDateStart);
-                        endTime.setText(data.EffectiveDateEnd);
+                        beginTime.setText("From: " + data.EffectiveDateStart);
+                        endTime.setText("To: " + data.EffectiveDateEnd);
                         ClassroomAdapter adapter = new ClassroomAdapter(data.ClassroomList);
                         progressBar.setVisibility(View.GONE);
                         classroomRecyclerView.setAdapter(adapter);
