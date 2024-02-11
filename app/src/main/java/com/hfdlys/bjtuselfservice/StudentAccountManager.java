@@ -70,8 +70,8 @@ public class StudentAccountManager {
     }
 
     private StudentInfo stuInfo;
-    private String stuId;
-    private String password;
+    private String stuId = null;
+    private String password = null;
     private boolean isMisLogin = false;
     private boolean isAaLogin = false;
     private MutableLiveData<StudentInfo> stuInfoLiveData = new MutableLiveData<>();
@@ -158,7 +158,28 @@ public class StudentAccountManager {
                     }
                 });
             } else {
-                loginFuture.complete(false);
+                if (stuId != null && password != null) {
+                    init(stuId, password).thenAccept(isLoginMis -> {
+                        if (isLoginMis) {
+                            MisDataManager.aaLogin(client, new WebCallback<String>() {
+                                @Override
+                                public void onResponse(String code) {
+                                    setAaLogin(true);
+                                    loginFuture.complete(true);
+                                }
+                                @Override
+                                public void onFailure(int code) {
+                                    setAaLogin(false);
+                                    loginFuture.complete(false);
+                                }
+                            });
+                        } else {
+                            loginFuture.complete(false);
+                        }
+                    });
+                } else {
+                    loginFuture.complete(false);
+                }
             }
         });
         return loginFuture;
@@ -179,11 +200,13 @@ public class StudentAccountManager {
                     }
                     @Override
                     public void onFailure(int code) {
-                        gradeFuture.complete(null);
+                        gradeFuture.completeExceptionally(new Exception("No connection"));
                     }
                 });
+            } else if (isLogin) {
+                gradeFuture.completeExceptionally(new Exception("Not loginAa"));
             } else {
-                gradeFuture.complete(null);
+                gradeFuture.completeExceptionally(new Exception("Not login"));
             }
         });
         return gradeFuture;
@@ -203,6 +226,10 @@ public class StudentAccountManager {
                         Future.completeExceptionally(new Exception("No connection"));
                     }
                 });
+            } else if (isLogin) {
+                Future.completeExceptionally(new Exception("Not loginAa"));
+            } else {
+                Future.completeExceptionally(new Exception("Not login"));
             }
         });
         return Future;

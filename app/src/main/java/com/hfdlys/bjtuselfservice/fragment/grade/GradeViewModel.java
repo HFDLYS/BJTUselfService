@@ -15,7 +15,25 @@ public class GradeViewModel extends ViewModel {
         return gradeList;
     }
     public void loadGradeList() {
-        studentAccountManager.getGrade().thenAccept(gradeList::postValue);
+        studentAccountManager.getGrade().thenAccept(gradeList::postValue)
+                .exceptionally(throwable -> {
+                    if (throwable.toString().equals("Not loginAa")) {
+                        studentAccountManager.loginAa().thenAccept(aBoolean -> {
+                            if (aBoolean) {
+                                loadGradeList();
+                            }
+                        });
+                    } else if (throwable.toString().equals("Not login")) {
+                        studentAccountManager.loginAa().thenAccept(aBoolean -> {
+                            if (aBoolean) {
+                                loadGradeList();
+                            }
+                        });
+                    } else {
+                        gradeList.postValue(null);
+                    }
+                    return null;
+                });
     }
     public MutableLiveData<Boolean> getIsAaLogin() {
         return studentAccountManager.getIsAaLogin();
