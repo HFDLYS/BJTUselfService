@@ -1,5 +1,10 @@
 package com.hfdlys.bjtuselfservice.fragment.home;
 
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.ComponentName;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -8,10 +13,12 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.snackbar.Snackbar;
 import com.hfdlys.bjtuselfservice.StudentAccountManager;
 import com.hfdlys.bjtuselfservice.databinding.FragmentHomeBinding;
 
@@ -36,6 +43,11 @@ public class HomeFragment extends Fragment {
         final TextView textMail = binding.textMail;
         final TextView textEcard = binding.textEcard;
         final TextView textNet = binding.textNet;
+
+        final CardView cardMail = binding.cardMail;
+        final CardView cardEcard = binding.cardEcard;
+        final CardView cardNet = binding.cardNet;
+
         homeViewModel.getStuInfo().observe(getViewLifecycleOwner(), studentInfo -> {
             String Introduce = studentInfo.stuName + "同学\n" +
                     "\t您好，\n" +
@@ -45,6 +57,31 @@ public class HomeFragment extends Fragment {
                     "\t祝你使用愉快!";
             textView.setText(Introduce);
         });
+
+        cardMail.setOnClickListener(v -> {
+
+                });
+        cardEcard.setOnClickListener(v -> {
+            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+            builder.setTitle("即将转跳至“完美校园”app......");
+            builder.setMessage("确定转跳吗，同时确保你已经下载“完美校园”app。");
+            builder.setPositiveButton("是是是是，我马上照搬", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    Intent intent = new Intent();
+                    intent.setComponent(new ComponentName("com.newcapec.mobile.ncp", "com.wanxiao.basebusiness.activity.SplashActivity"));
+                    try {
+                        startActivity(intent);
+                    } catch (Exception e) {
+                        Snackbar.make(binding.getRoot(), "未找到“完美校园”app", Snackbar.LENGTH_LONG).show();
+                    }
+                }});
+            AlertDialog dialog = builder.create();
+            dialog.show();
+                });
+        cardNet.setOnClickListener(v -> {
+
+                });
 
         homeViewModel.getStatus().observe(getViewLifecycleOwner(), status -> {
                 String EcardBalance = "校园卡余额：" + status.EcardBalance;
