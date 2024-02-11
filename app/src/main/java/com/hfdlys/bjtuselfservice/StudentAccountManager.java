@@ -187,51 +187,43 @@ public class StudentAccountManager {
     // 获得成绩
     public CompletableFuture<List<Grade>> getGrade() {
         CompletableFuture<List<Grade>> gradeFuture = new CompletableFuture<>();
-        checkIsLogin().thenAccept(isLogin -> {
-            if (isLogin && isAaLogin) {
-                MisDataManager.getGrade(client, new WebCallback<List<Grade>>() {
-                    @Override
-                    public void onResponse(List<Grade> resp) {
-                        List<Grade> grades = new ArrayList<>();
-                        for (Grade grade : resp) {
-                            grades.add(grade);
-                        }
-                        gradeFuture.complete(grades);
+        if (isAaLogin) {
+            MisDataManager.getGrade(client, new WebCallback<List<Grade>>() {
+                @Override
+                public void onResponse(List<Grade> resp) {
+                    List<Grade> grades = new ArrayList<>();
+                    for (Grade grade : resp) {
+                        grades.add(grade);
                     }
-                    @Override
-                    public void onFailure(int code) {
-                        gradeFuture.completeExceptionally(new Exception("No connection"));
-                    }
-                });
-            } else if (isLogin) {
-                gradeFuture.completeExceptionally(new Exception("Not loginAa"));
-            } else {
-                gradeFuture.completeExceptionally(new Exception("Not login"));
-            }
-        });
+                    gradeFuture.complete(grades);
+                }
+                @Override
+                public void onFailure(int code) {
+                    gradeFuture.completeExceptionally(new Exception("No connection"));
+                }
+            });
+        } else {
+            gradeFuture.completeExceptionally(new Exception("Not loginAa"));
+        }
         return gradeFuture;
     }
 
     public CompletableFuture<List<ExamSchedule>> getExamSchedule() {
         CompletableFuture<List<ExamSchedule>> Future = new CompletableFuture<>();
-        checkIsLogin().thenAccept(isLogin -> {
-            if (isLogin && isAaLogin) {
-                MisDataManager.getExamSchedule(client, new WebCallback<List<ExamSchedule>>() {
-                    @Override
-                    public void onResponse(List<ExamSchedule> obj) {
-                        Future.complete(obj);
-                    }
-                    @Override
-                    public void onFailure(int errcode) {
-                        Future.completeExceptionally(new Exception("No connection"));
-                    }
-                });
-            } else if (isLogin) {
-                Future.completeExceptionally(new Exception("Not loginAa"));
-            } else {
-                Future.completeExceptionally(new Exception("Not login"));
-            }
-        });
+        if (isAaLogin) {
+            MisDataManager.getExamSchedule(client, new WebCallback<List<ExamSchedule>>() {
+                @Override
+                public void onResponse(List<ExamSchedule> obj) {
+                    Future.complete(obj);
+                }
+                @Override
+                public void onFailure(int errcode) {
+                    Future.completeExceptionally(new Exception("No connection"));
+                }
+            });
+        } else {
+            Future.completeExceptionally(new Exception("Not loginAa"));
+        }
         return Future;
     }
 
