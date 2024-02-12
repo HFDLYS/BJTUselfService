@@ -1,20 +1,16 @@
 package com.hfdlys.bjtuselfservice;
 
 
-
 import androidx.lifecycle.MutableLiveData;
 
 import com.hfdlys.bjtuselfservice.utils.Network;
 import com.hfdlys.bjtuselfservice.utils.Network.WebCallback;
 import com.hfdlys.bjtuselfservice.web.MisDataManager;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import okhttp3.Cookie;
-import okhttp3.CookieJar;
-import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 
 public class StudentAccountManager {
@@ -77,9 +73,9 @@ public class StudentAccountManager {
     private String password = null;
     private boolean isMisLogin = false;
     private boolean isAaLogin = false;
-    private MutableLiveData<StudentInfo> stuInfoLiveData = new MutableLiveData<>();
-    private MutableLiveData<Boolean> isAaLoginLiveData = new MutableLiveData<>(false);
-    private MutableLiveData<Boolean> isMisLoginLiveData = new MutableLiveData<>(false);
+    private final MutableLiveData<StudentInfo> stuInfoLiveData = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> isAaLoginLiveData = new MutableLiveData<>(false);
+    private final MutableLiveData<Boolean> isMisLoginLiveData = new MutableLiveData<>(false);
 
     // 永续cookie的客户端
     final private OkHttpClient client = new OkHttpClient.Builder()
@@ -111,37 +107,50 @@ public class StudentAccountManager {
     }
     // 初始化登录 或 重载登录
     public CompletableFuture<Boolean> init(String stuId, String password) {
-        CompletableFuture<Boolean> loginFuture = new CompletableFuture<>();
-        checkIsLogin().thenAccept(isLogin -> {
+        this.stuId = stuId;
+        this.password = password;
+        return checkIsLogin().thenCompose(isLogin -> {
             if (isLogin) {
-                loginFuture.complete(true);
+                return CompletableFuture.completedFuture(true);
             } else {
-                this.stuId = stuId;
-                this.password = password;
-                MisDataManager.login(client, stuId, password, new WebCallback<String>() {
-                    @Override
-                    public void onResponse(String code) {
-                        setStudentInfo(code.split(";")[0], stuId, code.split(";")[2], code.split(";")[1]);
-                        setMisLogin(true);
-                        loginFuture.complete(true);
-                    }
-                    public void onFailure(int code) {
-                        MisDataManager.login(client, stuId, password, new WebCallback<String>() {
-                            @Override
-                            public void onResponse(String code) {
-                                setStudentInfo(code.split(";")[0], stuId, code.split(";")[2], code.split(";")[1]);
-                                setMisLogin(true);
-                                loginFuture.complete(true);
-                            }
-                            public void onFailure(int code) {
-                                loginFuture.complete(false);
-                            }
-                        });
-                    }
-                });
+                return attemptLoginWithRetry(stuId, password, 2);
+            }
+        });
+    }
+
+    private CompletableFuture<Boolean> attemptLoginWithRetry(String stuId, String password, int retries) {
+        CompletableFuture<Boolean> loginFuture = new CompletableFuture<>();
+        MisDataManager.login(client, stuId, password, new WebCallback<String>() {
+            @Override
+            public void onResponse(String code) {
+                setStudentInfoFromCode(code, stuId);
+                loginFuture.complete(true);
+            }
+
+            @Override
+            public void onFailure(int code) {
+                if (retries > 0) {
+                    System.out.println("Login failed, retrying...");
+                    attemptLoginWithRetry(stuId, password, retries - 1).whenComplete((result, ex) -> {
+                        if (ex != null) {
+                            loginFuture.completeExceptionally(ex);
+                        } else {
+                            loginFuture.complete(result);
+                        }
+                    });
+                } else {
+                    System.out.println("Login failed after retries.");
+                    loginFuture.complete(false);
+                }
             }
         });
         return loginFuture;
+    }
+
+    private void setStudentInfoFromCode(String code, String stuId) {
+        String[] parts = code.split(";");
+        setStudentInfo(parts[0], stuId, parts[2], parts[1]);
+        setMisLogin(true);
     }
     // 登录教务系统
     public CompletableFuture<Boolean> loginAa() {
@@ -189,10 +198,7 @@ public class StudentAccountManager {
             MisDataManager.getGrade(client, new WebCallback<List<Grade>>() {
                 @Override
                 public void onResponse(List<Grade> resp) {
-                    List<Grade> grades = new ArrayList<>();
-                    for (Grade grade : resp) {
-                        grades.add(grade);
-                    }
+                    List<Grade> grades = new ArrayList<>(resp);
                     gradeFuture.complete(grades);
                 }
                 @Override
