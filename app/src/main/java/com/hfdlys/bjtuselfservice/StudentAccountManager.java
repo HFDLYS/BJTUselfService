@@ -145,47 +145,42 @@ public class StudentAccountManager {
     }
     // 登录教务系统
     public CompletableFuture<Boolean> loginAa() {
-        CompletableFuture<Boolean> loginFuture = new CompletableFuture<>();
-        checkIsLogin().thenAccept(isLogin -> {
+        return checkIsLogin().thenCompose(isLogin -> {
             if (isLogin) {
-                MisDataManager.aaLogin(client, new WebCallback<String>() {
-                    @Override
-                    public void onResponse(String code) {
-                        setAaLogin(true);
-                        loginFuture.complete(true);
-                    }
-                    @Override
-                    public void onFailure(int code) {
-                        setAaLogin(false);
-                        loginFuture.complete(false);
-                    }
-                });
+                return attemptAaLogin();
             } else {
-                if (stuId != null && password != null) {
-                    init(stuId, password).thenAccept(isLoginMis -> {
-                        if (isLoginMis) {
-                            MisDataManager.aaLogin(client, new WebCallback<String>() {
-                                @Override
-                                public void onResponse(String code) {
-                                    setAaLogin(true);
-                                    loginFuture.complete(true);
-                                }
-                                @Override
-                                public void onFailure(int code) {
-                                    setAaLogin(false);
-                                    loginFuture.complete(false);
-                                }
-                            });
-                        } else {
-                            loginFuture.complete(false);
-                        }
-                    });
-                } else {
-                    loginFuture.complete(false);
-                }
+                return attemptInitAndLogin();
+            }
+        });
+    }
+
+    private CompletableFuture<Boolean> attemptAaLogin() {
+        CompletableFuture<Boolean> loginFuture = new CompletableFuture<>();
+        MisDataManager.aaLogin(client, new WebCallback<String>() {
+            @Override
+            public void onResponse(String code) {
+                setAaLogin(true);
+                loginFuture.complete(true);
+            }
+            @Override
+            public void onFailure(int code) {
+                loginFuture.complete(false);
             }
         });
         return loginFuture;
+    }
+
+    private CompletableFuture<Boolean> attemptInitAndLogin() {
+        if (stuId == null || password == null) {
+            return CompletableFuture.completedFuture(false);
+        }
+        return init(stuId, password).thenCompose(isLoginMis -> {
+            if (isLoginMis) {
+                return attemptAaLogin();
+            } else {
+                return CompletableFuture.completedFuture(false);
+            }
+        });
     }
     // 获得成绩
     public CompletableFuture<List<Grade>> getGrade() {
