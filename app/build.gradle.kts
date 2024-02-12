@@ -8,14 +8,12 @@ android {
 
     defaultConfig {
         applicationId = "com.hfdlys.bjtuselfservice"
-        minSdk = 29
+        minSdk = 28
         targetSdk = 34
-        versionCode = 1
-        versionName = "v0.2.0-arm64v8a"
+        versionCode = 3
+        versionName = "v0.2.1-arm64v8a"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        ndk {
-            abiFilters.add("arm64-v8a")
-        }
+
     }
 
     buildTypes {
@@ -39,6 +37,15 @@ android {
             }
         }
     }
+
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a")
+        }
+    }
+
 }
 
 dependencies {

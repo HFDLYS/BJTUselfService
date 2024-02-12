@@ -54,10 +54,14 @@ public class GradeAdapter extends RecyclerView.Adapter<GradeAdapter.GradeViewHol
             gradeYear.setText(grade.courseYear);
             gradeScore.setText(grade.courseScore);
             gradeScore.setTextColor(0xFFFF0000);
-            try {
-                gradeScore.setTextColor(calculateGradeColor(Integer.parseInt(grade.courseScore.split(",")[1])));
-            } catch (NumberFormatException e) {
+            if (grade.courseScore.split(",")[1].equals("-")) {
                 gradeScore.setTextColor(0xFF000000);
+            } else {
+                try {
+                    gradeScore.setTextColor(calculateGradeColor(Integer.parseInt(grade.courseScore.split(",")[1])));
+                } catch (NumberFormatException e) {
+                    gradeScore.setTextColor(0xFF000000);
+                }
             }
         }
     }

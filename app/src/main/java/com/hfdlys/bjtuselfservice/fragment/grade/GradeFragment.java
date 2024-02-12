@@ -66,8 +66,17 @@ public class GradeFragment extends Fragment {
             double allCredit = 0;
             double allScore = 0;
             for (StudentAccountManager.Grade grade : grades) {
-                allCredit += Double.parseDouble(grade.courseCredits);
-                allScore += Double.parseDouble(grade.courseScore.split(",")[1]) * Double.parseDouble(grade.courseCredits);
+                try {
+                    allCredit += Double.parseDouble(grade.courseCredits);
+                    allScore += Double.parseDouble(grade.courseScore.split(",")[1]) * Double.parseDouble(grade.courseCredits);
+                } catch (Exception ignored) {
+                }
+            }
+            if (allCredit == 0) {
+                gradeInfo.setText("成绩好像都没出来哦~\n");
+                progressBar.setVisibility(View.GONE);
+                recyclerView.setAdapter(new GradeAdapter(grades));
+                return;
             }
             double gpa = allScore / allCredit;
             String info = "您的加权平均分是" + String.format("%.1f", gpa) + "\n";
@@ -89,7 +98,7 @@ public class GradeFragment extends Fragment {
             progressBar.setVisibility(View.GONE);
             recyclerView.setAdapter(new GradeAdapter(grades));
         });
-        if (gradeViewModel.getIsAaLogin().getValue()) {
+        if (Boolean.TRUE.equals(gradeViewModel.getIsAaLogin().getValue())) {
             gradeViewModel.loadGradeList();
         } else {
             gradeViewModel.getIsAaLogin().observe(getViewLifecycleOwner(), isLogin -> {

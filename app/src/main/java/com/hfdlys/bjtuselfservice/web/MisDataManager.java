@@ -238,6 +238,9 @@ public class MisDataManager {
                     String year = cols.get(1).text().replace("\n","").replace("\t","").replace(" ","");
                     String courseName = cols.get(2).text().replace("\n","").replace("\t","").replace(" ","");
                     String courseGPA = cols.get(3).text().replace("\n","").replace("\t","").replace(" ","");
+                    if (courseGPA.isEmpty()) {
+                        courseGPA = "0.0";
+                    }
                     String courseScore = cols.get(4).text().replace("\n","").replace("\t","").replace(" ","");
                     courseScore = convertAndFormatGradeScore(courseScore);
                     String teacher = cols.get(6).text().replace("\n","").replace("\t","").replace(" ","");

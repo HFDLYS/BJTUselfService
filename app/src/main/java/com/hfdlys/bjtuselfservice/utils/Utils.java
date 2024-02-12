@@ -1,25 +1,14 @@
 package com.hfdlys.bjtuselfservice.utils;
 
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-
-import androidx.annotation.NonNull;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-
-
-import okhttp3.Cookie;
-import okhttp3.CookieJar;
-import okhttp3.HttpUrl;
 
 
 
@@ -118,7 +107,7 @@ public class Utils {
                 int score = gradeToScoreMap.get(input);
                 return input + "," + score;
             } else {
-                return "Invalid input";
+                return "-,-";
             }
         }
     }
