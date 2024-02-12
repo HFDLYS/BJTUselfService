@@ -1,7 +1,6 @@
 package com.hfdlys.bjtuselfservice.fragment.home;
 
 import android.app.AlertDialog;
-import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -19,7 +18,6 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 
-import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.snackbar.Snackbar;
 import com.hfdlys.bjtuselfservice.R;
 import com.hfdlys.bjtuselfservice.StudentAccountManager;
@@ -61,40 +59,34 @@ public class HomeFragment extends Fragment {
             textView.setText(Introduce);
         });
 
-        cardMail.setOnClickListener(v -> {
-            showDialog("新邮件", "要看看新邮件吗",
-                    (dialog, which) -> {
-                NavController navController = Navigation.findNavController(getActivity(), R.id.nav_host_fragment_content_main);
-                navController.navigate(R.id.action_homeFragment_to_mailFragment);
-            });
-        });
-        cardEcard.setOnClickListener(v -> {
-            showDialog("校园卡充值", "不好意思直接转跳微信成本还是太高，不过\n注意：以下操作需微信绑定学校企业号\n请分享至微信，后打开（莫吐槽🙏）哦",
-                    (dialog, which) -> {
-                Intent intent = new Intent();
-                intent.setComponent(new ComponentName("com.newcapec.mobile.ncp", "com.wanxiao.basebusiness.activity.SplashActivity"));
-                try {
-                    startActivity(intent);
-                } catch (Exception e) {
-                    Snackbar.make(binding.getRoot(), "未找到“完美校园”app", Snackbar.LENGTH_LONG).show();
-                }
-            });
-        });
-        cardNet.setOnClickListener(v -> {
-            showDialog("校园网续费", "不好意思直接转跳微信成本还是太高，不过\n注意：以下操作需微信绑定学校企业号\n请分享至微信，后打开（莫吐槽🙏）哦",
-                    (dialog, which) -> {
-                Intent shareIntent = new Intent();
-                shareIntent.setAction(Intent.ACTION_SEND);
-                shareIntent.setType("text/plain");
-                shareIntent.putExtra(Intent.EXTRA_TEXT, "https://weixin.bjtu.edu.cn/pay/wap/network/recharge.html");
-                Intent chooser = Intent.createChooser(shareIntent, "请选择：“微信：发送给朋友”");
-                try {
-                    startActivity(chooser);
-                } catch (Exception e) {
-                    Snackbar.make(binding.getRoot(), "未找到“微信”app？？？？", Snackbar.LENGTH_LONG).show();
-                }
-            });
-        });
+        cardMail.setOnClickListener(v -> showDialog("新邮件", "要看看新邮件吗",
+                (dialog, which) -> {
+            NavController navController = Navigation.findNavController(getActivity(), R.id.nav_host_fragment_content_main);
+            navController.navigate(R.id.action_homeFragment_to_mailFragment);
+        }));
+        cardEcard.setOnClickListener(v -> showDialog("校园卡充值", "请注意，接下来即将转跳“完美校园”app\n确保自己已安装哦☺️",
+                (dialog, which) -> {
+            Intent intent = new Intent();
+            intent.setComponent(new ComponentName("com.newcapec.mobile.ncp", "com.wanxiao.basebusiness.activity.SplashActivity"));
+            try {
+                startActivity(intent);
+            } catch (Exception e) {
+                Snackbar.make(binding.getRoot(), "未找到“完美校园”app", Snackbar.LENGTH_LONG).show();
+            }
+        }));
+        cardNet.setOnClickListener(v -> showDialog("校园网续费", "不好意思直接转跳微信成本还是太高，不过\n注意：以下操作需微信绑定学校企业号\n请分享至微信，后打开（莫吐槽🙏）哦",
+                (dialog, which) -> {
+            Intent shareIntent = new Intent();
+            shareIntent.setAction(Intent.ACTION_SEND);
+            shareIntent.setType("text/plain");
+            shareIntent.putExtra(Intent.EXTRA_TEXT, "https://weixin.bjtu.edu.cn/pay/wap/network/recharge.html");
+            Intent chooser = Intent.createChooser(shareIntent, "请选择：“微信：发送给朋友”");
+            try {
+                startActivity(chooser);
+            } catch (Exception e) {
+                Snackbar.make(binding.getRoot(), "未找到“微信”app？？？？", Snackbar.LENGTH_LONG).show();
+            }
+        }));
 
         homeViewModel.getStatus().observe(getViewLifecycleOwner(), status -> {
                 String EcardBalance = "校园卡余额：" + status.EcardBalance;
