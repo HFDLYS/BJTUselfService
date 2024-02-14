@@ -115,10 +115,11 @@ public class HomeFragment extends Fragment {
 
     }
     private void showDialog(String title, String message, DialogInterface.OnClickListener positiveListener) {
-        new AlertDialog.Builder(getContext())
+        new AlertDialog.Builder(getContext(), R.style.AlertDialogStyle)
                 .setTitle(title)
                 .setMessage(message)
                 .setPositiveButton(android.R.string.ok, positiveListener)
+                .setNegativeButton(android.R.string.cancel, null)
                 .create()
                 .show();
     }

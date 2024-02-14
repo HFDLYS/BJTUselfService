@@ -45,6 +45,7 @@
             <ProgressBar
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                style="@style/IcProgressBarStyle"
                 android:id="@+id/loadingStatus"
                 android:indeterminate="true" />
 

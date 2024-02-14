@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@android:color/white"
+    android:background="@drawable/dialog_background"
     android:paddingLeft="100dp"
     android:paddingRight="100dp"
     android:paddingTop="60dp"
@@ -13,12 +13,13 @@
     <ProgressBar
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        style="@style/IcProgressBarStyle"
         android:indeterminate="true"/>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="加载中..."
+        android:text="@string/loading"
         android:layout_marginTop="10dp"/>
 
 </LinearLayout>

@@ -11,8 +11,9 @@
         android:layout_height="match_parent"/>
     <ProgressBar
         android:id="@+id/loading"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        style="@style/IcProgressBarStyle"
+        android:layout_width="96dp"
+        android:layout_height="96dp"
         android:layout_gravity="center"
         android:layout_marginStart="32dp"
         android:layout_marginTop="64dp"

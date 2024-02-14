@@ -10,8 +10,8 @@ android {
         applicationId = "com.hfdlys.bjtuselfservice"
         minSdk = 28
         targetSdk = 34
-        versionCode = 3
-        versionName = "v0.2.1-arm64v8a"
+        versionCode = 4
+        versionName = "v0.3.0-arm64v8a"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
     }

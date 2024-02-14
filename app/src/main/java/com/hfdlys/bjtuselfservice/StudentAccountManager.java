@@ -129,7 +129,7 @@ public class StudentAccountManager {
 
             @Override
             public void onFailure(int code) {
-                if (retries > 0) {
+                if (retries > 0 && (code == 0)) {
                     System.out.println("Login failed, retrying...");
                     attemptLoginWithRetry(stuId, password, retries - 1).whenComplete((result, ex) -> {
                         if (ex != null) {
