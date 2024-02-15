@@ -131,6 +131,10 @@ public class MisDataManager {
                                                 if (response.request().url().toString().equals("https://mis.bjtu.edu.cn/home/")) {
                                                     Document doc = Jsoup.parse(response.body().string());
                                                     Element name = doc.selectFirst(".name_right > h3 > a");
+                                                    if (name == null) {
+                                                        loginCallback.onFailure(1);
+                                                        return;
+                                                    }
                                                     String nameStr = name.text().split("，")[0];
                                                     Element id = doc.selectFirst(".name_right .nr_con span:contains(身份)");
                                                     String idStr = id.text().replace("身份：", "");
@@ -226,10 +230,14 @@ public class MisDataManager {
             }
 
             @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try {
                     List<StudentAccountManager.Grade> gradeList = new ArrayList<>();
                     Document doc = Jsoup.parse(response.body().string());
+                    if (doc.selectFirst("table") == null) {
+                        ResCallback.onFailure(1);
+                        return;
+                    }
                     Element table = doc.selectFirst("table");
                     Elements rows = table.select("tr");
                     rows.remove(0);
@@ -271,6 +279,10 @@ public class MisDataManager {
                 try {
                     Document doc = Jsoup.parse(response.body().string());
                     Element table = doc.selectFirst("tbody");
+                    if (table == null) {
+                        ResCallback.onFailure(1);
+                        return;
+                    }
                     Elements rows = table.select("tr");
                     List<ExamSchedule> examScheduleList = new ArrayList<>();
                     for (Element row : rows) {
@@ -309,6 +321,10 @@ public class MisDataManager {
                 try {
                     Document doc = Jsoup.parse(response.body().string());
                     Element table = doc.selectFirst("table");
+                    if (table == null) {
+                        ResCallback.onFailure(1);
+                        return;
+                    }
                     Elements rows = table.select("tr");
                     List<StudentAccountManager.Course> courseList = new ArrayList<>();
                     rows.remove(0);

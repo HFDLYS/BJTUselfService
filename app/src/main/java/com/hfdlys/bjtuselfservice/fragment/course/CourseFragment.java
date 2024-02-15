@@ -28,6 +28,7 @@ import android.widget.GridLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.hfdlys.bjtuselfservice.R;
 import com.hfdlys.bjtuselfservice.StudentAccountManager;
@@ -75,7 +76,9 @@ public class CourseFragment extends Fragment {
         loadTermData(switchTerm.isChecked());
         CourseViewModel.getCourseList().observe(getViewLifecycleOwner(), courseList -> {
             if (courseList == null) {
-
+                Snackbar.make(view, "课表加载失败😭", Snackbar.LENGTH_LONG)
+                        .setAction("Action", null).show();
+                loading.setVisibility(View.GONE);
             } else {
                 initCourseGrid();
                 for (int i = 0; i < courseList.size(); i++) {
