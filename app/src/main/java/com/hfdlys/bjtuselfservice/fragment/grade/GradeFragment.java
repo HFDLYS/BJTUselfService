@@ -1,25 +1,21 @@
 package com.hfdlys.bjtuselfservice.fragment.grade;
 
-import androidx.lifecycle.ViewModelProvider;
-
+import android.annotation.SuppressLint;
 import android.os.Bundle;
-
-import com.google.android.material.card.MaterialCardView;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.widget.ProgressBar;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.TextView;
-
 import com.google.android.material.snackbar.Snackbar;
-import com.hfdlys.bjtuselfservice.R;
 import com.hfdlys.bjtuselfservice.StudentAccountManager;
 import com.hfdlys.bjtuselfservice.databinding.FragmentGradeBinding;
 
@@ -79,7 +75,7 @@ public class GradeFragment extends Fragment {
                 return;
             }
             double gpa = allScore / allCredit;
-            String info = "您的加权平均分是" + String.format("%.1f", gpa) + "\n";
+            @SuppressLint("DefaultLocale") String info = "您的加权平均分是" + String.format("%.1f", gpa);
             gradeInfo.setText(info);
             String greeting;
             if (gpa >= 90) {
