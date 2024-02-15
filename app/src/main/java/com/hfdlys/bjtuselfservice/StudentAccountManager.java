@@ -68,6 +68,20 @@ public class StudentAccountManager {
         }
     }
 
+    public static class Course {
+        public String CourseId;
+        public String CourseName;
+        public String CourseTeacher;
+        public String CourseTime;
+        public String CoursePlace;
+        public Course(String CourseId, String CourseName, String CourseTeacher, String CourseTime, String CoursePlace) {
+            this.CourseId = CourseId;
+            this.CourseName = CourseName;
+            this.CourseTeacher = CourseTeacher;
+            this.CourseTime = CourseTime;
+            this.CoursePlace = CoursePlace;
+        }
+    }
     private StudentInfo stuInfo;
     private String stuId = null;
     private String password = null;
@@ -203,7 +217,11 @@ public class StudentAccountManager {
                 }
                 @Override
                 public void onFailure(int code) {
-                    gradeFuture.completeExceptionally(new Exception("No connection"));
+                    if (code == 0) {
+                        gradeFuture.completeExceptionally(new Exception("No connection"));
+                    } else if (code == 1) {
+                        gradeFuture.completeExceptionally(new Exception("Rate limit exceeded"));
+                    }
                 }
             });
         } else {
@@ -221,8 +239,12 @@ public class StudentAccountManager {
                     Future.complete(obj);
                 }
                 @Override
-                public void onFailure(int errcode) {
-                    Future.completeExceptionally(new Exception("No connection"));
+                public void onFailure(int code) {
+                    if (code == 0) {
+                        Future.completeExceptionally(new Exception("No connection"));
+                    } else if (code == 1) {
+                        Future.completeExceptionally(new Exception("Rate limit exceeded"));
+                    }
                 }
             });
         } else {
@@ -251,6 +273,31 @@ public class StudentAccountManager {
             }
         });
         return statusFuture;
+    }
+
+    public CompletableFuture<List<Course>> getCourseList(boolean isCurrentTerm) {
+        CompletableFuture<List<Course>> Future = new CompletableFuture<>();
+        checkIsLogin().thenAccept(isLogin -> {
+            if (isLogin) {
+                MisDataManager.getCourse(client, isCurrentTerm,  new WebCallback<List<Course>>() {
+                    @Override
+                    public void onResponse(List<Course> resp) {
+                        Future.complete(resp);
+                    }
+                    @Override
+                    public void onFailure(int code) {
+                        if (code == 0) {
+                            Future.completeExceptionally(new Exception("No connection"));
+                        } else if (code == 1) {
+                            Future.completeExceptionally(new Exception("Rate limit exceeded"));
+                        }
+                    }
+                });
+            } else {
+                Future.completeExceptionally(new Exception("Not loginAa"));
+            }
+        });
+        return Future;
     }
 
     public String getStuId() {

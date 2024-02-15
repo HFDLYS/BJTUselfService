@@ -204,7 +204,6 @@ public class MisDataManager {
                     @Override
                     public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                         if (response.request().url().toString().equals("https://aa.bjtu.edu.cn/notice/item/")) {
-                            OkHttpClient tt = client;
                             loginCallback.onResponse(response.request().url().toString());
                         } else {
                             loginCallback.onFailure(1);
@@ -228,26 +227,30 @@ public class MisDataManager {
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                List<StudentAccountManager.Grade> gradeList = new ArrayList<>();
-                Document doc = Jsoup.parse(response.body().string());
-                Element table = doc.selectFirst("table");
-                Elements rows = table.select("tr");
-                rows.remove(0);
-                for (Element row : rows) {
-                    Elements cols = row.select("td");
-                    String year = cols.get(1).text().replace("\n","").replace("\t","").replace(" ","");
-                    String courseName = cols.get(2).text().replace("\n","").replace("\t","").replace(" ","");
-                    String courseGPA = cols.get(3).text().replace("\n","").replace("\t","").replace(" ","");
-                    if (courseGPA.isEmpty()) {
-                        courseGPA = "0.0";
+                try {
+                    List<StudentAccountManager.Grade> gradeList = new ArrayList<>();
+                    Document doc = Jsoup.parse(response.body().string());
+                    Element table = doc.selectFirst("table");
+                    Elements rows = table.select("tr");
+                    rows.remove(0);
+                    for (Element row : rows) {
+                        Elements cols = row.select("td");
+                        String year = cols.get(1).text().replace("\n", "").replace("\t", "").replace(" ", "");
+                        String courseName = cols.get(2).text().replace("\n", "").replace("\t", "").replace(" ", "");
+                        String courseGPA = cols.get(3).text().replace("\n", "").replace("\t", "").replace(" ", "");
+                        if (courseGPA.isEmpty()) {
+                            courseGPA = "0.0";
+                        }
+                        String courseScore = cols.get(4).text().replace("\n", "").replace("\t", "").replace(" ", "");
+                        courseScore = convertAndFormatGradeScore(courseScore);
+                        String teacher = cols.get(6).text().replace("\n", "").replace("\t", "").replace(" ", "");
+                        StudentAccountManager.Grade grade = new StudentAccountManager.Grade(courseName, teacher, courseScore, courseGPA, year);
+                        gradeList.add(grade);
                     }
-                    String courseScore = cols.get(4).text().replace("\n","").replace("\t","").replace(" ","");
-                    courseScore = convertAndFormatGradeScore(courseScore);
-                    String teacher = cols.get(6).text().replace("\n","").replace("\t","").replace(" ","");
-                    StudentAccountManager.Grade grade = new StudentAccountManager.Grade(courseName, teacher, courseScore, courseGPA, year);
-                    gradeList.add(grade);
+                    ResCallback.onResponse(gradeList);
+                } catch (IOException e) {
+                    ResCallback.onFailure(1);
                 }
-                ResCallback.onResponse(gradeList);
             }
         });
     }
@@ -265,26 +268,88 @@ public class MisDataManager {
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                Document doc = Jsoup.parse(response.body().string());
-                Element table = doc.selectFirst("tbody");
-                Elements rows = table.select("tr");
-                List<ExamSchedule> examScheduleList = new ArrayList<>();
-                for (Element row : rows) {
-                    Elements cols = row.select("td");
-                    String type = cols.get(1).text();
-                    String CourseName = cols.get(2).text();
-                    String ExamTime = cols.get(3).text();
-                    String ExamStatus = cols.get(4).text();
-                    String Detail = cols.get(5).text();
+                try {
+                    Document doc = Jsoup.parse(response.body().string());
+                    Element table = doc.selectFirst("tbody");
+                    Elements rows = table.select("tr");
+                    List<ExamSchedule> examScheduleList = new ArrayList<>();
+                    for (Element row : rows) {
+                        Elements cols = row.select("td");
+                        String type = cols.get(1).text();
+                        String CourseName = cols.get(2).text();
+                        String ExamTime = cols.get(3).text();
+                        String ExamStatus = cols.get(4).text();
+                        String Detail = cols.get(5).text();
 
 
-                    examScheduleList.add(new ExamSchedule(type, CourseName, ExamTime, ExamStatus, Detail));
+                        examScheduleList.add(new ExamSchedule(type, CourseName, ExamTime, ExamStatus, Detail));
+                    }
+                    ResCallback.onResponse(examScheduleList);
+                } catch (IOException e) {
+                    ResCallback.onFailure(1);
                 }
-                ResCallback.onResponse(examScheduleList);
             }
         });
     }
 
+    public static void getCourse(OkHttpClient client, Boolean isChecked, WebCallback<List<StudentAccountManager.Course>> ResCallback) {
+        String url = !isChecked ? "https://aa.bjtu.edu.cn/course_selection/courseselect/stuschedule/" : "https://aa.bjtu.edu.cn/course_selection/courseselecttask/schedule/";
+        Request request = new Request.Builder()
+                .url(url)
+                .header("Host", "aa.bjtu.edu.cn")
+                .build();
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                ResCallback.onFailure(0);
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
+                try {
+                    Document doc = Jsoup.parse(response.body().string());
+                    Element table = doc.selectFirst("table");
+                    Elements rows = table.select("tr");
+                    List<StudentAccountManager.Course> courseList = new ArrayList<>();
+                    rows.remove(0);
+                    for (Element row : rows) {
+                        Elements cols = row.select("td");
+                        cols.remove(0);
+                        courseList.add(null);
+                        for (Element col : cols) {
+                            if (col.text().isEmpty()) {
+                                courseList.add(null);
+                            } else {
+                                String rawIdAndName;
+                                String courseId;
+                                String courseName;
+                                if (!isChecked) {
+                                    rawIdAndName = col.child(0).html();
+                                } else {
+                                    rawIdAndName = col.select("span").first().html();
+                                }
+                                String[] idAndNameParts = rawIdAndName.split("<br>", 2);
+                                courseId = Jsoup.parse(idAndNameParts[0]).text().trim();
+                                if (!isChecked) {
+                                    courseName = Jsoup.parse(idAndNameParts[1]).select("span").first().text().trim();
+                                } else {
+                                    courseName = Jsoup.parse(idAndNameParts[1]).text().trim();
+                                }
+                                String courseTeacher = col.select("i").first().text();
+                                String courseTime = col.select("div[style=max-width:120px;]").first().ownText();
+                                String coursePlace = col.select("span.text-muted").first().text().replace(" ", "").replace("\n", "");
+                                StudentAccountManager.Course course = new StudentAccountManager.Course(courseId, courseName, courseTeacher, courseTime, coursePlace);
+                                courseList.add(course);
+                            }
+                        }
+                    }
+                    ResCallback.onResponse(courseList);
+                } catch (IOException e) {
+                    ResCallback.onFailure(1);
+                }
+            }
+        });
+    }
 
     public static void getStatus(OkHttpClient client, WebCallback<Status> ResCallback) {
         Request request = new Request.Builder()

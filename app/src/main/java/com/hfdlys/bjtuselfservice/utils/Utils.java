@@ -9,7 +9,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
-
+import java.util.Random;
 
 
 public class Utils {
@@ -126,16 +126,12 @@ public class Utils {
         return 0xFF000000 | (red << 16) | (green << 8);
     }
 
-    public class StudentInfo {
-        public String stuName;
-        public String stuClass;
-        public String stuDepartment;
-        public String stuId;
-        public StudentInfo(String stuName, String stuId, String stuDepartment, String stuClass) {
-            this.stuName = stuName;
-            this.stuClass = stuClass;
-            this.stuDepartment = stuDepartment;
-            this.stuId = stuId;
-        }
+    public static String generateRandomColor(String courseId) {
+        long seed = courseId.hashCode();
+        Random random = new Random(seed);
+        int r = 125 + random.nextInt(101);
+        int g = 145 + random.nextInt(101);
+        int b = 235 - random.nextInt(91);
+        return String.format("#%02X%02X%02X", r, g, b);
     }
 }
