@@ -63,8 +63,8 @@ public class GradeFragment extends Fragment {
             double allScore = 0;
             for (StudentAccountManager.Grade grade : grades) {
                 try {
-                    allCredit += Double.parseDouble(grade.courseCredits);
                     allScore += Double.parseDouble(grade.courseScore.split(",")[1]) * Double.parseDouble(grade.courseCredits);
+                    allCredit += Double.parseDouble(grade.courseCredits);
                 } catch (Exception ignored) {
                 }
             }

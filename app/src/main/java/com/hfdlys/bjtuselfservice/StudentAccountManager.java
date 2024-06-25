@@ -206,7 +206,7 @@ public class StudentAccountManager {
         });
     }
     // 获得成绩
-    public CompletableFuture<List<Grade>> getGrade() {
+    public CompletableFuture<List<Grade>> getGrade(String ctype) {
         CompletableFuture<List<Grade>> gradeFuture = new CompletableFuture<>();
         if (isAaLogin) {
             MisDataManager.getGrade(client, new WebCallback<List<Grade>>() {
@@ -223,7 +223,7 @@ public class StudentAccountManager {
                         gradeFuture.completeExceptionally(new Exception("Rate limit exceeded"));
                     }
                 }
-            });
+            }, ctype);
         } else {
             gradeFuture.completeExceptionally(new Exception("Not loginAa"));
         }

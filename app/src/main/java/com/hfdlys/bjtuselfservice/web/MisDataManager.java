@@ -218,9 +218,9 @@ public class MisDataManager {
         });
     }
 
-    public static void getGrade(OkHttpClient client, WebCallback ResCallback) {
+    public static void getGrade(OkHttpClient client, WebCallback ResCallback, String ctype) {
         Request request = new Request.Builder()
-                .url("https://aa.bjtu.edu.cn/score/scores/stu/view/")
+                .url("https://aa.bjtu.edu.cn/score/scores/stu/view/?page=1&perpage=500&ctype=" + ctype)
                 .header("Host", "aa.bjtu.edu.cn")
                 .build();
         client.newCall(request).enqueue(new Callback() {
@@ -250,7 +250,11 @@ public class MisDataManager {
                             courseGPA = "0.0";
                         }
                         String courseScore = cols.get(4).text().replace("\n", "").replace("\t", "").replace(" ", "");
-                        courseScore = convertAndFormatGradeScore(courseScore);
+                        try {
+                            courseScore = convertAndFormatGradeScore(courseScore);
+                        } catch (Exception e) {
+                            courseScore = "***";
+                        }
                         String teacher = cols.get(6).text().replace("\n", "").replace("\t", "").replace(" ", "");
                         StudentAccountManager.Grade grade = new StudentAccountManager.Grade(courseName, teacher, courseScore, courseGPA, year);
                         gradeList.add(grade);
