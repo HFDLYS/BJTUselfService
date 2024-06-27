@@ -388,7 +388,7 @@ public class MisDataManager {
                 try {
                     jsonObject = new JSONObject(response.body().string());
                     String netFee = jsonObject.getString("net_fee");
-                    double ecardYuer = jsonObject.getDouble("ecard_yuer");
+                    String ecardYuer = jsonObject.getString("ecard_yuer");
                     String newmailCount = jsonObject.getString("newmail_count");
                     Status status = new Status(newmailCount, ecardYuer, netFee);
                     ResCallback.onResponse(status);

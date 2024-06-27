@@ -92,8 +92,11 @@ public class HomeFragment extends Fragment {
                 String EcardBalance = "校园卡余额：" + status.EcardBalance;
                 String NetBalance = "校园网余额：" + status.NetBalance;
                 String NewMailCount = "新邮件：" + status.NewMailCount;
-                if (status.EcardBalance < 20) {
-                    EcardBalance += "，会不会不够用了";
+                try {
+                    if (Double.parseDouble(status.EcardBalance) < 20) {
+                        EcardBalance += "，会不会不够用了";
+                    }
+                } catch (Exception ignored) {
                 }
                 if (!status.NewMailCount.equals("0")) {
                     NewMailCount += "，记得去看哦";

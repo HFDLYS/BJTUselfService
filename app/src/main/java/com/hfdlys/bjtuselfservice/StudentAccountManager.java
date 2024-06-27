@@ -45,9 +45,9 @@ public class StudentAccountManager {
     }
     public static class Status {
         public String NewMailCount;
-        public double EcardBalance;
+        public String EcardBalance;
         public String NetBalance;
-        public Status(String NewMailCount, double EcardBalance, String NetBalance) {
+        public Status(String NewMailCount, String EcardBalance, String NetBalance) {
             this.NewMailCount = NewMailCount;
             this.EcardBalance = EcardBalance;
             this.NetBalance = NetBalance;
@@ -265,11 +265,11 @@ public class StudentAccountManager {
                     }
                     @Override
                     public void onFailure(int code) {
-                        statusFuture.complete(new Status("0", 0D, "0"));
+                        statusFuture.complete(new Status("0", "0", "0"));
                     }
                 });
             } else {
-                statusFuture.complete(new Status("0", 0D, "0"));
+                statusFuture.complete(new Status("0", "0", "0"));
             }
         });
         return statusFuture;
