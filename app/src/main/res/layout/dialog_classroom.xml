@@ -4,15 +4,11 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@drawable/dialog_background"
-    android:paddingLeft="100dp"
-    android:paddingRight="100dp"
-    android:paddingTop="60dp"
-    android:paddingBottom="60dp"
     android:gravity="center">
 
     <WebView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="400dp"
+        android:layout_height="200dp"
         android:id="@+id/classroomWebView"/>
 
 </LinearLayout>

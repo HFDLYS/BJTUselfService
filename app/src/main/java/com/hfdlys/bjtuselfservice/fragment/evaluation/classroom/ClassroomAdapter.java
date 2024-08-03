@@ -66,7 +66,7 @@ public class ClassroomAdapter extends RecyclerView.Adapter<ClassroomAdapter.View
             dialog.setContentView(R.layout.dialog_classroom);
             Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
 
-            dialog.show();
+
             WebView webView = dialog.findViewById(R.id.classroomWebView);
             WebSettings settings = webView.getSettings();
             settings.setUseWideViewPort(true);
@@ -80,9 +80,8 @@ public class ClassroomAdapter extends RecyclerView.Adapter<ClassroomAdapter.View
             });
             String postData = "buildi=" + buildingName + "&classrooms=" + classroomName;
             byte[] postDataBytes = postData.getBytes(StandardCharsets.UTF_8);
-            // webView.postUrl("http://101.43.129.190:2333/classroom/", postDataBytes);
-            webView.loadUrl("https://www.baidu.com");
-
+            webView.postUrl("http://101.43.129.190:2333/classroom/", postDataBytes);
+            dialog.show();
         });
         int percentage = (int) ((float) occupied / total * 10000);
         holder.classroomName.setText(classroomName);
