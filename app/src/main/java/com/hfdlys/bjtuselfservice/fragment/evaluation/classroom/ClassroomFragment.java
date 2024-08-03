@@ -1,7 +1,10 @@
 package com.hfdlys.bjtuselfservice.fragment.evaluation.classroom;
 
+import androidx.appcompat.app.AlertDialog;
+import androidx.cardview.widget.CardView;
 import androidx.lifecycle.ViewModelProvider;
 
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -21,6 +24,11 @@ import com.hfdlys.bjtuselfservice.R;
 import com.hfdlys.bjtuselfservice.databinding.FragmentClassroomBinding;
 import com.hfdlys.bjtuselfservice.utils.Network;
 import com.hfdlys.bjtuselfservice.web.ClassroomCapacityService;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
 
 public class ClassroomFragment extends Fragment {
 
@@ -46,9 +54,12 @@ public class ClassroomFragment extends Fragment {
         TextView beginTime = binding.beginTime;
         TextView endTime = binding.endTime;
         ProgressBar progressBar = binding.loading;
+        CardView sortCard = binding.sortCard;
+        TextView sortBy = binding.sortBy;
         RecyclerView classroomRecyclerView = binding.classroomRecycler;
         progressBar.setVisibility(View.VISIBLE);
         String building = getArguments().getString("buildingName");
+        List<ClassroomCapacityService.ClassroomCapacity> classroomList = new ArrayList<>();
         classroomRecyclerView.setLayoutManager(new LinearLayoutManager(this.getContext()));
         if (building != null) {
             buildingName.setText(building);
@@ -68,12 +79,45 @@ public class ClassroomFragment extends Fragment {
                         beginTime.setText("From: " + data.EffectiveDateStart);
                         endTime.setText("To: " + data.EffectiveDateEnd);
                         ClassroomAdapter adapter = new ClassroomAdapter(data.ClassroomList, building);
+                        classroomList.clear();
+                        classroomList.addAll(data.ClassroomList);
                         progressBar.setVisibility(View.GONE);
                         classroomRecyclerView.setAdapter(adapter);
                     }
                 });
             });
         }
+
+        sortCard.setOnClickListener(v -> {
+            AlertDialog.Builder builder = new AlertDialog.Builder(v.getContext());
+            builder.setTitle("选择排序方式");
+            builder.setItems(new String[]{"按教室名称排序", "按教室占比排序", "按教室总人数排序"}, (dialog, which) -> {
+                switch (which) {
+                    case 0:
+                        classroomList.sort(Comparator.comparing(o -> o.RoomName));
+                        sortBy.setText("教室名");
+                        break;
+                    case 1:
+                        classroomList.sort((o1, o2) -> o1.Used * o2.Capacity - o2.Used * o1.Capacity);
+                        sortBy.setText("占比");
+                        break;
+                    case 2:
+                        classroomList.sort((o1, o2) -> {
+                            if (o1.Used == o2.Used) return o1.Capacity - o2.Capacity;
+                            return o1.Used - o2.Used;
+                        });
+                        sortBy.setText("总人数");
+                        break;
+                }
+                ClassroomAdapter adapter = new ClassroomAdapter(classroomList, building);
+                classroomRecyclerView.setAdapter(adapter);
+            });
+            AlertDialog dialog = builder.create();
+            dialog.setOnShowListener(e -> {
+                Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawableResource(R.drawable.dialog_background);
+            });
+            dialog.show();
+        });
     }
 
 }

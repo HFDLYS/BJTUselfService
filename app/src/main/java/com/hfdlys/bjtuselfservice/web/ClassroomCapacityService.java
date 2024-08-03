@@ -8,6 +8,7 @@ import java.util.concurrent.CompletableFuture;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 
+import com.hfdlys.bjtuselfservice.constant.ApiConstant;
 import com.hfdlys.bjtuselfservice.utils.Network.WebCallback;
 
 import org.json.JSONArray;
@@ -41,7 +42,7 @@ public class ClassroomCapacityService {
         CompletableFuture<BuildingInfo> future = new CompletableFuture<>();
         OkHttpClient client = new OkHttpClient();
         Request request = new Request.Builder()
-                .url("http://101.43.129.190:2333/api/classnum/?building=" + BuildingName)
+                .url(ApiConstant.CLASSROOM_CAPACITY_URL + BuildingName)
                 .build();
         client.newCall(request).enqueue(new okhttp3.Callback() {
             @Override

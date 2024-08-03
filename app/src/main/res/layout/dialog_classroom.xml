@@ -2,13 +2,18 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:paddingLeft="6dp"
+    android:paddingRight="6dp"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp"
     android:orientation="vertical"
     android:background="@drawable/dialog_background"
     android:gravity="center">
 
     <WebView
-        android:layout_width="400dp"
-        android:layout_height="200dp"
+        android:layout_width="360dp"
+        android:layout_height="150dp"
+        android:layout_gravity="center"
         android:id="@+id/classroomWebView"/>
 
 </LinearLayout>

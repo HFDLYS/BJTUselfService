@@ -17,6 +17,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.hfdlys.bjtuselfservice.R;
+import com.hfdlys.bjtuselfservice.constant.ApiConstant;
 import com.hfdlys.bjtuselfservice.web.ClassroomCapacityService.ClassroomCapacity;
 
 import java.nio.charset.StandardCharsets;
@@ -26,6 +27,8 @@ import java.util.Objects;
 public class ClassroomAdapter extends RecyclerView.Adapter<ClassroomAdapter.ViewHolder> {
     private List<ClassroomCapacity> classroomList;
     private String buildingName;
+
+    private int pressTimes[];
 
     public ClassroomAdapter(List<ClassroomCapacity> classroomList, String buildingName) {
         this.classroomList = classroomList;
@@ -43,6 +46,7 @@ public class ClassroomAdapter extends RecyclerView.Adapter<ClassroomAdapter.View
             classroomOccupied = itemView.findViewById(R.id.classroom_occupied);
             percentageBar = itemView.findViewById(R.id.occupy_percent);
             errorText = itemView.findViewById(R.id.text_view_placeholder);
+            pressTimes = new int[classroomList.size()];
         }
     }
 
@@ -62,6 +66,21 @@ public class ClassroomAdapter extends RecyclerView.Adapter<ClassroomAdapter.View
         int occupied = classroom.Used;
         int total = classroom.Capacity;
         holder.itemView.setOnClickListener(v -> {
+            int flag = 0;
+            for (int i = 0; i < pressTimes.length; i++) {
+                if (i == position) {
+                    pressTimes[i]++;
+                    if (pressTimes[i] == 10) {
+                        pressTimes[i] = 0;
+                        flag = 1;
+                    }
+                } else {
+                    pressTimes[i] = 0;
+                }
+            }
+            if (flag == 0) {
+                return;
+            }
             Dialog dialog = new Dialog(v.getContext());
             dialog.setContentView(R.layout.dialog_classroom);
             Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
@@ -80,7 +99,7 @@ public class ClassroomAdapter extends RecyclerView.Adapter<ClassroomAdapter.View
             });
             String postData = "buildi=" + buildingName + "&classrooms=" + classroomName;
             byte[] postDataBytes = postData.getBytes(StandardCharsets.UTF_8);
-            webView.postUrl("http://101.43.129.190:2333/classroom/", postDataBytes);
+            webView.postUrl(ApiConstant.CLASSROOM_VIEW_URL, postDataBytes);
             dialog.show();
         });
         int percentage = (int) ((float) occupied / total * 10000);
