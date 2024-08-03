@@ -8,6 +8,7 @@
     android:focusable="true"
     android:layout_marginBottom="2dp"
     android:foreground="?attr/selectableItemBackground"
+    app:cardBackgroundColor="@color/grey_200"
     app:cardElevation="4dp"
     app:cardCornerRadius="8dp">
     <LinearLayout

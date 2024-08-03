@@ -8,6 +8,7 @@
     android:focusable="true"
     android:layout_marginBottom="2dp"
     android:foreground="?attr/selectableItemBackground"
+    app:cardBackgroundColor="@color/grey_200"
     app:cardElevation="4dp"
     app:cardCornerRadius="8dp">
     <LinearLayout
@@ -53,6 +54,11 @@
             android:layout_marginStart="12dp"
             android:textColor="@color/material_dynamic_secondary70"
             android:text="备注" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/black" />
 
         <TextView
             android:id="@+id/time_place"
