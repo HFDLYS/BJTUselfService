@@ -17,6 +17,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.hfdlys.bjtuselfservice.R;
+import com.hfdlys.bjtuselfservice.constant.ApiConstant;
 import com.hfdlys.bjtuselfservice.web.ClassroomCapacityService.ClassroomCapacity;
 
 import java.nio.charset.StandardCharsets;
@@ -80,7 +81,7 @@ public class ClassroomAdapter extends RecyclerView.Adapter<ClassroomAdapter.View
             });
             String postData = "buildi=" + buildingName + "&classrooms=" + classroomName;
             byte[] postDataBytes = postData.getBytes(StandardCharsets.UTF_8);
-            webView.postUrl("http://101.43.129.190:2333/classroom/", postDataBytes);
+            webView.postUrl(ApiConstant.CLASSROOM_VIEW_URL, postDataBytes);
             dialog.show();
         });
         int percentage = (int) ((float) occupied / total * 10000);
