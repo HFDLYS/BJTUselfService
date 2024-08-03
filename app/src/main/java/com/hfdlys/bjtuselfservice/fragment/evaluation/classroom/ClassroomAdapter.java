@@ -1,8 +1,15 @@
 package com.hfdlys.bjtuselfservice.fragment.evaluation.classroom;
 
+import android.annotation.SuppressLint;
+import android.app.Dialog;
+import android.graphics.drawable.ColorDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -12,13 +19,17 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.hfdlys.bjtuselfservice.R;
 import com.hfdlys.bjtuselfservice.web.ClassroomCapacityService.ClassroomCapacity;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Objects;
 
 public class ClassroomAdapter extends RecyclerView.Adapter<ClassroomAdapter.ViewHolder> {
     private List<ClassroomCapacity> classroomList;
+    private String buildingName;
 
-    public ClassroomAdapter(List<ClassroomCapacity> classroomList) {
+    public ClassroomAdapter(List<ClassroomCapacity> classroomList, String buildingName) {
         this.classroomList = classroomList;
+        this.buildingName = buildingName;
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
@@ -43,12 +54,36 @@ public class ClassroomAdapter extends RecyclerView.Adapter<ClassroomAdapter.View
         return new ViewHolder(view);
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
     @Override
     public void onBindViewHolder(@NonNull ClassroomAdapter.ViewHolder holder, int position) {
         ClassroomCapacity classroom = classroomList.get(position);
         String classroomName = classroom.RoomName;
         int occupied = classroom.Used;
         int total = classroom.Capacity;
+        holder.itemView.setOnClickListener(v -> {
+            Dialog dialog = new Dialog(v.getContext());
+            dialog.setContentView(R.layout.dialog_classroom);
+            Objects.requireNonNull(dialog.getWindow()).setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
+
+            dialog.show();
+            WebView webView = dialog.findViewById(R.id.classroomWebView);
+            WebSettings settings = webView.getSettings();
+            settings.setUseWideViewPort(true);
+            settings.setLoadWithOverviewMode(true);
+            settings.setJavaScriptEnabled(true);
+            webView.setWebViewClient(new WebViewClient() {
+                @Override
+                public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                    return false;
+                }
+            });
+            String postData = "buildi=" + buildingName + "&classrooms=" + classroomName;
+            byte[] postDataBytes = postData.getBytes(StandardCharsets.UTF_8);
+            // webView.postUrl("http://101.43.129.190:2333/classroom/", postDataBytes);
+            webView.loadUrl("https://www.baidu.com");
+
+        });
         int percentage = (int) ((float) occupied / total * 10000);
         holder.classroomName.setText(classroomName);
         holder.classroomOccupied.setText(String.format("%d/%d", occupied, total));

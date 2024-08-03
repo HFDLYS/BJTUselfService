@@ -63,7 +63,7 @@ public class MisDataManager {
                         String value = doc.select("input#id_captcha_0").attr("value");
                         String csrfmiddlewaretoken = doc.select("input[name=csrfmiddlewaretoken]").attr("value");
                         Request captchaRequest = new Request.Builder()
-                                .url("https://cas.bjtu.edu.cn/captcha/image/" + value + "/")
+                                .url("https://cas.bjtu.edu.cn/image/" + value + "/")
                                 .build();
 
                         client.newCall(captchaRequest).enqueue(new Callback() {
@@ -88,19 +88,18 @@ public class MisDataManager {
                                     loginCallback.onFailure(1);
                                     return;
                                 }
-                                String nextUrl = url.substring("https://cas.bjtu.edu.cn".length());
+                                String nextUrl = url.substring("https://cas.bjtu.edu.cn/auth/login/?next=".length());
                                 FormBody formBody = new FormBody.Builder()
                                         .add("csrfmiddlewaretoken", csrfmiddlewaretoken)
                                         .add("captcha_0", value)
                                         .add("captcha_1", ans)
                                         .add("loginname", stuId)
                                         .add("password", stuPasswd)
-                                        .add("next", nextUrl)
                                         .build();
                                 Request loginRequest = new Request.Builder()
                                         .url("https://cas.bjtu.edu.cn/auth/login/?next=" + nextUrl)
                                         .header("Host", "cas.bjtu.edu.cn")
-                                        .header("Referer", "https://cas.bjtu.edu.cn/auth/login/")
+                                        .header("Referer", url)
                                         .header("Origin", "https://cas.bjtu.edu.cn")
                                         .header("Content-Type", "application/x-www-form-urlencoded")
                                         .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")

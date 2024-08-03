@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/dialog_background"
+    android:paddingLeft="100dp"
+    android:paddingRight="100dp"
+    android:paddingTop="60dp"
+    android:paddingBottom="60dp"
+    android:gravity="center">
+
+    <WebView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/classroomWebView"/>
+
+</LinearLayout>
