@@ -95,6 +95,16 @@ class Authenticator(private val studentAccountManager: StudentAccountManager) {
                     Log.e("Authenticator", "AA登录失败")
                     Result.failure(Exception("AA登录失败"))
                 }
+
+                val isXsMisLoginSuccessful = studentAccountManager.loginXsMis().await()
+                Log.d("Authenticator", "XsMis登录结果：$isXsMisLoginSuccessful")
+
+                if (isXsMisLoginSuccessful) {
+                    Result.success(true)
+                } else {
+                    Log.e("Authenticator", "XsMis登录失败")
+                    Result.failure(Exception("XsMis登录失败"))
+                }
             } else {
                 Log.e("Authenticator", "初始登录失败")
                 Result.failure(Exception("初始登录失败"))

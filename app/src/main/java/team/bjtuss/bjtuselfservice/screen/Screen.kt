@@ -91,7 +91,7 @@ fun HomeScreen() {
                 tint = Color.Blue
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text(text = newMailCount, fontSize = 18.sp)
+            BJTUMailLoginScreen({ Text(newMailCount, fontSize = 18.sp) })
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -109,7 +109,7 @@ fun HomeScreen() {
                 tint = Color.Red
             )
             Spacer(modifier = Modifier.width(8.dp))
-            BJTUMailLoginScreen({ Text(newMailCount, fontSize = 18.sp) })
+            Text(text = netBalance, fontSize = 18.sp)
         }
     }
 }

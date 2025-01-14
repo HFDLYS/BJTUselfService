@@ -4,6 +4,7 @@ import static team.bjtuss.bjtuselfservice.utils.Utils.convertAndFormatGradeScore
 
 import androidx.annotation.NonNull;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.jsoup.Jsoup;
@@ -14,8 +15,11 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
-import team.bjtuss.bjtuselfservice.Model;
+import okhttp3.CookieJar;
+import okhttp3.HttpUrl;
+import team.bjtuss.bjtuselfservice.CaptchaModel;
 import team.bjtuss.bjtuselfservice.StudentAccountManager;
 import team.bjtuss.bjtuselfservice.utils.ImageToTensorConverter;
 import team.bjtuss.bjtuselfservice.utils.Network.WebCallback;
@@ -76,9 +80,9 @@ public class MisDataManager {
                                 }
                                 byte[] img = response.body().bytes();
                                 //神经网络推理
-                                Model model = Model.getInstance();
+                                CaptchaModel captchaModel = CaptchaModel.getInstance();
                                 float[] tensor = ImageToTensorConverter.convertToTensor(img, 130, 42);
-                                String captcha = model.predict(tensor);
+                                String captcha = captchaModel.predict(tensor);
                                 String ans = Utils.calculate(captcha);
                                 if (ans == null) {
                                     loginCallback.onFailure(1);
@@ -383,10 +387,10 @@ public class MisDataManager {
         });
     }
 
-    public static void getStatus(OkHttpClient client, WebCallback<StudentAccountManager.Status> ResCallback) {
+    public static void xsmislogin(OkHttpClient client, WebCallback ResCallback) {
         Request request = new Request.Builder()
-                .url("https://mis.bjtu.edu.cn/osys_ajax_wrap/")
-                .header("Host", "mis.bjtu.edu.cn")
+                .url("https://xsmis.bjtu.edu.cn/v4/user/cas_login/?next=client%2Fhome")
+                .header("Host", "xsmis.bjtu.edu.cn")
                 .build();
         client.newCall(request).enqueue(new Callback() {
             @Override
@@ -396,17 +400,75 @@ public class MisDataManager {
 
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
-                JSONObject jsonObject = null;
+                String content = response.body().string();
+                String nextUrl;
                 try {
-                    jsonObject = new JSONObject(response.body().string());
-                    String netFee = jsonObject.getString("net_fee");
-                    String ecardYuer = jsonObject.getString("ecard_yuer");
-                    String newmailCount = jsonObject.getString("newmail_count");
-                    StudentAccountManager.Status status = new StudentAccountManager.Status(newmailCount, ecardYuer, netFee);
-                    ResCallback.onResponse(status);
+                    JSONObject temp = new JSONObject(content);
+                    nextUrl = temp.getString("url");
                 } catch (JSONException e) {
                     ResCallback.onFailure(1);
-                    throw new RuntimeException(e);
+                    return;
+                }
+                Request request = new Request.Builder()
+                        .url(nextUrl)
+                        .build();
+                client.newCall(request).enqueue(new Callback() {
+                    @Override
+                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                        ResCallback.onFailure(0);
+                    }
+
+                    @Override
+                    public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+
+                        CookieJar cookieJar = client.cookieJar();
+
+                        if (response.request().url().toString().equals("https://xsmis.bjtu.edu.cn/#/client/home")) {
+                            ResCallback.onResponse(response.request().url().toString());
+                        } else {
+                            ResCallback.onFailure(1);
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    public static void getStatus(OkHttpClient client, WebCallback<StudentAccountManager.Status> ResCallback) {
+        String authorization = client.cookieJar().loadForRequest(Objects.requireNonNull(HttpUrl.parse("https://xsmis.bjtu.edu.cn"))).get(1).value();
+        Request request = new Request.Builder()
+                .url("https://xsmis.bjtu.edu.cn/v4/people/appdata/")
+                .header("Host", "xsmis.bjtu.edu.cn")
+                .header("Authorization", "token " + authorization)
+                .build();
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                ResCallback.onFailure(0);
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                try {
+                    JSONObject jsonObject = new JSONObject(response.body().string());
+                    JSONArray data = jsonObject.getJSONArray("data");
+                    String netFee = "0";
+                    String ecardYuer = "0";
+                    String newmailCount = "0";
+                    for (int i = 0; i < data.length(); i++) {
+                        JSONObject item = data.getJSONObject(i);
+                        if (item.getString("tag").equals("ecard")) {
+                            ecardYuer = item.getString("count");
+                        } else if (item.getString("tag").equals("web_count")) {
+                            netFee = item.getString("count");
+                        } else if (item.getString("tag").equals("email")) {
+                            newmailCount = item.getString("count");
+                        }
+                    }
+                    StudentAccountManager.Status status = new StudentAccountManager.Status(newmailCount, ecardYuer, netFee);
+                    ResCallback.onResponse(status);
+                } catch (Exception e) {
+                    ResCallback.onFailure(1);
                 }
             }
         });

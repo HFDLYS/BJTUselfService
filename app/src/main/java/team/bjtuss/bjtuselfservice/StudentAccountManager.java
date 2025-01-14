@@ -28,6 +28,7 @@ public class StudentAccountManager {
     private boolean isMisLogin = false;
     private boolean isAaLogin = false;
 
+    private boolean isXsmisLogin = false;
     private StudentAccountManager() {
     }
 
@@ -138,13 +139,40 @@ public class StudentAccountManager {
         return loginFuture;
     }
 
+    public CompletableFuture<Boolean> loginXsMis() {
+        return checkIsLogin().thenCompose(isLogin -> {
+            if (isLogin) {
+                return attemptXsMisLogin();
+            } else {
+                return CompletableFuture.completedFuture(false);
+            }
+        });
+    }
+
+    private CompletableFuture<Boolean> attemptXsMisLogin() {
+        CompletableFuture<Boolean> loginFuture = new CompletableFuture<>();
+        MisDataManager.xsmislogin(client, new WebCallback<String>() {
+            @Override
+            public void onResponse(String code) {
+                setXsmisLogin(true);
+                loginFuture.complete(true);
+            }
+
+            @Override
+            public void onFailure(int code) {
+                loginFuture.complete(false);
+            }
+        });
+        return loginFuture;
+    }
+
     private CompletableFuture<Boolean> attemptInitAndLogin() {
         if (stuId == null || password == null) {
             return CompletableFuture.completedFuture(false);
         }
         return init(stuId, password).thenCompose(isLoginMis -> {
             if (isLoginMis) {
-                return attemptAaLogin();
+                return CompletableFuture.completedFuture(true);
             } else {
                 return CompletableFuture.completedFuture(false);
             }
@@ -205,7 +233,7 @@ public class StudentAccountManager {
     public CompletableFuture<Status> getStatus() {
         CompletableFuture<Status> statusFuture = new CompletableFuture<>();
         checkIsLogin().thenAccept(isLogin -> {
-            if (isLogin) {
+            if (isXsmisLogin) {
                 MisDataManager.getStatus(client, new WebCallback<Status>() {
                     @Override
                     public void onResponse(Status resp) {
@@ -287,6 +315,10 @@ public class StudentAccountManager {
     public void setMisLogin(boolean isMis) {
         isMisLogin = isMis;
         isMisLoginLiveData.postValue(isMis);
+    }
+
+    public void setXsmisLogin(boolean isMis) {
+        isXsmisLogin = isMis;
     }
 
     private static class Holder {

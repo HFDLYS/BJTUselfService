@@ -9,14 +9,14 @@ import android.util.Log;
 
 import static team.bjtuss.bjtuselfservice.utils.Utils.assetFilePath;
 
-public class Model {
+public class CaptchaModel {
     private static Module module;
-    private static Model instance;
+    private static CaptchaModel instance;
     private char[] charset = {' ', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '-', '*', '='};
     private int n_class = charset.length;
     private Context context;
 
-    private Model(Context context) {
+    private CaptchaModel(Context context) {
         this.context = context;
         try {
             module = Module.load(assetFilePath(context, "model.pt"));
@@ -29,10 +29,10 @@ public class Model {
     }
 
     public static void init(Context context) {
-        instance = new Model(context);
+        instance = new CaptchaModel(context);
     }
 
-    public static Model getInstance() {
+    public static CaptchaModel getInstance() {
         return instance;
     }
 

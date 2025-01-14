@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        Model.init(this)
+        CaptchaModel.init(this)
 
         setContent {
             BJTUselfServicecomposeTheme(dynamicColor = true) {
@@ -145,7 +145,7 @@ object RouteManager {
 fun AppNavigation(navController: NavController, loginViewModel: LoginViewModel) {
     val pages = listOf(
         PageItem(RouteManager.Home, "首页", Icons.Default.Home),
-        PageItem(RouteManager.Space, "空间", Icons.Default.BorderAll),
+        PageItem(RouteManager.Space, "应用", Icons.Default.BorderAll),
         PageItem(RouteManager.Setting, "设置", Icons.Default.Settings)
     )
 
