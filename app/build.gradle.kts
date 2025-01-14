@@ -1,77 +1,76 @@
 plugins {
-    id("com.android.application")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
+    id("kotlin-kapt")
+    id("com.google.dagger.hilt.android")
 }
 
 android {
-    namespace = "com.hfdlys.bjtuselfservice"
+    namespace = "indi.optsimauth.bjtuselfservicecompose"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.hfdlys.bjtuselfservice"
-        minSdk = 28
+        applicationId = "indi.optsimauth.bjtuselfservicecompose"
+        minSdk = 34
         targetSdk = 34
-        versionCode = 6
-        versionName = "v0.4.0"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        versionCode = 1
+        versionName = "1.0"
 
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+    kotlinOptions {
+        jvmTarget = "11"
     }
     buildFeatures {
-        viewBinding = true
+        compose = true
     }
-
-    sourceSets {
-        getByName("main") {
-            assets {
-                srcDirs("src\\main\\assets")
-            }
-        }
-    }
-
-    splits {
-        abi {
-            isEnable = true
-            reset()
-            include("arm64-v8a", "armeabi-v7a")
-        }
-    }
-
 }
 
 dependencies {
 
-    implementation("androidx.appcompat:appcompat:1.6.1")
-
-    implementation("com.google.android.material:material:1.11.0")
-
-    implementation("org.json:json:20210307")
-
-    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
-    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
-    implementation("androidx.recyclerview:recyclerview:1.3.2")
-
-    implementation("androidx.security:security-crypto:1.1.0-alpha03")
-    implementation("androidx.navigation:navigation-fragment:2.7.6")
-    implementation("androidx.navigation:navigation-ui:2.7.6")
-    implementation("androidx.legacy:legacy-support-v4:1.0.0")
-    implementation("androidx.annotation:annotation:1.6.0")
-    testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.1.5")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.activity.compose)
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.navigation.compose)
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.ui.test.junit4)
+    debugImplementation(libs.androidx.ui.tooling)
+    debugImplementation(libs.androidx.ui.test.manifest)
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("org.jsoup:jsoup:1.14.3")
-
     implementation("org.pytorch:pytorch_android:2.1.0")
+    implementation("org.jsoup:jsoup:1.14.3")
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation("io.github.stoyan-vuchev:squircle-shape:2.0.0")
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("com.google.dagger:hilt-android:2.51.1")
+    kapt("com.google.dagger:hilt-android-compiler:2.51.1")
+    implementation("io.github.oleksandrbalan:lazytable:1.8.0")
+    implementation("androidx.webkit:webkit:1.5.0")
+}
+kapt {
+    correctErrorTypes = true
 }
