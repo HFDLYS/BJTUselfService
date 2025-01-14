@@ -7,12 +7,12 @@ plugins {
 }
 
 android {
-    namespace = "indi.optsimauth.bjtuselfservicecompose"
+    namespace = "team.bjtuss.bjtuselfservice"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "indi.optsimauth.bjtuselfservicecompose"
-        minSdk = 34
+        applicationId = "team.bjtuss.bjtuselfservice"
+        minSdk = 28
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
