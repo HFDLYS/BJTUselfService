@@ -345,6 +345,8 @@ public class StudentAccountManager {
         public String courseScore;
         public String courseCredits;
         public String courseYear;
+        public String tag;
+        public String detail;
 
         public Grade(String courseName, String courseTeacher, String courseScore, String courseCredits, String courseYear) {
             this.courseName = courseName;

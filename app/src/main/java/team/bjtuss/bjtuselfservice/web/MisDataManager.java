@@ -246,6 +246,7 @@ public class MisDataManager {
                         String year = cols.get(1).text().replace("\n", "").replace("\t", "").replace(" ", "");
                         String courseName = cols.get(2).text().replace("\n", "").replace("\t", "").replace(" ", "");
                         String courseGPA = cols.get(3).text().replace("\n", "").replace("\t", "").replace(" ", "");
+                        Element detail = cols.get(7).selectFirst("span[data-content]");
                         if (courseGPA.isEmpty()) {
                             courseGPA = "0.0";
                         }
@@ -257,6 +258,17 @@ public class MisDataManager {
                         }
                         String teacher = cols.get(6).text().replace("\n", "").replace("\t", "").replace(" ", "");
                         StudentAccountManager.Grade grade = new StudentAccountManager.Grade(courseName, teacher, courseScore, courseGPA, year);
+                        grade.tag = ctype;
+                        if (detail != null) {
+                            String dataContent = detail.attr("data-content");
+                            Document contentDoc = Jsoup.parse(dataContent);
+                            Element divElement = contentDoc.selectFirst("div[style='width:200px;line-height:25px;']");
+                            if (divElement != null) {
+                                grade.detail = divElement.html().replace("\t", "").replace(" ", "").replace("<br>", "");
+                            }
+                        } else {
+                            grade.detail = "";
+                        }
                         gradeList.add(grade);
                     }
                     ResCallback.onResponse(gradeList);

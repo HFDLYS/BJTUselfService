@@ -5,7 +5,10 @@ import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -16,9 +19,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -35,7 +44,13 @@ import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.viewmodel.GradeViewModel
 import kotlin.collections.mapOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.window.DialogProperties
+import team.bjtuss.bjtuselfservice.utils.Utils
 
 @Composable
 fun GradeScreen(
@@ -86,41 +101,14 @@ fun GradeList(
     gradeList: List<StudentAccountManager.Grade>,
     gradeInfo: GradeInfoResult
 ) {
-    val scoreColors = mapOf(
-        "A+" to Color(0xFF4CAF50),   // Bright Green
-        "A" to Color(0xFF81C784),    // Light Green
-        "A-" to Color(0xFF66BB6A),   // Medium Green
-        "B+" to Color(0xFF64B5F6),   // Light Blue
-        "B" to Color(0xFF2196F3),    // Vibrant Blue
-        "B-" to Color(0xFF1E88E5),   // Medium Blue
-        "C+" to Color(0xFFFFD54F),   // Soft Yellow
-        "C" to Color(0xFFFFC107),    // Amber
-        "C-" to Color(0xFFFFB300),   // Dark Amber
-        "D+" to Color(0xFFFFA726),   // Light Orange
-        "D" to Color(0xFFFF7043),    // Orange
-        "F" to Color(0xFFF44336)     // Red
-    )
 
-    fun getScoreGrade(scoreStr: String): String {
+    fun getScoreGrade(scoreStr: String): Int {
         val cleanScore = scoreStr.replace(",", "").replace("[^0-9.]".toRegex(), "")
         return try {
-            val score = cleanScore.toDouble()
-            when {
-                score >= 90 -> "A"
-                score >= 85 -> "A-"
-                score >= 81 -> "B+"
-                score >= 78 -> "B"
-                score >= 75 -> "B-"
-                score >= 71 -> "C+"
-                score >= 68 -> "C"
-                score >= 65 -> "C-"
-                score >= 61 -> "D+"
-                score >= 60 -> "D"
-                else -> "F"
-            }
+            cleanScore.toDouble().toInt()
         } catch (e: NumberFormatException) {
             // 如果转换失败，可以返回一个默认等级或原始字符串
-            "Unknown"
+            -1
         }
     }
 
@@ -141,14 +129,11 @@ fun GradeList(
             ) {
                 items(gradeList.size) { index ->
                     val grade = gradeList[index]
-                    val scoreGrade = getScoreGrade(grade.courseScore)
-                    val cardColor =
-                        scoreColors[scoreGrade] ?: MaterialTheme.colorScheme.surfaceVariant
-
+                    val score = getScoreGrade(grade.courseScore)
+                    val cardColor = Color(Utils.calculateGradeColor(score.toDouble()))
                     GradeItemCard(
                         grade = grade,
-                        cardColor = cardColor,
-                        scoreGrade = scoreGrade
+                        cardColor = cardColor
                     )
                 }
             }
@@ -234,12 +219,14 @@ fun GpaCard(gradeInfo: GradeInfoResult) {
 fun GradeItemCard(
     grade: StudentAccountManager.Grade,
     cardColor: Color,
-    scoreGrade: String
 ) {
+    var showDetailedInformationDialog by remember { mutableStateOf(false) }
+
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 8.dp)
+            .clickable { showDetailedInformationDialog = true },
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
@@ -321,4 +308,93 @@ fun GradeItemCard(
             }
         }
     }
+
+    if (showDetailedInformationDialog) {
+        GradeDetailDialog(
+            grade = grade,
+            onDismissRequest = { showDetailedInformationDialog = false } // 关闭对话框
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GradeDetailDialog(
+    grade: StudentAccountManager.Grade,
+    onDismissRequest: () -> Unit
+) {
+    BasicAlertDialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true
+        ),
+        content = {
+            // Dialog background with padding and rounded corners
+            Box(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.background,
+                        shape = MaterialTheme.shapes.medium
+                    )
+                    .fillMaxWidth()
+            ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp) // Adjusted spacing between items
+                ) {
+                    // Title of the dialog
+                    item {
+                        Text(
+                            text = "详情信息",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                            shape = MaterialTheme.shapes.small,
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = grade.courseName,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "教师: ${grade.courseTeacher}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "学分: ${grade.courseCredits}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "成绩: ${grade.courseScore}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = grade.detail,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = Int.MAX_VALUE,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
 }
