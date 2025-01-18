@@ -108,7 +108,7 @@ fun App(loginViewModel: LoginViewModel) {
         composable(RouteManager.HomeWorkAndExam) {
             Greeting("Android")
         }
-        composable(RouteManager.ClassroomPeopleEstimation) {
+        composable(RouteManager.ClassroomDetection) {
             SettingScreen(loginViewModel)
         }
         composable(RouteManager.BJTUMiaoMiaoHouse) {
@@ -116,6 +116,9 @@ fun App(loginViewModel: LoginViewModel) {
         }
         composable(RouteManager.Grade) {
             GradeScreen(gradeViewModel)
+        }
+        composable(RouteManager.Email) {
+            EmailScreen()
         }
     }
 
@@ -135,10 +138,11 @@ object RouteManager {
     const val Setting: String = "Setting"
     const val Navigation: String = "Navigation"
     const val HomeWorkAndExam: String = "HomeWorkAndExam"
-    const val ClassroomPeopleEstimation: String = "ClassroomPeopleEstimation"
+    const val ClassroomDetection: String = "ClassroomPeopleEstimation"
     const val BJTUMiaoMiaoHouse: String = "BJTUMiaoMiaoHouse"
     const val Grade: String = "Grade"
     const val CourseSchedule: String = "CourseSchedule"
+    const val Email: String = "Email"
 }
 
 @Composable
@@ -185,7 +189,7 @@ fun AppNavigation(navController: NavController, loginViewModel: LoginViewModel) 
         ) { page ->
             when (page) {
                 0 -> {
-                    HomeScreen()
+                    HomeScreen(navController = navController)
                 }
 
                 1 -> {

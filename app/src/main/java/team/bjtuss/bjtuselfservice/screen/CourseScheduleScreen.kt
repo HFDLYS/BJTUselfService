@@ -3,6 +3,7 @@ package team.bjtuss.bjtuselfservice.screen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import team.bjtuss.bjtuselfservice.StudentAccountManager.Course
+import team.bjtuss.bjtuselfservice.utils.Utils
 import team.bjtuss.bjtuselfservice.viewmodel.CourseScheduleViewModel
 
 data class MenuItem(
@@ -270,21 +272,30 @@ fun CourseCell(
                 modifier = Modifier.fillMaxSize()
             ) {
                 courses.forEach {
-                    Text(
-                        text = it.CourseName,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontSize = 10.sp,
-                        textAlign = TextAlign.Center,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = it.CoursePlace,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontSize = 8.sp,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    )
+                    val backgroundColor = Color(android.graphics.Color.parseColor(Utils.generateRandomColor(it.CourseName, isSystemInDarkTheme())))
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(backgroundColor),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = it.CourseName,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 10.sp,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = it.CoursePlace,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 8.sp,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
                 }
             }
         }
@@ -343,7 +354,8 @@ fun DetailedCourseInformationDialog(courses: List<Course>, onDismissRequest: () 
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                            shape = MaterialTheme.shapes.small
+                            shape = MaterialTheme.shapes.small,
+                            colors = CardDefaults.cardColors(Color(android.graphics.Color.parseColor(Utils.generateRandomColor(course.CourseName, isSystemInDarkTheme()))))
                         ) {
                             Column(
                                 modifier = Modifier.padding(16.dp),
@@ -361,7 +373,6 @@ fun DetailedCourseInformationDialog(courses: List<Course>, onDismissRequest: () 
                                 CourseDetailRow("上课地点", course.CoursePlace, Icons.Default.Place)
                             }
                         }
-
                     }
                 }
             }

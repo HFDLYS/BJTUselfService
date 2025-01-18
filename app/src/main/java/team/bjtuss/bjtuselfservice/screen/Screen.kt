@@ -21,10 +21,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Color.Companion.Blue
-import androidx.compose.ui.graphics.Color.Companion.Green
-import androidx.compose.ui.graphics.Color.Companion.Red
-import androidx.compose.ui.graphics.Color.Companion.Yellow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import team.bjtuss.bjtuselfservice.R
@@ -37,7 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(navController: NavController) {
     val studentAccountManager = StudentAccountManager.getInstance()
 
 //    val name = studentAccountManager.stuName
@@ -91,7 +87,7 @@ fun HomeScreen() {
                 tint = Color.Blue
             )
             Spacer(modifier = Modifier.width(8.dp))
-            BJTUMailLoginScreen({ Text(newMailCount, fontSize = 18.sp) })
+            BJTUMailLoginScreen({ Text(newMailCount, fontSize = 18.sp) }, navController)
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -141,16 +137,11 @@ fun SpaceScreen(navController: NavController) {
 }
 
 private val spaces = listOf(
-    Space("成绩", R.drawable.diary_img, Blue, RouteManager.Grade),
-    Space("课程表", R.drawable.ai_chat_img, Red, RouteManager.CourseSchedule),
-    Space("作业与考试", R.drawable.bookmarks_img, Green, RouteManager.HomeWorkAndExam),
-    Space("教室人数评估", R.drawable.calendar_img, Yellow, RouteManager.ClassroomPeopleEstimation),
-    Space(
-        "北交妙妙屋",
-        R.drawable.bookmarks_img,
-        Color(0xFF00FF00),
-        RouteManager.BJTUMiaoMiaoHouse
-    ),
+    Space("成绩", R.drawable.grade, Color(0xFF315A9A), RouteManager.Grade),
+    Space("课程表", R.drawable.course, Color(0xFF315A9A), RouteManager.CourseSchedule),
+    Space("作业与考试", R.drawable.exam, Color(0xFF315A9A), RouteManager.HomeWorkAndExam),
+    Space("教室人数评估", R.drawable.detect, Color(0xFF315A9A), RouteManager.ClassroomDetection),
+    // Space("北交妙妙屋", R.drawable.bookmarks_img, Color(0xFF00FF00), RouteManager.BJTUMiaoMiaoHouse),
 )
 
 private data class Space(

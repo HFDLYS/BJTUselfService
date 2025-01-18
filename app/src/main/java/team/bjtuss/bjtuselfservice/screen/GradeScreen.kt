@@ -18,17 +18,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -42,7 +46,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.viewmodel.GradeViewModel
-import kotlin.collections.mapOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,7 +63,6 @@ fun GradeScreen(
 
     GradeList(
         gradeList = gradeList,
-        gradeInfo = calculateGradeInfo(gradeList),
     )
 }
 
@@ -96,12 +98,17 @@ sealed class GradeInfoResult {
     ) : GradeInfoResult()
 }
 
+enum class SortOrder {
+    ORIGINAL, ASCENDING, DESCENDING
+}
+
 @Composable
 fun GradeList(
-    gradeList: List<StudentAccountManager.Grade>,
-    gradeInfo: GradeInfoResult
+    gradeList: List<StudentAccountManager.Grade>
 ) {
-
+    var filterExpanded by remember { mutableStateOf(false) }
+    var selectedFilter by remember { mutableStateOf("全部") }
+    var sortOrder by remember { mutableStateOf(SortOrder.ORIGINAL) }
     fun getScoreGrade(scoreStr: String): Int {
         val cleanScore = scoreStr.replace(",", "").replace("[^0-9.]".toRegex(), "")
         return try {
@@ -111,7 +118,6 @@ fun GradeList(
             -1
         }
     }
-
     Scaffold(
         modifier = Modifier.fillMaxSize()
     ) { paddingValues ->
@@ -121,14 +127,81 @@ fun GradeList(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp),
         ) {
-            GpaCard(gradeInfo)
+            GpaCard(gradeList, selectedFilter)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                IconButton(onClick = { filterExpanded = true }) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Filter Options"
+                    )
+                }
+                // 筛选条件
+                DropdownMenu(
+                    expanded = filterExpanded,
+                    onDismissRequest = { filterExpanded = false },
+                    modifier = Modifier.background(MaterialTheme.colorScheme.background)
+                ) {
+                    val filterOptions = listOf("全部", "本学期课程", "历年成绩")
+                    filterOptions.forEach { option ->
+                        DropdownMenuItem(
+                            onClick = {
+                                selectedFilter = option
+                                filterExpanded = false
+                            },
+                            text = {
+                                Text(
+                                    text = option,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        )
+                    }
+                }
 
+                IconButton(
+                    onClick = {
+                        sortOrder = when (sortOrder) {
+                            SortOrder.ORIGINAL -> SortOrder.ASCENDING
+                            SortOrder.ASCENDING -> SortOrder.DESCENDING
+                            SortOrder.DESCENDING -> SortOrder.ORIGINAL
+                        }
+                    },
+                    modifier = Modifier.align(Alignment.CenterVertically)
+                ) {
+                    Icon(
+                        imageVector = when (sortOrder) {
+                            SortOrder.ORIGINAL -> Icons.Default.Sort
+                            SortOrder.ASCENDING -> Icons.Default.ArrowUpward
+                            SortOrder.DESCENDING -> Icons.Default.ArrowDownward
+                        },
+                        contentDescription = "Sort Order"
+                    )
+                }
+            }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
-                items(gradeList.size) { index ->
-                    val grade = gradeList[index]
+                val filteredGradeList = gradeList.filter {
+                    when (selectedFilter) {
+                        "本学期课程" -> it.tag == "lr"
+                        "历年成绩" -> it.tag == "ln"
+                        else -> true
+                    }
+                }
+                val sortedGradeList = when (sortOrder) {
+                    SortOrder.ORIGINAL -> filteredGradeList
+                    SortOrder.ASCENDING -> filteredGradeList.sortedBy { getScoreGrade(it.courseScore) }
+                    SortOrder.DESCENDING -> filteredGradeList.sortedByDescending { getScoreGrade(it.courseScore) }
+                }
+                items(sortedGradeList.size) { index ->
+                    val grade = sortedGradeList[index]
                     val score = getScoreGrade(grade.courseScore)
                     val cardColor = Color(Utils.calculateGradeColor(score.toDouble()))
                     GradeItemCard(
@@ -143,7 +216,7 @@ fun GradeList(
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
-fun GpaCard(gradeInfo: GradeInfoResult) {
+fun GpaCard(gradeList: List<StudentAccountManager.Grade>, selectedFilter: String) {
 //    val infiniteTransition = rememberInfiniteTransition()
 //    val scale by infiniteTransition.animateFloat(
 //        initialValue = 1f,
@@ -153,7 +226,14 @@ fun GpaCard(gradeInfo: GradeInfoResult) {
 //            repeatMode = RepeatMode.Reverse
 //        ), label = ""
 //    )
-
+    val filteredGradeList = gradeList.filter {
+        when (selectedFilter) {
+            "本学期课程" -> it.tag == "lr"
+            "历年成绩" -> it.tag == "ln"
+            else -> true
+        }
+    }
+    val gradeInfo = calculateGradeInfo(filteredGradeList)
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()

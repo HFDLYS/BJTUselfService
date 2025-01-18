@@ -2,7 +2,9 @@ package team.bjtuss.bjtuselfservice.screen
 
 import android.content.Intent
 import android.net.Uri
+import android.net.http.SslError
 import android.webkit.CookieManager
+import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -15,37 +17,84 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.navigation.NavController
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
+import team.bjtuss.bjtuselfservice.RouteManager
 
 @Composable
 fun EmailScreen() {
+    val context = LocalContext.current
+    val studentAccountManager = StudentAccountManager.getInstance()
 
+
+    AndroidView(
+        modifier = Modifier.fillMaxSize(),
+        factory = { context ->
+            WebView(context).apply {
+                // WebView Settings
+                settings.apply {
+                    useWideViewPort = true
+                    loadWithOverviewMode = true
+                    javaScriptEnabled = true
+                    domStorageEnabled = true
+                    databaseEnabled = true
+                    allowUniversalAccessFromFileURLs = true
+                    allowFileAccess = true
+                    cacheMode = WebSettings.LOAD_DEFAULT
+                    mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                }
+
+
+                // WebView Client
+                webViewClient = object : WebViewClient() {
+                    override fun shouldOverrideUrlLoading(
+                        view: WebView,
+                        request: WebResourceRequest
+                    ): Boolean {
+                        val url = request.url.toString()
+                        view.loadUrl(url)
+                        return true
+                    }
+
+                    override fun onPageFinished(view: WebView?, url: String?) {
+                        super.onPageFinished(view, url)
+                    }
+
+                    override fun onReceivedSslError(
+                        view: WebView?,
+                        handler: SslErrorHandler?,
+                        error: SslError?
+                    ) {
+                        super.onReceivedSslError(view, handler, error)
+                    }
+                }
+
+                WebViewUtil.syncCookiesFromOkHttpToWebView(
+                    "https://mis.bjtu.edu.cn/",
+                    studentAccountManager.client
+                )
+
+                loadUrl("https://mis.bjtu.edu.cn/module/module/26/")
+            }
+        }
+    )
 }
 
 @Composable
-fun BJTUMailLoginScreen(content: @Composable () -> Unit) {
+fun BJTUMailLoginScreen(content: @Composable () -> Unit, navController: NavController) {
     val context = LocalContext.current
     val studentAccountManager = StudentAccountManager.getInstance()
 
 
     Button(
         onClick = {
-            // 同步 Cookies
-            WebViewUtil.syncCookiesFromOkHttpToWebView(
-                "https://mis.bjtu.edu.cn",
-                studentAccountManager.client
-            )
-            // 直接用浏览器打开邮箱
-            val intent = Intent(
-                Intent.ACTION_VIEW,
-                Uri.parse("https://mis.bjtu.edu.cn/module/module/26/")
-            ).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(intent)
+
+            navController.navigate(RouteManager.Email)
+
+
         }
     ) {
         content()
@@ -157,6 +206,4 @@ fun WebViewScreen() {
             }
         }
     )
-
-
 }

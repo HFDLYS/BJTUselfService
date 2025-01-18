@@ -129,12 +129,23 @@ public class Utils {
         return 0xFF000000 | (red << 16) | (green << 8);
     }
 
-    public static String generateRandomColor(String courseId) {
+    public static String generateRandomColor(String courseId, boolean isDarkMode) {
         long seed = courseId.hashCode();
         Random random = new Random(seed);
-        int r = 125 + random.nextInt(101);
-        int g = 145 + random.nextInt(101);
-        int b = 235 - random.nextInt(91);
+
+        int r, g, b;
+        if (isDarkMode) {
+            // 为暗色模式生成深色
+            r = random.nextInt(56);  // 0-55
+            g = random.nextInt(56);  // 0-55
+            b = random.nextInt(56);  // 0-55
+        } else {
+            // 为亮色模式生成浅色
+            r = 200 + random.nextInt(56);  // 200-255
+            g = 200 + random.nextInt(56);  // 200-255
+            b = 200 + random.nextInt(56);  // 200-255
+        }
+
         return String.format("#%02X%02X%02X", r, g, b);
     }
 }
