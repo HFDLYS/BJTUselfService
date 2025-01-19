@@ -59,6 +59,7 @@ import kotlinx.coroutines.launch
 import team.bjtuss.bjtuselfservice.RouteManager.ClassroomDetection
 import team.bjtuss.bjtuselfservice.screen.BuildingScreen
 import team.bjtuss.bjtuselfservice.screen.ClassroomScreen
+import team.bjtuss.bjtuselfservice.viewmodel.ClassroomViewModel
 
 
 class MainActivity : ComponentActivity() {
@@ -95,6 +96,7 @@ fun App(loginViewModel: LoginViewModel) {
 
     val gradeViewModel: GradeViewModel = viewModel()
     val courseScheduleViewModel: CourseScheduleViewModel = viewModel()
+    val classroomViewModel: ClassroomViewModel = viewModel()
 
     NavHost(
         navController = navController,
@@ -110,7 +112,7 @@ fun App(loginViewModel: LoginViewModel) {
         composable(RouteManager.CourseSchedule) {
             CourseScheduleScreen(courseScheduleViewModel)
         }
-        composable(RouteManager.HomeWorkAndExam) {
+        composable(RouteManager.Exam) {
             Greeting("Android")
         }
         composable(RouteManager.Building) {
@@ -121,7 +123,7 @@ fun App(loginViewModel: LoginViewModel) {
             arguments = listOf(navArgument("buildingName") { type = NavType.StringType })
         ) {
             val buildingName = it.arguments?.getString("buildingName") ?: ""
-            ClassroomScreen(buildingName = buildingName)
+            ClassroomScreen(buildingName = buildingName, classroomViewModel)
         }
         composable(RouteManager.BJTUMiaoMiaoHouse) {
             EmailScreen()
@@ -149,7 +151,7 @@ object RouteManager {
     const val Space: String = "Space"
     const val Setting: String = "Setting"
     const val Navigation: String = "Navigation"
-    const val HomeWorkAndExam: String = "HomeWorkAndExam"
+    const val Exam: String = "Exam"
     const val Building: String = "Building"
     const val ClassroomDetection: String = "ClassroomDetection/{buildingName}"
     const val BJTUMiaoMiaoHouse: String = "BJTUMiaoMiaoHouse"

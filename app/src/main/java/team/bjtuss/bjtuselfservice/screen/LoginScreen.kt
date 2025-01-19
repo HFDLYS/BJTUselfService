@@ -160,9 +160,6 @@ class LoginViewModel : ViewModel() {
                 }
                 _loginState.value = LoginState.Loading
                 val result = authenticator.autoLogin(username, password)
-                if (result.isSuccess) {
-                    _screenStatus.value = ScreenStatus.AppScreen
-                }
 
 
                 if (result.isSuccess) {

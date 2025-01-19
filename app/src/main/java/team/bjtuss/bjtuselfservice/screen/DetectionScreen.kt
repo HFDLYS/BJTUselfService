@@ -2,16 +2,21 @@ package team.bjtuss.bjtuselfservice.screen
 
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
@@ -31,20 +36,27 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import team.bjtuss.bjtuselfservice.R
 import team.bjtuss.bjtuselfservice.RouteManager
+import team.bjtuss.bjtuselfservice.viewmodel.ClassroomViewModel
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService.ClassroomCapacity
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService.getClassroomCapacity
+import java.util.Calendar
 
 @Composable
 fun BuildingScreen(navController: NavController) {
@@ -129,8 +141,47 @@ fun BuildingScreen(navController: NavController) {
     }
 }
 
+fun getCurrentClassIndex(): Int {
+    val courseTimes = listOf(
+        "第一节\n08:00\n10:00",
+        "第二节\n10:00\n12:20",
+        "第三节\n12:20\n14:10",
+        "第四节\n14:10\n16:10",
+        "第五节\n16:10\n18:10",
+        "第六节\n19:00\n21:00",
+        "第七节\n21:00\n22:00"
+    )
+
+    val currentTime = Calendar.getInstance()
+    val currentHour = currentTime.get(Calendar.HOUR_OF_DAY)
+    val currentMinute = currentTime.get(Calendar.MINUTE)
+
+    for (i in courseTimes.indices) {
+        val times = courseTimes[i].split("\n")
+        val startTime = times[1]
+        val endTime = times[2]
+
+        val (startHour, startMinute) = startTime.split(":").map { it.toInt() }
+        val (endHour, endMinute) = endTime.split(":").map { it.toInt() }
+
+        val startTotalMinutes = startHour * 60 + startMinute
+        val endTotalMinutes = endHour * 60 + endMinute
+        val currentTotalMinutes = currentHour * 60 + currentMinute
+
+        if (currentTotalMinutes in startTotalMinutes..endTotalMinutes) {
+            return i
+        }
+    }
+
+    return -1
+}
+
 @Composable
-fun ClassroomScreen(buildingName: String) {
+fun ClassroomScreen(
+    buildingName: String,
+    classroomViewModel: ClassroomViewModel
+) {
+    val classroomMap by classroomViewModel.classroomMap.collectAsState()
     val buildingInfo = remember { mutableStateOf<ClassroomCapacityService.BuildingInfo?>(null) }
     var filterExpanded by remember { mutableStateOf(false) }
     var selectedFilter by remember { mutableStateOf("教室名") }
@@ -141,7 +192,6 @@ fun ClassroomScreen(buildingName: String) {
             buildingInfo.value = it
         }
     }
-
     Scaffold(
         modifier = Modifier.fillMaxSize()
     ) { paddingValues ->
@@ -168,7 +218,7 @@ fun ClassroomScreen(buildingName: String) {
                         ),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                            .padding(vertical = 1.dp),
                     )
                     Text(
                         text = "有效期：${info.EffectiveDateStart} 至 ${info.EffectiveDateEnd}",
@@ -177,7 +227,7 @@ fun ClassroomScreen(buildingName: String) {
                         ),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                            .padding(vertical = 8.dp),
                     )
                 }
                 Row(
@@ -246,66 +296,114 @@ fun ClassroomScreen(buildingName: String) {
                     }
                     items(info.ClassroomList.size) { index ->
                         val classroom = filteredClassroomList[index]
-                        ElevatedCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 16.dp),
-                            colors = CardDefaults.elevatedCardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
-                        ) {
-                            Column  (
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .fillMaxHeight(),
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = classroom.RoomName,
-                                        style = MaterialTheme.typography.bodyMedium.copy(
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    )
-                                    Text(
-                                        text = "使用：${classroom.Used}/${classroom.Capacity}",
-                                        style = MaterialTheme.typography.bodyMedium.copy(
-                                            color = MaterialTheme.colorScheme.primary,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    )
-                                }
-                                // 这里需要进度条
-                                val progress = if (classroom.Capacity > 0) {
-                                    classroom.Used.toFloat() / classroom.Capacity.toFloat()
-                                } else {
-                                    0f
-                                }
-
-                                LinearProgressIndicator(
-                                    progress = progress,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                                    color = MaterialTheme.colorScheme.primary,
-                                    trackColor = MaterialTheme.colorScheme.surface
-                                )
-                            }
-                        }
+                        ClassroomCard(classroom, classroomMap)
                     }
                 }
             } ?: run {
-                // 显示加载中的状态
-                CircularProgressIndicator(
+                Box(
                     modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
+                        .fillMaxSize()
                         .padding(top = 32.dp)
+                ) {
+                    RotatingImageLoader(
+                        image = painterResource(id = R.drawable.loading_icon),
+                        rotationDuration = 1000,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ClassroomCard(classroom: ClassroomCapacity, classroomMap: MutableMap<String, MutableList<Int>>) {
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column  (
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = classroom.RoomName,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 )
+                Text(
+                    text = "使用：${classroom.Used}/${classroom.Capacity}",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+            }
+
+            val progress = if (classroom.Capacity > 0) {
+                classroom.Used.toFloat() / classroom.Capacity.toFloat()
+            } else {
+                0f
+            }
+
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surface,
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                repeat(7) { index ->
+                    var color = MaterialTheme.colorScheme.surfaceVariant
+                    if (classroomMap.contains(classroom.RoomName)) {
+                        when (classroomMap[classroom.RoomName]!![index]) {
+                            0 -> color = MaterialTheme.colorScheme.surfaceVariant
+                            1 -> color = Color(0xffe46868)
+                            2 -> color = Color(0xff9e6868)
+                            3 -> color = Color(0xff394ed6)
+                            4 -> color = Color(0xff77bf6d)
+                            5 -> color = Color(0xffd8cc56)
+                        }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, if (getCurrentClassIndex() == index) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary, CircleShape)
+                            .padding(4.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                                .background(color)
+                        )
+                    }
+                    if (index < 6) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                }
             }
         }
     }

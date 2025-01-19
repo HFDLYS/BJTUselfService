@@ -10,6 +10,7 @@ import team.bjtuss.bjtuselfservice.web.MisDataManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import okhttp3.OkHttpClient;
@@ -259,6 +260,32 @@ public class StudentAccountManager {
                 MisDataManager.getCourse(client, isCurrentTerm, new WebCallback<List<List<Course>>>() {
                     @Override
                     public void onResponse(List<List<Course>> resp) {
+                        Future.complete(resp);
+                    }
+
+                    @Override
+                    public void onFailure(int code) {
+                        if (code == 0) {
+                            Future.completeExceptionally(new Exception("No connection"));
+                        } else if (code == 1) {
+                            Future.completeExceptionally(new Exception("Rate limit exceeded"));
+                        }
+                    }
+                });
+            } else {
+                Future.completeExceptionally(new Exception("Not loginAa"));
+            }
+        });
+        return Future;
+    }
+
+    public CompletableFuture<Map<String, List<Integer>>> getClassroom() {
+        CompletableFuture<Map<String, List<Integer>>> Future = new CompletableFuture<>();
+        checkIsLogin().thenAccept(isLogin -> {
+            if (isLogin) {
+                MisDataManager.getClassroom(client, new WebCallback<Map<String, List<Integer>>>() {
+                    @Override
+                    public void onResponse(Map<String, List<Integer>> resp) {
                         Future.complete(resp);
                     }
 

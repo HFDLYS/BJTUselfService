@@ -22,9 +22,6 @@ class GradeViewModel : ViewModel() {
         try {
             studentAccountManager.getGrade("ln").thenAccept {
                 _gradeList.value.addAll(it)
-                it.forEach {
-                    println("ln123 ${it.courseName}")
-                }
             }
         } catch (e: Exception) {
             handleLoginError(e)
@@ -33,9 +30,6 @@ class GradeViewModel : ViewModel() {
         try {
             studentAccountManager.getGrade("lr").thenAccept {
                 _gradeList.value.addAll(it)
-                it.forEach {
-                    println("lr123 ${it.courseName}")
-                }
             }
         } catch (e: Exception) {
             handleLoginError(e)

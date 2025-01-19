@@ -14,7 +14,10 @@ import org.jsoup.select.Elements;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import okhttp3.CookieJar;
@@ -393,6 +396,92 @@ public class MisDataManager {
                     }
                     ResCallback.onResponse(courseList);
                 } catch (IOException e) {
+                    ResCallback.onFailure(1);
+                }
+            }
+        });
+    }
+
+    public static void getClassroom(OkHttpClient client, WebCallback<Map<String, List<Integer>>> ResCallback) {
+        String url = "https://aa.bjtu.edu.cn/classroom/timeholdresult/room_view/";
+        Request request = new Request.Builder()
+                .url(url)
+                .header("Host", "aa.bjtu.edu.cn")
+                .build();
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                ResCallback.onFailure(0);
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
+                String url = response.request().url().toString();
+                if (url.contains("https://aa.bjtu.edu.cn/classroom/timeholdresult/room_view/?zc=")) {
+                    url += "&page=1&perpage=500";
+                    Request request = new Request.Builder()
+                            .url(url)
+                            .header("Host", "aa.bjtu.edu.cn")
+                            .build();
+                    client.newCall(request).enqueue(new Callback() {
+                        @Override
+                        public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                            try {
+                                Document doc = Jsoup.parse(response.body().string());
+                                Element table = doc.selectFirst("table");
+                                if (table == null) {
+                                    ResCallback.onFailure(1);
+                                    return;
+                                }
+                                Map<String, List<Integer>> classroomMap = new HashMap<>();
+                                Elements rows = table.select("tr");
+                                Calendar calendar = Calendar.getInstance();
+                                int dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
+                                int index = (dayOfWeek == Calendar.SUNDAY) ? 6 : (dayOfWeek - 2);
+                                for (int i = 2; i < rows.size(); i++) {
+                                    Element row = rows.get(i);
+                                    Elements cols = row.select("td");
+                                    Element colName = cols.get(0);
+                                    String classroomName = colName.text();
+                                    classroomName = classroomName.split(" ")[0];
+                                    List<Integer> classroomList = new ArrayList<>();
+                                    for (int j = 0; j < 7; j++) {
+                                        Element col = cols.get(1 + 7 * index + j);
+                                        String style = col.attr("style");
+                                        switch (style) {
+                                            case "background-color: #fff":
+                                                classroomList.add(0);
+                                                break;
+                                            case "background-color: #e46868":
+                                                classroomList.add(1);
+                                                break;
+                                            case "background-color: #9e6868":
+                                                classroomList.add(2);
+                                                break;
+                                            case "background-color: #394ed6":
+                                                classroomList.add(3);
+                                                break;
+                                            case "background-color: #77bf6d":
+                                                classroomList.add(4);
+                                                break;
+                                            case "background-color: #d8cc56":
+                                                classroomList.add(5);
+                                                break;
+                                        }
+                                    }
+                                    classroomMap.put(classroomName, classroomList);
+                                }
+                                ResCallback.onResponse(classroomMap);
+                            } catch (IOException e) {
+                                ResCallback.onFailure(1);
+                            }
+                        }
+                        @Override
+                        public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                            ResCallback.onFailure(0);
+                        }
+                    });
+                } else {
                     ResCallback.onFailure(1);
                 }
             }

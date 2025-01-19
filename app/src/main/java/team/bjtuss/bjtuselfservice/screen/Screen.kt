@@ -140,7 +140,7 @@ fun SpaceScreen(navController: NavController) {
 private val spaces = listOf(
     Space("成绩", R.drawable.grade, RouteManager.Grade),
     Space("课程表", R.drawable.course, RouteManager.CourseSchedule),
-    Space("作业与考试", R.drawable.exam, RouteManager.HomeWorkAndExam),
+    Space("作业与考试", R.drawable.exam, RouteManager.Exam),
     Space("教室人数评估", R.drawable.detect, RouteManager.Building),
     // Space("北交妙妙屋", R.drawable.bookmarks_img, Color(0xFF00FF00), RouteManager.BJTUMiaoMiaoHouse),
 )
