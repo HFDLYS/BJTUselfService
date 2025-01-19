@@ -3,6 +3,7 @@ package team.bjtuss.bjtuselfservice.screen
 import android.content.Intent
 import android.net.Uri
 import android.net.http.SslError
+import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
@@ -46,7 +47,10 @@ fun EmailScreen() {
                     cacheMode = WebSettings.LOAD_DEFAULT
                     mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                 }
-
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
 
                 // WebView Client
                 webViewClient = object : WebViewClient() {
@@ -79,7 +83,7 @@ fun EmailScreen() {
 
                 loadUrl("https://mis.bjtu.edu.cn/module/module/26/")
             }
-        }
+        },
     )
 }
 

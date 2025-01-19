@@ -418,6 +418,7 @@ public class MisDataManager {
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 String url = response.request().url().toString();
                 if (url.contains("https://aa.bjtu.edu.cn/classroom/timeholdresult/room_view/?zc=")) {
+                    int nowWeek = Integer.parseInt(url.split("zc=")[1].split("&")[0]);
                     url += "&page=1&perpage=500";
                     Request request = new Request.Builder()
                             .url(url)

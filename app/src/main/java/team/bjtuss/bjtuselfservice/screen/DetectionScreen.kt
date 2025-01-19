@@ -1,8 +1,18 @@
 package team.bjtuss.bjtuselfservice.screen
 
+import android.annotation.SuppressLint
 import android.util.Log
+import android.view.ViewGroup
+import android.webkit.ConsoleMessage
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebView.setWebContentsDebuggingEnabled
+import android.webkit.WebViewClient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +22,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -46,16 +57,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import team.bjtuss.bjtuselfservice.R
 import team.bjtuss.bjtuselfservice.RouteManager
+import team.bjtuss.bjtuselfservice.constant.ApiConstant.CLASSROOM_VIEW_URL
 import team.bjtuss.bjtuselfservice.viewmodel.ClassroomViewModel
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService.ClassroomCapacity
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService.getClassroomCapacity
+import java.nio.charset.StandardCharsets
 import java.util.Calendar
 
 @Composable
@@ -186,6 +203,9 @@ fun ClassroomScreen(
     var filterExpanded by remember { mutableStateOf(false) }
     var selectedFilter by remember { mutableStateOf("教室名") }
     var sortOrder by remember { mutableStateOf(false) }
+
+    val showDialog = remember { mutableStateOf(false) }
+    val selectedClassroom = remember { mutableStateOf<String>("") }
     // 异步获取教室容量信息
     LaunchedEffect(buildingName) {
         getClassroomCapacity(buildingName).thenAccept {
@@ -285,6 +305,7 @@ fun ClassroomScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
+
                     var filteredClassroomList = when (selectedFilter) {
                         "教室名" -> info.ClassroomList.sortedBy { it.RoomName }
                         "占用率" -> info.ClassroomList.sortedBy { it.Used.toDouble() / it.Capacity }
@@ -296,8 +317,18 @@ fun ClassroomScreen(
                     }
                     items(info.ClassroomList.size) { index ->
                         val classroom = filteredClassroomList[index]
-                        ClassroomCard(classroom, classroomMap)
+                        ClassroomCard(classroom, classroomMap) {
+                            selectedClassroom.value = classroom.RoomName
+                            showDialog.value = true
+                        }
                     }
+                }
+                if (showDialog.value && selectedClassroom.value.isNotEmpty()) {
+                    ClassroomViewDialog(
+                        onDismiss = { showDialog.value = false },
+                        buildingName = buildingName,
+                        classroomName = selectedClassroom.value
+                    )
                 }
             } ?: run {
                 Box(
@@ -316,11 +347,77 @@ fun ClassroomScreen(
     }
 }
 
+@SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun ClassroomCard(classroom: ClassroomCapacity, classroomMap: MutableMap<String, MutableList<Int>>) {
+fun ClassroomViewDialog(
+    onDismiss: () -> Unit,
+    buildingName: String,
+    classroomName: String
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .background(MaterialTheme.colorScheme.surface)
+        ) {
+            AndroidView(
+                modifier = Modifier
+                    .height(140.dp)
+                    .align(Alignment.Center),
+                factory = { context ->
+                    WebView(context).apply {
+                        settings.useWideViewPort = true
+                        settings.loadWithOverviewMode = true
+                        settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                        settings.cacheMode = WebSettings.LOAD_NO_CACHE
+                        settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                        webViewClient = object : WebViewClient() {
+                            override fun shouldOverrideUrlLoading(
+                                view: WebView,
+                                request: WebResourceRequest
+                            ): Boolean {
+                                return false
+                            }
+                        }
+                        webChromeClient = object : WebChromeClient() {
+                            override fun onConsoleMessage(message: ConsoleMessage?): Boolean {
+                                Log.d("WebView", message?.message() ?: "")
+                                return super.onConsoleMessage(message)
+                            }
+                        }
+
+                        val postData = "buildi=$buildingName&classrooms=$classroomName"
+                        val postDataBytes = postData.toByteArray(StandardCharsets.UTF_8)
+
+                        postUrl(CLASSROOM_VIEW_URL, postDataBytes)
+                        // loadUrl("https://www.google.com")
+                    }
+                },
+                update = {
+                    val postData = "buildi=$buildingName&classrooms=$classroomName"
+                    val postDataBytes = postData.toByteArray(StandardCharsets.UTF_8)
+
+                    it.postUrl(CLASSROOM_VIEW_URL, postDataBytes)
+                },
+            )
+        }
+    }
+}
+
+@Composable
+fun ClassroomCard(
+    classroom: ClassroomCapacity,
+    classroomMap: MutableMap<String, MutableList<Int>>,
+    onClick: () -> Unit = {}
+) {
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onClick() }
             .padding(bottom = 16.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -334,7 +431,7 @@ fun ClassroomCard(classroom: ClassroomCapacity, classroomMap: MutableMap<String,
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp),
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -359,14 +456,28 @@ fun ClassroomCard(classroom: ClassroomCapacity, classroomMap: MutableMap<String,
                 0f
             }
 
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surface,
-            )
+            if (classroom.Used < classroom.Capacity) {
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 8.dp, top = 8.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surface,
+                )
+            } else {
+                Text(
+                    text = "无法读取本教室人数",
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = MaterialTheme.colorScheme.error,
+                        fontStyle = FontStyle.Italic,
+                        fontSize = 12.sp
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 4.dp),
+                )
+            }
 
             Row(
                 modifier = Modifier
