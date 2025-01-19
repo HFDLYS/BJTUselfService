@@ -38,9 +38,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import team.bjtuss.bjtuselfservice.screen.CourseScheduleScreen
 import team.bjtuss.bjtuselfservice.screen.EmailScreen
 import team.bjtuss.bjtuselfservice.screen.GradeScreen
@@ -54,6 +56,9 @@ import team.bjtuss.bjtuselfservice.ui.theme.BJTUselfServicecomposeTheme
 import team.bjtuss.bjtuselfservice.viewmodel.CourseScheduleViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.GradeViewModel
 import kotlinx.coroutines.launch
+import team.bjtuss.bjtuselfservice.RouteManager.ClassroomDetection
+import team.bjtuss.bjtuselfservice.screen.BuildingScreen
+import team.bjtuss.bjtuselfservice.screen.ClassroomScreen
 
 
 class MainActivity : ComponentActivity() {
@@ -108,8 +113,15 @@ fun App(loginViewModel: LoginViewModel) {
         composable(RouteManager.HomeWorkAndExam) {
             Greeting("Android")
         }
-        composable(RouteManager.ClassroomDetection) {
-            SettingScreen(loginViewModel)
+        composable(RouteManager.Building) {
+            BuildingScreen(navController)
+        }
+        composable(
+            route = ClassroomDetection,
+            arguments = listOf(navArgument("buildingName") { type = NavType.StringType })
+        ) {
+            val buildingName = it.arguments?.getString("buildingName") ?: ""
+            ClassroomScreen(buildingName = buildingName)
         }
         composable(RouteManager.BJTUMiaoMiaoHouse) {
             EmailScreen()
@@ -138,7 +150,8 @@ object RouteManager {
     const val Setting: String = "Setting"
     const val Navigation: String = "Navigation"
     const val HomeWorkAndExam: String = "HomeWorkAndExam"
-    const val ClassroomDetection: String = "ClassroomPeopleEstimation"
+    const val Building: String = "Building"
+    const val ClassroomDetection: String = "ClassroomDetection/{buildingName}"
     const val BJTUMiaoMiaoHouse: String = "BJTUMiaoMiaoHouse"
     const val Grade: String = "Grade"
     const val CourseSchedule: String = "CourseSchedule"

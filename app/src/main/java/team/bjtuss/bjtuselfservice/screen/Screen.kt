@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -127,7 +128,7 @@ fun SpaceScreen(navController: NavController) {
     ) {
         items(spaces.size) { index ->
             val space = spaces[index]
-            SpaceCard(title = space.title, image = space.image, backgroundColor = space.color) {
+            SpaceCard(title = space.title, image = space.image, backgroundColor = MaterialTheme.colorScheme.primary) {
                 navController.navigate(space.route)
             }
         }
@@ -137,17 +138,16 @@ fun SpaceScreen(navController: NavController) {
 }
 
 private val spaces = listOf(
-    Space("成绩", R.drawable.grade, Color(0xFF315A9A), RouteManager.Grade),
-    Space("课程表", R.drawable.course, Color(0xFF315A9A), RouteManager.CourseSchedule),
-    Space("作业与考试", R.drawable.exam, Color(0xFF315A9A), RouteManager.HomeWorkAndExam),
-    Space("教室人数评估", R.drawable.detect, Color(0xFF315A9A), RouteManager.ClassroomDetection),
+    Space("成绩", R.drawable.grade, RouteManager.Grade),
+    Space("课程表", R.drawable.course, RouteManager.CourseSchedule),
+    Space("作业与考试", R.drawable.exam, RouteManager.HomeWorkAndExam),
+    Space("教室人数评估", R.drawable.detect, RouteManager.Building),
     // Space("北交妙妙屋", R.drawable.bookmarks_img, Color(0xFF00FF00), RouteManager.BJTUMiaoMiaoHouse),
 )
 
 private data class Space(
     val title: String,
     val image: Int,
-    val color: Color,
     val route: String
 )
 
