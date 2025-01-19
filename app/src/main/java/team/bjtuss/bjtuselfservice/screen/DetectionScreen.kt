@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
@@ -355,14 +356,14 @@ fun ClassroomViewDialog(
     classroomName: String
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        Box(
+        Card(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.surface)
         ) {
             AndroidView(
                 modifier = Modifier
-                    .height(140.dp)
-                    .align(Alignment.Center),
+                    .height(130.dp)
+                    .align(Alignment.CenterHorizontally),
                 factory = { context ->
                     WebView(context).apply {
                         settings.useWideViewPort = true
