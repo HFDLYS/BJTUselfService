@@ -277,10 +277,11 @@ fun GpaCard(gradeList: List<StudentAccountManager.Grade>, selectedFilter: String
                     ) { score ->
                         Text(
                             text = when {
-                                score >= 90 -> "🏆 优秀！继续保持你的学术热情！"
-                                score >= 80 -> "👍 很棒！你正在取得进步！"
-                                score >= 60 -> "📚 继续努力，你可以做得更好！"
-                                else -> "💪 不要放弃，提升的机会还很多！"
+                                score >= 90 -> "🫢 这位学霸会不会太猛了"
+                                score >= 85 -> "🫡 鼓足干劲，力争上游，多快好省地，加油吧！！！"
+                                score >= 75 -> "🥹 不错哦，继续努力"
+                                score >= 60 -> "☺️ 得加把劲了，但或许已经够了？"
+                                else -> "😱😱😱 同学你真得加油了啊"
                             },
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
