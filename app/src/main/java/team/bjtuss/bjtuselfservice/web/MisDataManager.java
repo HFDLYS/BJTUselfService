@@ -260,8 +260,9 @@ public class MisDataManager {
                             courseScore = "***";
                         }
                         String teacher = cols.get(6).text().replace("\n", "").replace("\t", "").replace(" ", "");
+                        String tag = cols.get(1).text().replace("\n", "").replace("\t", "").replace(" ", "");
                         StudentAccountManager.Grade grade = new StudentAccountManager.Grade(courseName, teacher, courseScore, courseGPA, year);
-                        grade.tag = ctype;
+                        grade.tag = tag;
                         if (detail != null) {
                             String dataContent = detail.attr("data-content");
                             Document contentDoc = Jsoup.parse(dataContent);

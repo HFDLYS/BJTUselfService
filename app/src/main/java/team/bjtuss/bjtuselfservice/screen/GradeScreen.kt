@@ -146,7 +146,8 @@ fun GradeList(
                     onDismissRequest = { filterExpanded = false },
                     modifier = Modifier.background(MaterialTheme.colorScheme.background)
                 ) {
-                    val filterOptions = listOf("全部", "本学期课程", "历年成绩")
+                    val filterOptions = mutableListOf("全部")
+                    filterOptions += gradeList.map { it.tag }.distinct()
                     filterOptions.forEach { option ->
                         DropdownMenuItem(
                             onClick = {
@@ -190,9 +191,8 @@ fun GradeList(
             ) {
                 val filteredGradeList = gradeList.filter {
                     when (selectedFilter) {
-                        "本学期课程" -> it.tag == "lr"
-                        "历年成绩" -> it.tag == "ln"
-                        else -> true
+                        "全部" -> true
+                        else -> it.tag == selectedFilter
                     }
                 }
                 val sortedGradeList = when (sortOrder) {
@@ -228,9 +228,8 @@ fun GpaCard(gradeList: List<StudentAccountManager.Grade>, selectedFilter: String
 //    )
     val filteredGradeList = gradeList.filter {
         when (selectedFilter) {
-            "本学期课程" -> it.tag == "lr"
-            "历年成绩" -> it.tag == "ln"
-            else -> true
+            "全部" -> true
+            else -> it.tag == selectedFilter
         }
     }
     val gradeInfo = calculateGradeInfo(filteredGradeList)
@@ -270,10 +269,6 @@ fun GpaCard(gradeList: List<StudentAccountManager.Grade>, selectedFilter: String
                     )
                     AnimatedContent(
                         targetState = gradeInfo.averageScore,
-                        transitionSpec = {
-                            slideInVertically { height -> height } togetherWith
-                                    slideOutVertically { height -> -height }
-                        }
                     ) { score ->
                         Text(
                             text = when {

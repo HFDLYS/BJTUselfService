@@ -19,6 +19,7 @@ class GradeViewModel : ViewModel() {
     }
 
     fun loadGradeList() {
+        _gradeList.value = mutableListOf()
         try {
             studentAccountManager.getGrade("ln").thenAccept {
                 _gradeList.value.addAll(it)
