@@ -1,14 +1,18 @@
 package team.bjtuss.bjtuselfservice.screen
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
@@ -22,7 +26,9 @@ import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -39,11 +45,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
+import team.bjtuss.bjtuselfservice.R
+import team.bjtuss.bjtuselfservice.RouteManager
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
@@ -63,6 +76,8 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
     var status by remember { mutableStateOf<StudentAccountManager.Status?>(null) }
     var selectedChange by remember { mutableStateOf<DataChange<GradeEntity>?>(null) }
     var showDialog by remember { mutableStateOf(false) }
+
+    var isRefreshing by remember { mutableStateOf(false) }
 
     studentAccountManager.status.thenAccept {
         status = it
@@ -100,97 +115,15 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Status Card
-//        Card(
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .animateContentSize(),
-//            shape = RoundedCornerShape(16.dp),
-//            colors = CardDefaults.cardColors(
-//                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-//            )
-//        ) {
-//            Column(
-//                modifier = Modifier
-//                    .padding(20.dp),
-//                verticalArrangement = Arrangement.spacedBy(16.dp)
-//            ) {
-//                Row(
-//                    verticalAlignment = Alignment.CenterVertically,
-//                    modifier = Modifier
-//                        .background(
-//                            MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-//                            RoundedCornerShape(12.dp)
-//                        )
-//                        .padding(12.dp)
-//                ) {
-//                    Icon(
-//                        imageVector = Icons.Default.Email,
-//                        contentDescription = "New Mail",
-//                        tint = MaterialTheme.colorScheme.primary,
-//                        modifier = Modifier.size(28.dp)
-//                    )
-//                    Spacer(modifier = Modifier.width(12.dp))
-//                    BJTUMailLoginScreen(
-//                        { Text(newMailCount, fontSize = 18.sp, color = MaterialTheme.colorScheme.onBackground) },
-//                        navController
-//                    )
-//                }
-//
-//                Row(
-//                    verticalAlignment = Alignment.CenterVertically,
-//                    modifier = Modifier
-//                        .background(
-//                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f),
-//                            RoundedCornerShape(12.dp)
-//                        )
-//                        .padding(12.dp)
-//                ) {
-//                    Icon(
-//                        imageVector = Icons.Default.AccountBalanceWallet,
-//                        contentDescription = "Ecard Balance",
-//                        tint = MaterialTheme.colorScheme.secondary,
-//                        modifier = Modifier.size(28.dp)
-//                    )
-//                    Spacer(modifier = Modifier.width(12.dp))
-//                    Text(
-//                        text = ecardBalance,
-//                        fontSize = 18.sp,
-//                        color = MaterialTheme.colorScheme.onBackground
-//                    )
-//                }
-//
-//                Row(
-//                    verticalAlignment = Alignment.CenterVertically,
-//                    modifier = Modifier
-//                        .background(
-//                            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.1f),
-//                            RoundedCornerShape(12.dp)
-//                        )
-//                        .padding(12.dp)
-//                ) {
-//                    Icon(
-//                        imageVector = Icons.Default.Wifi,
-//                        contentDescription = "Net Balance",
-//                        tint = MaterialTheme.colorScheme.tertiary,
-//                        modifier = Modifier.size(28.dp)
-//                    )
-//                    Spacer(modifier = Modifier.width(12.dp))
-//                    Text(
-//                        text = netBalance,
-//                        fontSize = 18.sp,
-//                        color = MaterialTheme.colorScheme.onBackground
-//                    )
-//                }
-//            }
-//        }
 
 
         StatusInfo(ecardBalance, netBalance, newMailCount, navController)
 
         // Grade Changes Section
         Card(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
 //            colors = CardDefaults.cardColors(
 //                containerColor = MaterialTheme.colorScheme.surface,
@@ -200,70 +133,111 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
                 modifier = Modifier.padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = "成绩变动",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold
-                )
-
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    thickness = 1.dp
-                )
-
-                LazyColumn(
-                    modifier = Modifier,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(gradeChangeList.size) { index ->
-                        val gradeChange = gradeChangeList[index]
-                        GradeChangeCard(
-                            gradeChange = gradeChange,
-                            onClick = {
-                                selectedChange = gradeChange
-                                showDialog = true
-                            }
+                if (isRefreshing) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(top = 32.dp)
+                    ) {
+                        RotatingImageLoader(
+                            image = painterResource(id = R.drawable.loading_icon),
+                            rotationDuration = 1000,
+                            modifier = Modifier.align(Alignment.Center)
                         )
                     }
                 }
-                Text(
-                    text = "课程变动",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold
-                )
+                if (gradeChangeList.isNotEmpty()) {
+                    Text(
+                        text = "成绩变动",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
 
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    thickness = 1.dp
-                )
-                LazyColumn {
-                    items(courseChangeList.size) { index ->
-                        val courseChange = courseChangeList[index]
-                        when (courseChange) {
-                            is DataChange.Added -> {
-                                Text("新增 ${courseChange.items.size} 项课程")
-                            }
 
-                            is DataChange.Modified -> {
-                                Text("变动 ${courseChange.items.size} 项课程")
-                            }
+                    LazyColumn(
+                        modifier = Modifier,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(gradeChangeList.size) { index ->
+                            val gradeChange = gradeChangeList[index]
+                            GradeChangeCard(
+                                gradeChange = gradeChange,
+                                onClick = {
+                                    selectedChange = gradeChange
+                                    showDialog = true
+                                }
+                            )
+                        }
+                    }
+                }
 
-                            is DataChange.Deleted -> {
-                                Text("删除 ${courseChange.items.size} 项课程")
+                if (courseChangeList.isNotEmpty()) {
+                    Text(
+                        text = "课程变动",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    LazyColumn {
+                        items(courseChangeList.size) { index ->
+                            val courseChange = courseChangeList[index]
+                            when (courseChange) {
+                                is DataChange.Added -> {
+                                    Text("新增 ${courseChange.items.size} 项课程")
+                                }
+
+                                is DataChange.Modified -> {
+                                    Text("变动 ${courseChange.items.size} 项课程")
+                                }
+
+                                is DataChange.Deleted -> {
+                                    Text("删除 ${courseChange.items.size} 项课程")
+                                }
                             }
                         }
                     }
                 }
             }
         }
+
+        Button(
+            onClick = {
+                isRefreshing = true  // 开始刷新
+
+                CoroutineScope(Dispatchers.Main).launch {
+                    try {
+                        val job1 = async { mainViewModel.gradeViewModel.loadDataAndDetectChanges() }
+                        val job2 = async { mainViewModel.courseScheduleViewModel.loadDataAndDetectChanges() }
+                        job1.await()
+                        job2.await()
+                    } catch (e: Exception) {
+                        Log.e("refreshingButton", "Data loading failed", e)
+                    } finally {
+                        isRefreshing = false
+                    }
+                }
+            },
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            enabled = !isRefreshing
+        ) {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = "刷新",
+                modifier = Modifier.size(24.dp)
+            )
+            Text("刷新",
+                fontSize = 18.sp
+            )
+        }
     }
 
     if (showDialog && selectedChange != null) {
         DetailedGradeChangeDialog(
             change = selectedChange!!,
-            onDismiss = { showDialog = false }
+            onDismiss = { showDialog = false },
+            navController = navController
         )
     }
 }
@@ -379,7 +353,6 @@ private fun GradeChangeCard(
                 contentDescription = "View Details",
                 tint = textColor.copy(alpha = 0.7f)
             )
-
         }
     }
 }
@@ -388,7 +361,8 @@ private fun GradeChangeCard(
 @Composable
 fun DetailedGradeChangeDialog(
     change: DataChange<GradeEntity>,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    navController: NavController
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -397,7 +371,10 @@ fun DetailedGradeChangeDialog(
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
             shape = MaterialTheme.shapes.large,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+            onClick = {
+                navController.navigate(RouteManager.Grade)
+            }
         ) {
             Column(
                 modifier = Modifier

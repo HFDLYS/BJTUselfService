@@ -165,6 +165,7 @@ class LoginViewModel : ViewModel() {
                 if (result.isSuccess) {
                     _screenStatus.value = ScreenStatus.AppScreen
                 } else {
+                    _loginState.value = LoginState.Error(result.exceptionOrNull()?.message ?: "自动登录失败")
                     LoginState.Error(result.exceptionOrNull()?.message ?: "自动登录失败")
                 }
 

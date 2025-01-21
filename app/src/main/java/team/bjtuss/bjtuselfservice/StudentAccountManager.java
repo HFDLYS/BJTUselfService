@@ -36,6 +36,9 @@ public class StudentAccountManager {
     private boolean isXsmisLogin = false;
 
     private StudentAccountManager() {
+        gradeMap = new java.util.HashMap<>();
+        courseListMap = new java.util.HashMap<>();
+        examScheduleList = new ArrayList<>();
     }
 
     // 单例模式
@@ -185,6 +188,8 @@ public class StudentAccountManager {
         });
     }
 
+    public Map<String, List<GradeEntity>> gradeMap;
+
     // 获得成绩
     public CompletableFuture<List<GradeEntity>> getGrade(String ctype) {
         CompletableFuture<List<GradeEntity>> gradeFuture = new CompletableFuture<>();
@@ -193,6 +198,7 @@ public class StudentAccountManager {
                 @Override
                 public void onResponse(List<GradeEntity> resp) {
                     List<GradeEntity> grades = new ArrayList<>(resp);
+                    gradeMap.put(ctype, grades);
                     gradeFuture.complete(grades);
                 }
 
@@ -201,7 +207,7 @@ public class StudentAccountManager {
                     if (code == 0) {
                         gradeFuture.completeExceptionally(new Exception("No connection"));
                     } else if (code == 1) {
-                        gradeFuture.completeExceptionally(new Exception("Rate limit exceeded"));
+                        gradeFuture.complete(new ArrayList<>());
                     }
                 }
             }, ctype);
@@ -211,12 +217,14 @@ public class StudentAccountManager {
         return gradeFuture;
     }
 
+    public List<ExamSchedule> examScheduleList;
     public CompletableFuture<List<ExamSchedule>> getExamSchedule() {
         CompletableFuture<List<ExamSchedule>> Future = new CompletableFuture<>();
         if (isAaLogin) {
             MisDataManager.getExamSchedule(client, new WebCallback<List<ExamSchedule>>() {
                 @Override
                 public void onResponse(List<ExamSchedule> obj) {
+                    examScheduleList = new ArrayList<>(obj);
                     Future.complete(obj);
                 }
 
@@ -258,6 +266,7 @@ public class StudentAccountManager {
         return statusFuture;
     }
 
+    public Map<Boolean, List<List<CourseEntity>>> courseListMap;
     public CompletableFuture<List<List<CourseEntity>>> getCourseList(boolean isCurrentTerm) {
         CompletableFuture<List<List<CourseEntity>>> Future = new CompletableFuture<>();
         checkIsLogin().thenAccept(isLogin -> {
@@ -265,6 +274,7 @@ public class StudentAccountManager {
                 MisDataManager.getCourse(client, isCurrentTerm, new WebCallback<List<List<CourseEntity>>>() {
                     @Override
                     public void onResponse(List<List<CourseEntity>> resp) {
+                        courseListMap.put(isCurrentTerm, resp);
                         Future.complete(resp);
                     }
 

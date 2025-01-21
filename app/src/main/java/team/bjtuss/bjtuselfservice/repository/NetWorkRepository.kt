@@ -60,10 +60,23 @@ object NetWorkRepository {
 
     suspend fun getCourseList(): List<CourseEntity> {
         return withContext(Dispatchers.IO) {
-            val currentTermCourseListOfTwoDim =
-                async { studentAccountManager.getCourseList(true).await() }
-            val nextTermCourseListOfTwoDim =
-                async { studentAccountManager.getCourseList(false).await() }
+            val currentTermCourseListOfTwoDim = async {
+                try {
+                    studentAccountManager.getCourseList(true).await()
+                } catch (e: Exception) {
+                    println("Error fetching current term course list: ${e.message}")
+                    studentAccountManager.courseListMap[true] ?: emptyList()
+                }
+            }
+
+            val nextTermCourseListOfTwoDim = async {
+                try {
+                    studentAccountManager.getCourseList(false).await()
+                } catch (e: Exception) {
+                    println("Error fetching next term course list: ${e.message}")
+                    studentAccountManager.courseListMap[false] ?: emptyList()
+                }
+            }
             val courseListOfOneDim: MutableList<CourseEntity> = mutableListOf()
             currentTermCourseListOfTwoDim.await().forEach {
                 if (it == null || it.isEmpty()) {
@@ -98,11 +111,23 @@ object NetWorkRepository {
     suspend fun getGradeList(): List<GradeEntity> {
         val gradeList = withContext(Dispatchers.IO) {
             val lnGradesDeferred = async {
-                studentAccountManager.getGrade("ln").await() ?: emptyList()
+                try {
+                    studentAccountManager.getGrade("ln").await()
+                } catch (e: Exception) {
+                    println("Error fetching ln grade list: ${e.message}")
+                    studentAccountManager.gradeMap["ln"] ?: emptyList()
+                }
             }
+
             val lrGradesDeferred = async {
-                studentAccountManager.getGrade("lr").await() ?: emptyList()
+                try {
+                    studentAccountManager.getGrade("lr").await()
+                } catch (e: Exception) {
+                    println("Error fetching lr grade list: ${e.message}")
+                    studentAccountManager.gradeMap["lr"] ?: emptyList()
+                }
             }
+
 
             // Wait for both requests and combine results
             val lnGrades = lnGradesDeferred.await()

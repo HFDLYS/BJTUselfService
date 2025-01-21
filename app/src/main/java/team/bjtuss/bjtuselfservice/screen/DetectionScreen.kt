@@ -133,7 +133,7 @@ fun BuildingScreen(navController: NavController) {
                             .fillMaxWidth()
                             .padding(bottom = 16.dp),
                         colors = CardDefaults.elevatedCardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            containerColor = MaterialTheme.colorScheme.surface
                         ),
                         onClick = {
                             navController.navigate("ClassroomDetection" + "/${buildingList[index]}")
@@ -421,8 +421,8 @@ fun ClassroomCard(
             .clickable { onClick() }
             .padding(bottom = 16.dp),
         colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
     ) {
         Column  (
             modifier = Modifier
@@ -487,10 +487,10 @@ fun ClassroomCard(
                 horizontalArrangement = Arrangement.Start
             ) {
                 repeat(7) { index ->
-                    var color = MaterialTheme.colorScheme.surfaceVariant
+                    var color = MaterialTheme.colorScheme.surface
                     if (classroomMap.contains(classroom.RoomName)) {
                         when (classroomMap[classroom.RoomName]!![index]) {
-                            0 -> color = MaterialTheme.colorScheme.surfaceVariant
+                            0 -> color = MaterialTheme.colorScheme.surface
                             1 -> color = Color(0xffe46868)
                             2 -> color = Color(0xff9e6868)
                             3 -> color = Color(0xff394ed6)
