@@ -1,23 +1,49 @@
 package team.bjtuss.bjtuselfservice.screen
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CardElevation
+import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -31,85 +57,19 @@ import team.bjtuss.bjtuselfservice.component.SpaceCard
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import team.bjtuss.bjtuselfservice.entity.GradeEntity
+import team.bjtuss.bjtuselfservice.utils.KotlinUtils
+import team.bjtuss.bjtuselfservice.viewmodel.DataChange
+import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
+import kotlin.compareTo
+import kotlin.reflect.full.memberProperties
 
-@Composable
-fun HomeScreen(navController: NavController) {
-    val studentAccountManager = StudentAccountManager.getInstance()
-
-//    val name = studentAccountManager.stuName
-//
-//    Text(text = "Hello, $name")
-
-    var status by remember {
-        mutableStateOf<StudentAccountManager.Status?>(null)
-    }
-
-    studentAccountManager.status.thenAccept {
-        status = it
-    }
-
-    val ecardBalance = "校园卡余额：${status?.EcardBalance}".let {
-        if (status?.EcardBalance?.toDoubleOrNull() ?: 0.0 < 20) {
-            "$it，会不会不够用了"
-        } else {
-            it
-        }
-    }
-
-    val netBalance = "校园网余额：${status?.NetBalance}".let {
-        if (status?.NetBalance == "0") {
-            "$it，😱下个月要没网了"
-        } else {
-            it
-        }
-    }
-
-    val newMailCount = "新邮件：${status?.NewMailCount}".let {
-        if (status?.NewMailCount != "0") {
-            "$it，记得去看哦"
-        } else {
-            it
-        }
-    }
-
-
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Default.Email,
-                contentDescription = "New Mail",
-                tint = Color.Blue
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            BJTUMailLoginScreen({ Text(newMailCount, fontSize = 18.sp) }, navController)
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Default.AccountBalanceWallet,
-                contentDescription = "Ecard Balance",
-                tint = Color.Green
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = ecardBalance, fontSize = 18.sp)
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Default.Wifi,
-                contentDescription = "Net Balance",
-                tint = Color.Red
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = netBalance, fontSize = 18.sp)
-        }
-    }
-}
 
 @Composable
 fun SpaceScreen(navController: NavController) {
@@ -128,12 +88,14 @@ fun SpaceScreen(navController: NavController) {
     ) {
         items(spaces.size) { index ->
             val space = spaces[index]
-            SpaceCard(title = space.title, image = space.image, backgroundColor = MaterialTheme.colorScheme.primary) {
+            SpaceCard(
+                title = space.title,
+                image = space.image,
+                backgroundColor = MaterialTheme.colorScheme.primary
+            ) {
                 navController.navigate(space.route)
             }
         }
-
-
     }
 }
 
@@ -150,7 +112,5 @@ private data class Space(
     val image: Int,
     val route: String
 )
-
-
 
 

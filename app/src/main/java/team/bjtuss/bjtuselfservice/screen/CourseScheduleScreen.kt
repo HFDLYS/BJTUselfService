@@ -36,6 +36,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,7 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
-import team.bjtuss.bjtuselfservice.StudentAccountManager.Course
+import team.bjtuss.bjtuselfservice.entity.CourseEntity
 import team.bjtuss.bjtuselfservice.utils.Utils
 import team.bjtuss.bjtuselfservice.viewmodel.CourseScheduleViewModel
 
@@ -94,6 +95,9 @@ fun GradeTopMenu(menuItemList: List<MenuItem>) {
 fun CourseScheduleScreen(
     courseScheduleViewModel: CourseScheduleViewModel
 ) {
+    LaunchedEffect(Unit) {
+        courseScheduleViewModel.syncDataAndClearChange()
+    }
     val weekDays = listOf("", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日")
     val courseTimes = listOf(
         "第一节\n08:00\n09:50",
@@ -152,7 +156,7 @@ fun CourseScheduleScreen(
 @Composable
 fun CourseScheduleContent(
     modifier: Modifier = Modifier,
-    courseList: List<List<Course>>,
+    courseList: List<List<CourseEntity>>,
     weekDays: List<String>,
     courseTimes: List<String>
 ) {
@@ -213,7 +217,7 @@ fun CourseScheduleContent(
 
 @Composable
 fun CourseScheduleGrid(
-    courseList: List<List<Course>>,
+    courseList: List<List<CourseEntity>>,
 
     ) {
     val weekDays: Int = 7
@@ -239,9 +243,10 @@ fun CourseScheduleGrid(
     }
 }
 
+
 @Composable
 fun CourseCell(
-    courses: List<Course>?,
+    courses: List<CourseEntity>?,
     modifier: Modifier = Modifier
 ) {
     var showDetailedCourseInformationDialog by remember { mutableStateOf(false) }
@@ -272,7 +277,14 @@ fun CourseCell(
                 modifier = Modifier.fillMaxSize()
             ) {
                 courses.forEach {
-                    val backgroundColor = Color(android.graphics.Color.parseColor(Utils.generateRandomColor(it.CourseName, isSystemInDarkTheme())))
+                    val backgroundColor = Color(
+                        android.graphics.Color.parseColor(
+                            Utils.generateRandomColor(
+                                it.courseName,
+                                isSystemInDarkTheme()
+                            )
+                        )
+                    )
 
                     Column(
                         modifier = Modifier
@@ -281,7 +293,7 @@ fun CourseCell(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = it.CourseName,
+                            text = it.courseName,
                             style = MaterialTheme.typography.bodySmall,
                             fontSize = 10.sp,
                             textAlign = TextAlign.Center,
@@ -289,7 +301,7 @@ fun CourseCell(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = it.CoursePlace,
+                            text = it.coursePlace,
                             style = MaterialTheme.typography.bodySmall,
                             fontSize = 8.sp,
                             textAlign = TextAlign.Center,
@@ -312,7 +324,10 @@ fun CourseCell(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DetailedCourseInformationDialog(courses: List<Course>, onDismissRequest: () -> Unit = {}) {
+fun DetailedCourseInformationDialog(
+    courses: List<CourseEntity>,
+    onDismissRequest: () -> Unit = {}
+) {
 
     BasicAlertDialog(
         onDismissRequest = onDismissRequest,
@@ -355,22 +370,31 @@ fun DetailedCourseInformationDialog(courses: List<Course>, onDismissRequest: () 
                             modifier = Modifier.fillMaxWidth(),
                             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                             shape = MaterialTheme.shapes.small,
-                            colors = CardDefaults.cardColors(Color(android.graphics.Color.parseColor(Utils.generateRandomColor(course.CourseName, isSystemInDarkTheme()))))
+                            colors = CardDefaults.cardColors(
+                                Color(
+                                    android.graphics.Color.parseColor(
+                                        Utils.generateRandomColor(
+                                            course.courseName,
+                                            isSystemInDarkTheme()
+                                        )
+                                    )
+                                )
+                            )
                         ) {
                             Column(
                                 modifier = Modifier.padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 // Course details with icons
-                                CourseDetailRow("课程编号", course.CourseId, Icons.Default.Code)
-                                CourseDetailRow("课程名称", course.CourseName, Icons.Default.Book)
-                                CourseDetailRow("教师", course.CourseTeacher, Icons.Default.Person)
+                                CourseDetailRow("课程编号", course.courseId, Icons.Default.Code)
+                                CourseDetailRow("课程名称", course.courseName, Icons.Default.Book)
+                                CourseDetailRow("教师", course.courseTeacher, Icons.Default.Person)
                                 CourseDetailRow(
                                     "上课时间",
-                                    course.CourseTime,
+                                    course.courseTime,
                                     Icons.Default.Schedule
                                 )
-                                CourseDetailRow("上课地点", course.CoursePlace, Icons.Default.Place)
+                                CourseDetailRow("上课地点", course.coursePlace, Icons.Default.Place)
                             }
                         }
                     }

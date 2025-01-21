@@ -412,7 +412,7 @@ fun ClassroomViewDialog(
 @Composable
 fun ClassroomCard(
     classroom: ClassroomCapacity,
-    classroomMap: MutableMap<String, MutableList<Int>>,
+    classroomMap: Map<String,List<Int>>,
     onClick: () -> Unit = {}
 ) {
     ElevatedCard(

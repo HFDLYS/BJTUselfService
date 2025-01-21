@@ -3,7 +3,11 @@ package team.bjtuss.bjtuselfservice;
 
 import androidx.annotation.Nullable;
 import androidx.lifecycle.MutableLiveData;
+import androidx.room.Entity;
 
+
+import team.bjtuss.bjtuselfservice.entity.CourseEntity;
+import team.bjtuss.bjtuselfservice.entity.GradeEntity;
 import team.bjtuss.bjtuselfservice.utils.Network;
 import team.bjtuss.bjtuselfservice.utils.Network.WebCallback;
 import team.bjtuss.bjtuselfservice.web.MisDataManager;
@@ -30,6 +34,7 @@ public class StudentAccountManager {
     private boolean isAaLogin = false;
 
     private boolean isXsmisLogin = false;
+
     private StudentAccountManager() {
     }
 
@@ -181,13 +186,13 @@ public class StudentAccountManager {
     }
 
     // 获得成绩
-    public CompletableFuture<List<Grade>> getGrade(String ctype) {
-        CompletableFuture<List<Grade>> gradeFuture = new CompletableFuture<>();
+    public CompletableFuture<List<GradeEntity>> getGrade(String ctype) {
+        CompletableFuture<List<GradeEntity>> gradeFuture = new CompletableFuture<>();
         if (isAaLogin) {
-            MisDataManager.getGrade(client, new WebCallback<List<Grade>>() {
+            MisDataManager.getGrade(client, new WebCallback<List<GradeEntity>>() {
                 @Override
-                public void onResponse(List<Grade> resp) {
-                    List<Grade> grades = new ArrayList<>(resp);
+                public void onResponse(List<GradeEntity> resp) {
+                    List<GradeEntity> grades = new ArrayList<>(resp);
                     gradeFuture.complete(grades);
                 }
 
@@ -253,13 +258,13 @@ public class StudentAccountManager {
         return statusFuture;
     }
 
-    public CompletableFuture<List<List<Course>>> getCourseList(boolean isCurrentTerm) {
-        CompletableFuture<List<List<Course>>> Future = new CompletableFuture<>();
+    public CompletableFuture<List<List<CourseEntity>>> getCourseList(boolean isCurrentTerm) {
+        CompletableFuture<List<List<CourseEntity>>> Future = new CompletableFuture<>();
         checkIsLogin().thenAccept(isLogin -> {
             if (isLogin) {
-                MisDataManager.getCourse(client, isCurrentTerm, new WebCallback<List<List<Course>>>() {
+                MisDataManager.getCourse(client, isCurrentTerm, new WebCallback<List<List<CourseEntity>>>() {
                     @Override
-                    public void onResponse(List<List<Course>> resp) {
+                    public void onResponse(List<List<CourseEntity>> resp) {
                         Future.complete(resp);
                     }
 
@@ -366,24 +371,6 @@ public class StudentAccountManager {
         }
     }
 
-    public static class Grade {
-        public String courseName;
-        public String courseTeacher;
-        public String courseScore;
-        public String courseCredits;
-        public String courseYear;
-        public String tag;
-        public String detail;
-
-        public Grade(String courseName, String courseTeacher, String courseScore, String courseCredits, String courseYear) {
-            this.courseName = courseName;
-            this.courseTeacher = courseTeacher;
-            this.courseScore = courseScore;
-            this.courseCredits = courseCredits;
-            this.courseYear = courseYear;
-        }
-    }
-
     public static class Status {
         public String NewMailCount;
         public String EcardBalance;
@@ -412,21 +399,21 @@ public class StudentAccountManager {
         }
     }
 
-    public static class Course {
-        public String CourseId;
-        public String CourseName;
-        public String CourseTeacher;
-        public String CourseTime;
-        public String CoursePlace;
-
-        public Course(String CourseId, String CourseName, String CourseTeacher, String CourseTime, String CoursePlace) {
-            this.CourseId = CourseId;
-            this.CourseName = CourseName;
-            this.CourseTeacher = CourseTeacher;
-            this.CourseTime = CourseTime;
-            this.CoursePlace = CoursePlace;
-        }
-    }
+//    public static class Course {
+//        public String CourseId;
+//        public String CourseName;
+//        public String CourseTeacher;
+//        public String CourseTime;
+//        public String CoursePlace;
+//
+//        public Course(String CourseId, String CourseName, String CourseTeacher, String CourseTime, String CoursePlace) {
+//            this.CourseId = CourseId;
+//            this.CourseName = CourseName;
+//            this.CourseTeacher = CourseTeacher;
+//            this.CourseTime = CourseTime;
+//            this.CoursePlace = CoursePlace;
+//        }
+//    }
 }
 
 
@@ -490,7 +477,7 @@ class LoginResult {
 }
 
 class LoggedInUserView {
-    private String displayName;
+    private final String displayName;
     //... other data fields that may be accessible to the UI
 
     LoggedInUserView(String displayName) {

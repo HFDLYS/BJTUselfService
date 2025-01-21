@@ -37,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,24 +54,30 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.window.DialogProperties
+import team.bjtuss.bjtuselfservice.entity.GradeEntity
+
 import team.bjtuss.bjtuselfservice.utils.Utils
+
 
 @Composable
 fun GradeScreen(
     gradeViewModel: GradeViewModel
 ) {
+    LaunchedEffect(Unit) {
+        gradeViewModel.syncDataAndClearChange()
+    }
     val gradeList by gradeViewModel.gradeList.collectAsState()
-
+//    gradeViewModel.syncDataAndClearChange()
     GradeList(
         gradeList = gradeList,
     )
 }
 
-fun calculateGradeInfo(grades: List<StudentAccountManager.Grade>): GradeInfoResult {
-    val (totalScore, totalCredit) = grades.fold(0.0 to 0.0) { (accScore, accCredit), grade ->
+fun calculateGradeInfo(grades: List<GradeEntity>): GradeInfoResult {
+    val (totalScore, totalCredit) = grades.fold(0.0 to 0.0) { (accScore, accCredit), GradeEntity ->
         try {
-            val scoreValue = grade.courseScore.split(",")[1].toDoubleOrNull() ?: 0.0
-            val creditValue = grade.courseCredits.toDoubleOrNull() ?: 0.0
+            val scoreValue = GradeEntity.courseScore.split(",")[1].toDoubleOrNull() ?: 0.0
+            val creditValue = GradeEntity.courseCredits.toDoubleOrNull() ?: 0.0
 
             accScore + (scoreValue * creditValue) to accCredit + creditValue
         } catch (e: Exception) {
@@ -104,7 +111,7 @@ enum class SortOrder {
 
 @Composable
 fun GradeList(
-    gradeList: List<StudentAccountManager.Grade>
+    gradeList: List<GradeEntity>
 ) {
     var filterExpanded by remember { mutableStateOf(false) }
     var selectedFilter by remember { mutableStateOf("全部") }
@@ -147,7 +154,7 @@ fun GradeList(
                     modifier = Modifier.background(MaterialTheme.colorScheme.background)
                 ) {
                     val filterOptions = mutableListOf("全部")
-                    filterOptions += gradeList.map { it.tag }.distinct()
+                    filterOptions += gradeList.map { it.tag }.filterNotNull().distinct()
                     filterOptions.forEach { option ->
                         DropdownMenuItem(
                             onClick = {
@@ -201,11 +208,11 @@ fun GradeList(
                     SortOrder.DESCENDING -> filteredGradeList.sortedByDescending { getScoreGrade(it.courseScore) }
                 }
                 items(sortedGradeList.size) { index ->
-                    val grade = sortedGradeList[index]
-                    val score = getScoreGrade(grade.courseScore)
+                    val GradeEntity = sortedGradeList[index]
+                    val score = getScoreGrade(GradeEntity.courseScore)
                     val cardColor = Color(Utils.calculateGradeColor(score.toDouble()))
                     GradeItemCard(
-                        grade = grade,
+                        GradeEntity = GradeEntity,
                         cardColor = cardColor
                     )
                 }
@@ -216,7 +223,7 @@ fun GradeList(
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
-fun GpaCard(gradeList: List<StudentAccountManager.Grade>, selectedFilter: String) {
+fun GpaCard(gradeList: List<GradeEntity>, selectedFilter: String) {
 //    val infiniteTransition = rememberInfiniteTransition()
 //    val scale by infiniteTransition.animateFloat(
 //        initialValue = 1f,
@@ -293,7 +300,7 @@ fun GpaCard(gradeList: List<StudentAccountManager.Grade>, selectedFilter: String
 
 @Composable
 fun GradeItemCard(
-    grade: StudentAccountManager.Grade,
+    GradeEntity: GradeEntity,
     cardColor: Color,
 ) {
     var showDetailedInformationDialog by remember { mutableStateOf(false) }
@@ -319,9 +326,9 @@ fun GradeItemCard(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = grade.courseName.substring(
+                    text = GradeEntity.courseName.substring(
                         8,
-                        grade.courseName.length - 4
+                        GradeEntity.courseName.length - 4
                     ),
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
@@ -341,7 +348,7 @@ fun GradeItemCard(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = grade.courseTeacher,
+                        text = GradeEntity.courseTeacher,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -357,7 +364,7 @@ fun GradeItemCard(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "${grade.courseCredits}",
+                        text = GradeEntity.courseCredits,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -369,7 +376,7 @@ fun GradeItemCard(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = grade.courseScore,
+                    text = GradeEntity.courseScore,
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
                         color = cardColor
@@ -387,7 +394,7 @@ fun GradeItemCard(
 
     if (showDetailedInformationDialog) {
         GradeDetailDialog(
-            grade = grade,
+            GradeEntity = GradeEntity,
             onDismissRequest = { showDetailedInformationDialog = false } // 关闭对话框
         )
     }
@@ -396,7 +403,7 @@ fun GradeItemCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GradeDetailDialog(
-    grade: StudentAccountManager.Grade,
+    GradeEntity: GradeEntity,
     onDismissRequest: () -> Unit
 ) {
     BasicAlertDialog(
@@ -441,27 +448,27 @@ fun GradeDetailDialog(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(
-                                    text = grade.courseName,
+                                    text = GradeEntity.courseName,
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "教师: ${grade.courseTeacher}",
+                                    text = "教师: ${GradeEntity.courseTeacher}",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = "学分: ${grade.courseCredits}",
+                                    text = "学分: ${GradeEntity.courseCredits}",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = "成绩: ${grade.courseScore}",
+                                    text = "成绩: ${GradeEntity.courseScore}",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = grade.detail,
+                                    text = GradeEntity.detail,
                                     style = MaterialTheme.typography.bodyMedium,
                                     maxLines = Int.MAX_VALUE,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant

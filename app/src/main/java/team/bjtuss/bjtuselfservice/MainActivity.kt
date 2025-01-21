@@ -60,6 +60,8 @@ import team.bjtuss.bjtuselfservice.RouteManager.ClassroomDetection
 import team.bjtuss.bjtuselfservice.screen.BuildingScreen
 import team.bjtuss.bjtuselfservice.screen.ClassroomScreen
 import team.bjtuss.bjtuselfservice.viewmodel.ClassroomViewModel
+import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
+import team.bjtuss.bjtuselfservice.viewmodel.MainViewModelFactory
 
 
 class MainActivity : ComponentActivity() {
@@ -98,6 +100,15 @@ fun App(loginViewModel: LoginViewModel) {
     val courseScheduleViewModel: CourseScheduleViewModel = viewModel()
     val classroomViewModel: ClassroomViewModel = viewModel()
 
+    val mainViewModel: MainViewModel =
+        viewModel(
+            factory = MainViewModelFactory(
+                gradeViewModel,
+                courseScheduleViewModel,
+                classroomViewModel
+            )
+        )
+
     NavHost(
         navController = navController,
         startDestination = RouteManager.Navigation,
@@ -107,7 +118,7 @@ fun App(loginViewModel: LoginViewModel) {
         popExitTransition = { activityPopExitTransition() }
     ) {
         composable(RouteManager.Navigation) {
-            AppNavigation(navController, loginViewModel)
+            AppNavigation(navController, loginViewModel,mainViewModel)
         }
         composable(RouteManager.CourseSchedule) {
             CourseScheduleScreen(courseScheduleViewModel)
@@ -161,7 +172,7 @@ object RouteManager {
 }
 
 @Composable
-fun AppNavigation(navController: NavController, loginViewModel: LoginViewModel) {
+fun AppNavigation(navController: NavController, loginViewModel: LoginViewModel,mainViewModel: MainViewModel) {
     val pages = listOf(
         PageItem(RouteManager.Home, "首页", Icons.Default.Home),
         PageItem(RouteManager.Space, "应用", Icons.Default.BorderAll),
@@ -169,6 +180,7 @@ fun AppNavigation(navController: NavController, loginViewModel: LoginViewModel) 
     )
 
     val pagerState = rememberPagerState(pageCount = { pages.size })
+
 
     var targetPage by remember { mutableIntStateOf(pagerState.currentPage) }
     val coroutineScope = rememberCoroutineScope()
@@ -204,7 +216,10 @@ fun AppNavigation(navController: NavController, loginViewModel: LoginViewModel) 
         ) { page ->
             when (page) {
                 0 -> {
-                    HomeScreen(navController = navController)
+                    HomeScreen(
+                        navController = navController,
+                        mainViewModel = mainViewModel
+                    )
                 }
 
                 1 -> {

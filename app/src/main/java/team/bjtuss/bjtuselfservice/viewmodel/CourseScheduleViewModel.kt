@@ -1,41 +1,37 @@
 package team.bjtuss.bjtuselfservice.viewmodel
 
-import androidx.lifecycle.ViewModel
-import team.bjtuss.bjtuselfservice.StudentAccountManager
-import team.bjtuss.bjtuselfservice.StudentAccountManager.Course
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import team.bjtuss.bjtuselfservice.database.AppDatabase
+import team.bjtuss.bjtuselfservice.entity.CourseEntity
+import team.bjtuss.bjtuselfservice.repository.DatabaseRepository
+import team.bjtuss.bjtuselfservice.repository.NetWorkRepository
 
-class CourseScheduleViewModel : ViewModel() {
-    private val studentAccountManager = StudentAccountManager.getInstance()
 
-    private var _currentTermCourseList =
-        MutableStateFlow<MutableList<MutableList<Course>>>(mutableListOf())
-    val currentTermCourseList: StateFlow<MutableList<MutableList<Course>>> =
-        _currentTermCourseList.asStateFlow()
 
-    private var _nextTermCourseList =
-        MutableStateFlow<MutableList<MutableList<Course>>>(mutableListOf())
-    val nextTermCourseList: StateFlow<MutableList<MutableList<Course>>> =
-        _nextTermCourseList.asStateFlow()
+class CourseScheduleViewModel : BaseSyncViewModel<CourseEntity>(
+    dataSyncManager = DefaultDataSyncManager<CourseEntity>(
+        AppDatabase.getInstance().courseEntityDao()
+    ) {
+        Pair(it.courseId, it.courseLocationIndex)
+    }
+) {
+
+    val currentTermCourseList: StateFlow<List<List<CourseEntity>>> =
+        DatabaseRepository.currentTermCourseList
+
+    val nextTermCourseList: StateFlow<List<List<CourseEntity>>> =
+        DatabaseRepository.nextTermCourseList
 
 
     init {
-
-        studentAccountManager.getCourseList(false).thenAccept { courseList ->
-//            _currentTermCourseList.update { currentList ->
-//                currentList.apply {
-//                    courses.filterNotNull().forEach { add(it) }
-//                }
-//            }
-            _currentTermCourseList.value.addAll(courseList)
-        }
-
-        studentAccountManager.getCourseList(true).thenAccept {
-            _nextTermCourseList.value.addAll(it)
-        }
+        loadDataAndDetectChanges()
     }
 
+    override suspend fun fetchNetworkData(): List<CourseEntity> {
+        return NetWorkRepository.getCourseList()
+    }
 
+    override suspend fun fetchLocalData(): List<CourseEntity> {
+        return DatabaseRepository.getCourseList()
+    }
 }

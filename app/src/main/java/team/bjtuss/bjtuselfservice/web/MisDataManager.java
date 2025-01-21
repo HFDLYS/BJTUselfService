@@ -24,6 +24,8 @@ import okhttp3.CookieJar;
 import okhttp3.HttpUrl;
 import team.bjtuss.bjtuselfservice.CaptchaModel;
 import team.bjtuss.bjtuselfservice.StudentAccountManager;
+import team.bjtuss.bjtuselfservice.entity.CourseEntity;
+import team.bjtuss.bjtuselfservice.entity.GradeEntity;
 import team.bjtuss.bjtuselfservice.utils.ImageToTensorConverter;
 import team.bjtuss.bjtuselfservice.utils.Network.WebCallback;
 import team.bjtuss.bjtuselfservice.utils.Utils;
@@ -36,6 +38,7 @@ import okhttp3.Response;
 
 public class MisDataManager {
     public static void login(OkHttpClient client, String stuId, String stuPasswd, WebCallback loginCallback) {
+
         Request request = new Request.Builder()
                 .url("https://mis.bjtu.edu.cn/auth/sso/?next=/")
                 .header("Host", "mis.bjtu.edu.cn")
@@ -143,7 +146,6 @@ public class MisDataManager {
                                                     Element department = doc.selectFirst(".name_right .nr_con span:contains(部门)");
                                                     String departmentStr = department.text().replace("部门：", "");
                                                     loginCallback.onResponse(nameStr + ";" + idStr + ";" + departmentStr);
-                                                    return;
                                                 } else {
                                                     loginCallback.onFailure(1);
                                                 }
@@ -235,7 +237,7 @@ public class MisDataManager {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try {
-                    List<StudentAccountManager.Grade> gradeList = new ArrayList<>();
+                    List<GradeEntity> gradeList = new ArrayList<>();
                     Document doc = Jsoup.parse(response.body().string());
                     if (doc.selectFirst("table") == null) {
                         ResCallback.onFailure(1);
@@ -261,7 +263,7 @@ public class MisDataManager {
                         }
                         String teacher = cols.get(6).text().replace("\n", "").replace("\t", "").replace(" ", "");
                         String tag = cols.get(1).text().replace("\n", "").replace("\t", "").replace(" ", "");
-                        StudentAccountManager.Grade grade = new StudentAccountManager.Grade(courseName, teacher, courseScore, courseGPA, year);
+                        GradeEntity grade = new GradeEntity(courseName, teacher, courseScore, courseGPA, year);
                         grade.tag = tag;
                         if (detail != null) {
                             String dataContent = detail.attr("data-content");
@@ -324,7 +326,7 @@ public class MisDataManager {
         });
     }
 
-    public static void getCourse(OkHttpClient client, Boolean isChecked, WebCallback<List<List<StudentAccountManager.Course>>> ResCallback) {
+    public static void getCourse(OkHttpClient client, Boolean isChecked, WebCallback<List<List<CourseEntity>>> ResCallback) {
         String url = !isChecked ? "https://aa.bjtu.edu.cn/course_selection/courseselect/stuschedule/" : "https://aa.bjtu.edu.cn/course_selection/courseselecttask/schedule/";
         Request request = new Request.Builder()
                 .url(url)
@@ -339,6 +341,8 @@ public class MisDataManager {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 try {
+                    boolean isCurrentTerm = isChecked;
+
                     Document doc = Jsoup.parse(response.body().string());
                     Element table = doc.selectFirst("table");
                     if (table == null) {
@@ -346,17 +350,21 @@ public class MisDataManager {
                         return;
                     }
                     Elements rows = table.select("tr");
-                    List<List<StudentAccountManager.Course>> courseList = new ArrayList<>();
+                    List<List<CourseEntity>> courseList = new ArrayList<>();
                     rows.remove(0);
+                    int rowNumber = 0;
                     for (Element row : rows) {
+                        int columnNumber = 0;
+                        rowNumber++;
                         Elements cols = row.select("td");
                         cols.remove(0);
                         courseList.add(null);
                         for (Element col : cols) {
+                            columnNumber++;
                             if (col.text().isEmpty()) {
                                 courseList.add(null);
                             } else {
-                                List<StudentAccountManager.Course> courses = new ArrayList<>();
+                                List<CourseEntity> courses = new ArrayList<>();
                                 for (Element child : col.children()) {
 
                                     String rawIdAndName;
@@ -386,7 +394,16 @@ public class MisDataManager {
                                             .replace(" ", "")
                                             .replace("\n", "");
 
-                                    courses.add(new StudentAccountManager.Course(courseId, courseName, courseTeacher, courseTime, coursePlace));
+
+//
+                                    courses.add(new CourseEntity(
+                                            courseId,
+                                            courseName,
+                                            courseTeacher,
+                                            (rowNumber - 1) * 8 + columnNumber,
+                                            courseTime,
+                                            coursePlace,
+                                            isCurrentTerm));
                                 }
 
                                 courseList.add(courses);
@@ -478,6 +495,7 @@ public class MisDataManager {
                                 ResCallback.onFailure(1);
                             }
                         }
+
                         @Override
                         public void onFailure(@NonNull Call call, @NonNull IOException e) {
                             ResCallback.onFailure(0);
