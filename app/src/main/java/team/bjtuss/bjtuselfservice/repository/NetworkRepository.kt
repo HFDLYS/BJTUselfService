@@ -1,5 +1,6 @@
 package team.bjtuss.bjtuselfservice.repository
 
+import androidx.lifecycle.LiveData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +32,10 @@ object NetworkRepository {
         } catch (e: Exception) {
             handleClassroomLoginError(e)
         }
+    }
+
+    fun getQueueStatus(): LiveData<Boolean> {
+        return requestQueue.isBusy
     }
 
     private fun handleClassroomLoginError(throwable: Throwable) {

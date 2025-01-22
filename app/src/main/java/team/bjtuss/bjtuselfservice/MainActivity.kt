@@ -108,7 +108,7 @@ fun App(loginViewModel: LoginViewModel) {
             factory = MainViewModelFactory(
                 gradeViewModel,
                 courseScheduleViewModel,
-                classroomViewModel
+                examScheduleViewModel
             )
         )
 

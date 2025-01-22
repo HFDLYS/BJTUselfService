@@ -6,20 +6,20 @@ import androidx.lifecycle.ViewModelProvider
 class MainViewModel(
     val gradeViewModel: GradeViewModel,
     val courseScheduleViewModel: CourseScheduleViewModel,
-    val classroomViewModel: ClassroomViewModel
+    val examScheduleViewModel: ExamScheduleViewModel
 ) : ViewModel()
 
 
 class MainViewModelFactory(
     private val gradeViewModel: GradeViewModel,
     private val courseScheduleViewModel: CourseScheduleViewModel,
-    private val classroomViewModel: ClassroomViewModel
+    private val examScheduleViewModel: ExamScheduleViewModel
 ) : ViewModelProvider.Factory {
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return MainViewModel(gradeViewModel, courseScheduleViewModel, classroomViewModel) as T
+            return MainViewModel(gradeViewModel, courseScheduleViewModel, examScheduleViewModel) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

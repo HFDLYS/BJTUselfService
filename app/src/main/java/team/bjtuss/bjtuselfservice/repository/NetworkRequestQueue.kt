@@ -1,5 +1,7 @@
 package team.bjtuss.bjtuselfservice.repository
 
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,6 +16,9 @@ class NetworkRequestQueue {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val mutex = Mutex()
     private val queue = Channel<NetworkRequest>(Channel.UNLIMITED)
+
+    private val _isBusy = MutableLiveData<Boolean>(false)
+    val isBusy: LiveData<Boolean> get() = _isBusy
 
     init {
         scope.launch {
@@ -35,6 +40,7 @@ class NetworkRequestQueue {
 
         for (request in queue) {
             try {
+                _isBusy.postValue(true)
                 mutex.withLock {
                     val result = request.operation()
                     request.deferred.complete(result)
@@ -43,6 +49,8 @@ class NetworkRequestQueue {
                 // 记录异常
                 println("Error processing request ${request.id}: ${e.message}")
                 request.deferred.complete(Result.failure(e))
+            } finally {
+                _isBusy.postValue(false)
             }
         }
     }

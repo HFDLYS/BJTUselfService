@@ -65,6 +65,7 @@ import team.bjtuss.bjtuselfservice.RouteManager
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
+import team.bjtuss.bjtuselfservice.repository.NetworkRepository
 import team.bjtuss.bjtuselfservice.utils.KotlinUtils
 import team.bjtuss.bjtuselfservice.viewmodel.DataChange
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
@@ -86,6 +87,10 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
 
     studentAccountManager.status.thenAccept {
         status = it
+    }
+
+    NetworkRepository.getQueueStatus().observeForever {
+        isRefreshing = it
     }
 
     // Status info formatting functions
@@ -204,20 +209,9 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
 
         Button(
             onClick = {
-                isRefreshing = true
-
-                CoroutineScope(Dispatchers.Main).launch {
-                    try {
-                        val job1 = async { mainViewModel.gradeViewModel.loadDataAndDetectChanges() }
-                        val job2 = async { mainViewModel.courseScheduleViewModel.loadDataAndDetectChanges() }
-                        job1.await()
-                        job2.await()
-                    } catch (e: Exception) {
-                        Log.e("refreshingButton", "Data loading failed", e)
-                    } finally {
-                        isRefreshing = false
-                    }
-                }
+                mainViewModel.gradeViewModel.loadDataAndDetectChanges()
+                mainViewModel.courseScheduleViewModel.loadDataAndDetectChanges()
+                mainViewModel.examScheduleViewModel.loadDataAndDetectChanges()
             },
             modifier = Modifier
                 .align(Alignment.CenterHorizontally),
