@@ -152,12 +152,16 @@ public class MisDataManager {
                                                 }
                                             }
                                         });
+                                        response.close();
                                     }
                                 });
+                                response.close();
                             }
                         });
+                        response.close();
                     }
                 });
+                response.close();
             }
         });
     }
@@ -182,6 +186,7 @@ public class MisDataManager {
                 } else {
                     loginCallback.onFailure(1);
                 }
+                response.close();
             }
         });
     }
@@ -218,8 +223,31 @@ public class MisDataManager {
                         } else {
                             loginCallback.onFailure(1);
                         }
+                        response.close();
                     }
                 });
+            }
+        });
+    }
+
+    public static void bksyLogin(OkHttpClient client, WebCallback loginCallback) {
+        Request request = new Request.Builder()
+                .url("https://mis.bjtu.edu.cn/module/module/104/")
+                .build();
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                loginCallback.onFailure(0);
+            }
+
+            @Override
+            public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                if (response.request().url().toString().equals("https://bksy.bjtu.edu.cn/login_introduce_t.html")) {
+                    loginCallback.onResponse(response.request().url().toString());
+                } else {
+                    loginCallback.onFailure(1);
+                }
+                response.close();
             }
         });
     }
@@ -281,6 +309,8 @@ public class MisDataManager {
                     ResCallback.onResponse(gradeList);
                 } catch (IOException e) {
                     ResCallback.onFailure(1);
+                } finally {
+                    response.close();
                 }
             }
         });
@@ -322,6 +352,8 @@ public class MisDataManager {
                     ResCallback.onResponse(examScheduleList);
                 } catch (IOException e) {
                     ResCallback.onFailure(1);
+                } finally {
+                    response.close();
                 }
             }
         });
@@ -416,6 +448,8 @@ public class MisDataManager {
                     ResCallback.onResponse(courseList);
                 } catch (IOException e) {
                     ResCallback.onFailure(1);
+                } finally {
+                    response.close();
                 }
             }
         });
@@ -505,6 +539,7 @@ public class MisDataManager {
                 } else {
                     ResCallback.onFailure(1);
                 }
+                response.close();
             }
         });
     }
@@ -550,8 +585,10 @@ public class MisDataManager {
                         } else {
                             ResCallback.onFailure(1);
                         }
+                        response.close();
                     }
                 });
+                response.close();
             }
         });
     }
@@ -592,6 +629,7 @@ public class MisDataManager {
                 } catch (Exception e) {
                     ResCallback.onFailure(1);
                 }
+                response.close();
             }
         });
     }

@@ -1,12 +1,11 @@
 package team.bjtuss.bjtuselfservice.repository
 
+import android.util.Log
 import androidx.lifecycle.LiveData
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.future.await
-import kotlinx.coroutines.withContext
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
@@ -16,40 +15,24 @@ import team.bjtuss.bjtuselfservice.entity.GradeEntity
 object NetworkRepository {
     private val requestQueue = NetworkRequestQueue()
     private val studentAccountManager = StudentAccountManager.getInstance()
-    private var _classroomMap =
-        MutableStateFlow<MutableMap<String, List<Int>>>(mutableMapOf())
-    val classroomMap: StateFlow<MutableMap<String, List<Int>>> = _classroomMap.asStateFlow()
 
-    init {
-        loadClassroomMap()
-    }
 
-    fun loadClassroomMap() {
-        try {
-            studentAccountManager.getClassroom().thenAccept {
-                _classroomMap.value.putAll(it)
+    suspend fun getClassroomMap(): Map<String, MutableList<Int>>? {
+        val result =  requestQueue.enqueue("getClassroomMap") {
+
+            val classroomMap = try {
+                studentAccountManager.getClassroom().await()
+            } catch (e: Exception) {
+                Log.e("NetworkRepository", "Error fetching classroom map: ${e.message}")
+                emptyMap()
             }
-        } catch (e: Exception) {
-            handleClassroomLoginError(e)
+            classroomMap
         }
+        return result.getOrElse { emptyMap() }
     }
 
     fun getQueueStatus(): LiveData<Boolean> {
         return requestQueue.isBusy
-    }
-
-    private fun handleClassroomLoginError(throwable: Throwable) {
-        when (throwable.message) {
-            "Not loginAa", "Not login" -> {
-                studentAccountManager.loginAa().thenAccept {
-                    if (it) {
-                        loadClassroomMap()
-                    }
-                }
-            }
-
-            else -> _classroomMap = MutableStateFlow(mutableMapOf())
-        }
     }
 
     suspend fun getExamScheduleList(): List<ExamScheduleEntity> {
@@ -58,7 +41,7 @@ object NetworkRepository {
                 val result = studentAccountManager.getExamSchedule().await()
                 result
             } catch (e: Exception) {
-                println("Error fetching exam schedule list: ${e.message}")
+                Log.e("NetworkRepository", "Error fetching exam schedule list: ${e.message}")
                 studentAccountManager.examScheduleList ?: emptyList()
             }
         }
@@ -75,7 +58,7 @@ object NetworkRepository {
             val currentTermCourses = try {
                 studentAccountManager.getCourseList(true).await()
             } catch (e: Exception) {
-                println("Error fetching current term course list: ${e.message}")
+                Log.e("NetworkRepository", "Error fetching current term course list: ${e.message}")
                 studentAccountManager.courseListMap[true] ?: emptyList()
             }
 
@@ -83,7 +66,7 @@ object NetworkRepository {
             val nextTermCourses = try {
                 studentAccountManager.getCourseList(false).await()
             } catch (e: Exception) {
-                println("Error fetching next term course list: ${e.message}")
+                Log.e("NetworkRepository", "Error fetching next term course list: ${e.message}")
                 studentAccountManager.courseListMap[false] ?: emptyList()
             }
 
@@ -114,13 +97,13 @@ object NetworkRepository {
             val lnGrades = try {
                 studentAccountManager.getGrade("ln").await()
             } catch (e: Exception) {
-                println("Error fetching ln grade list: ${e.message}")
+                Log.e("NetworkRepository", "Error fetching ln grade list: ${e.message}")
                 studentAccountManager.gradeMap["ln"] ?: emptyList()
             }
             val lrGrades = try {
                 studentAccountManager.getGrade("lr").await()
             } catch (e: Exception) {
-                println("Error fetching lr grade list: ${e.message}")
+                Log.e("NetworkRepository", "Error fetching lr grade list: ${e.message}")
                 studentAccountManager.gradeMap["lr"] ?: emptyList()
             }
 

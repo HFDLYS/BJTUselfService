@@ -148,6 +148,33 @@ public class StudentAccountManager {
         return loginFuture;
     }
 
+    public CompletableFuture<Boolean> attemptBksyLogin() {
+        CompletableFuture<Boolean> loginFuture = new CompletableFuture<>();
+        MisDataManager.bksyLogin(client, new WebCallback<String>() {
+            @Override
+            public void onResponse(String code) {
+                loginFuture.complete(true);
+            }
+
+            @Override
+            public void onFailure(int code) {
+                loginFuture.complete(false);
+            }
+        });
+        return loginFuture;
+    }
+
+
+    public CompletableFuture<Boolean> loginBksy() {
+        return checkIsLogin().thenCompose(isLogin -> {
+            if (isLogin) {
+                return attemptBksyLogin();
+            } else {
+                return CompletableFuture.completedFuture(false);
+            }
+        });
+    }
+
     public CompletableFuture<Boolean> loginXsMis() {
         return checkIsLogin().thenCompose(isLogin -> {
             if (isLogin) {

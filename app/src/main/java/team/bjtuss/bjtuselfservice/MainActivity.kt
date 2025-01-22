@@ -100,9 +100,9 @@ fun App(loginViewModel: LoginViewModel) {
     val navController = rememberNavController()
 
 
+    val classroomViewModel: ClassroomViewModel = viewModel()
     val gradeViewModel: GradeViewModel = viewModel()
     val courseScheduleViewModel: CourseScheduleViewModel = viewModel()
-    val classroomViewModel: ClassroomViewModel = viewModel()
     val examScheduleViewModel: ExamScheduleViewModel = viewModel()
 
     val mainViewModel: MainViewModel =
