@@ -203,6 +203,8 @@ fun LoginScreen(
     LaunchedEffect(Unit) {
         if (loginState is LoginState.Idle) {
         } else {
+            username = SettingsRepository.getStoredCredentialsBlocking().first
+            password = SettingsRepository.getStoredCredentialsBlocking().second
             loginViewModel.autoLogin()
         }
     }
@@ -228,7 +230,11 @@ fun LoginScreen(
                 message = (loginState as LoginState.Error).message,  // 不需要显式转换
                 onDismiss = {
                     loginViewModel.setLoginStateIdle()
-                })
+                },
+                onRetry = {
+                    loginViewModel.login(username, password)
+                }
+            )
 
             is LoginState.Loading -> LoadingDialog()
             is LoginState.Idle -> {}
@@ -247,7 +253,8 @@ fun LoginScreen(
 @Composable
 fun ErrorDialog(
     message: String,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onRetry: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -258,8 +265,15 @@ fun ErrorDialog(
             Text(text = message)
         },
         confirmButton = {
+            Button(
+                onClick = onRetry
+            ) {
+                Text(text = "重试")
+            }
+        },
+        dismissButton = {
             Button(onClick = onDismiss) {
-                Text(text = "确定")
+                Text(text = "好吧")
             }
         }
     )
