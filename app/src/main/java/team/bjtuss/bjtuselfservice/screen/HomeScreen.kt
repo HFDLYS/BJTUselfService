@@ -156,7 +156,8 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
                         text = "成绩变动",
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(start = 16.dp)
                     )
 
 
@@ -182,7 +183,8 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
                         text = "课程变动",
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(start = 16.dp)
                     )
 
                     LazyColumn {
@@ -275,8 +277,7 @@ fun MailButton(content: @Composable () -> Unit, navController: NavController) {
         onClick = {
             navController.navigate(RouteManager.Email)
         },
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = Modifier.fillMaxWidth()
     ) {
         Icon(
             imageVector = Icons.Default.Email,

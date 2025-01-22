@@ -3,10 +3,10 @@ package team.bjtuss.bjtuselfservice;
 
 import androidx.annotation.Nullable;
 import androidx.lifecycle.MutableLiveData;
-import androidx.room.Entity;
 
 
 import team.bjtuss.bjtuselfservice.entity.CourseEntity;
+import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity;
 import team.bjtuss.bjtuselfservice.entity.GradeEntity;
 import team.bjtuss.bjtuselfservice.utils.Network;
 import team.bjtuss.bjtuselfservice.utils.Network.WebCallback;
@@ -217,13 +217,13 @@ public class StudentAccountManager {
         return gradeFuture;
     }
 
-    public List<ExamSchedule> examScheduleList;
-    public CompletableFuture<List<ExamSchedule>> getExamSchedule() {
-        CompletableFuture<List<ExamSchedule>> Future = new CompletableFuture<>();
+    public List<ExamScheduleEntity> examScheduleList;
+    public CompletableFuture<List<ExamScheduleEntity>> getExamSchedule() {
+        CompletableFuture<List<ExamScheduleEntity>> Future = new CompletableFuture<>();
         if (isAaLogin) {
-            MisDataManager.getExamSchedule(client, new WebCallback<List<ExamSchedule>>() {
+            MisDataManager.getExamSchedule(client, new WebCallback<List<ExamScheduleEntity>>() {
                 @Override
-                public void onResponse(List<ExamSchedule> obj) {
+                public void onResponse(List<ExamScheduleEntity> obj) {
                     examScheduleList = new ArrayList<>(obj);
                     Future.complete(obj);
                 }
@@ -393,21 +393,6 @@ public class StudentAccountManager {
         }
     }
 
-    public static class ExamSchedule {
-        public String ExamType;
-        public String CourseName;
-        public String ExamTimeAndPlace;
-        public String ExamStatus;
-        public String Detail;
-
-        public ExamSchedule(String ExamType, String CourseName, String ExamTimeAndPlace, String ExamStatus, String Detail) {
-            this.ExamType = ExamType;
-            this.CourseName = CourseName;
-            this.ExamTimeAndPlace = ExamTimeAndPlace;
-            this.ExamStatus = ExamStatus;
-            this.Detail = Detail;
-        }
-    }
 
 //    public static class Course {
 //        public String CourseId;

@@ -4,10 +4,9 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 
-abstract class BaseEntity {
-   abstract var id: Int
-}
-
+/**
+ * 成绩实体类
+ */
 
 @Entity
 data class GradeEntity(

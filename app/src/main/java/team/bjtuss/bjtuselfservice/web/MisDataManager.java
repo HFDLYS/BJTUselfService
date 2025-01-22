@@ -25,6 +25,7 @@ import okhttp3.HttpUrl;
 import team.bjtuss.bjtuselfservice.CaptchaModel;
 import team.bjtuss.bjtuselfservice.StudentAccountManager;
 import team.bjtuss.bjtuselfservice.entity.CourseEntity;
+import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity;
 import team.bjtuss.bjtuselfservice.entity.GradeEntity;
 import team.bjtuss.bjtuselfservice.utils.ImageToTensorConverter;
 import team.bjtuss.bjtuselfservice.utils.Network.WebCallback;
@@ -285,7 +286,7 @@ public class MisDataManager {
         });
     }
 
-    public static void getExamSchedule(OkHttpClient client, WebCallback<List<StudentAccountManager.ExamSchedule>> ResCallback) {
+    public static void getExamSchedule(OkHttpClient client, WebCallback<List<ExamScheduleEntity>> ResCallback) {
         Request request = new Request.Builder()
                 .url("https://aa.bjtu.edu.cn/examine/examplanstudent/stulist/")
                 .header("Host", "aa.bjtu.edu.cn")
@@ -306,7 +307,7 @@ public class MisDataManager {
                         return;
                     }
                     Elements rows = table.select("tr");
-                    List<StudentAccountManager.ExamSchedule> examScheduleList = new ArrayList<>();
+                    List<ExamScheduleEntity> examScheduleList = new ArrayList<>();
                     for (Element row : rows) {
                         Elements cols = row.select("td");
                         String type = cols.get(1).text();
@@ -316,7 +317,7 @@ public class MisDataManager {
                         String Detail = cols.get(5).text();
 
 
-                        examScheduleList.add(new StudentAccountManager.ExamSchedule(type, CourseName, ExamTime, ExamStatus, Detail));
+                        examScheduleList.add(new ExamScheduleEntity(type, CourseName, ExamTime, ExamStatus, Detail));
                     }
                     ResCallback.onResponse(examScheduleList);
                 } catch (IOException e) {

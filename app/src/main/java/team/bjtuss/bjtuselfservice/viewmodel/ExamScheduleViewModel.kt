@@ -5,14 +5,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import team.bjtuss.bjtuselfservice.StudentAccountManager
+import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 
 class ExamScheduleViewModel : ViewModel() {
     private val studentAccountManager = StudentAccountManager.getInstance()
 
     private var _examScheduleList =
-        MutableStateFlow<MutableList<StudentAccountManager.ExamSchedule>>(mutableListOf())
+        MutableStateFlow<MutableList<ExamScheduleEntity>>(mutableListOf())
 
-    val examScheduleList: StateFlow<MutableList<StudentAccountManager.ExamSchedule>> =
+    val examScheduleList: StateFlow<MutableList<ExamScheduleEntity>> =
         _examScheduleList.asStateFlow()
 
     init {
