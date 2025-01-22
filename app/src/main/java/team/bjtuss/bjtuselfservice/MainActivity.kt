@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -64,6 +65,7 @@ import team.bjtuss.bjtuselfservice.viewmodel.ClassroomViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.ExamScheduleViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModelFactory
+import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService
 
 
 class MainActivity : ComponentActivity() {
@@ -184,7 +186,8 @@ fun AppNavigation(navController: NavController, loginViewModel: LoginViewModel,m
 
     val pagerState = rememberPagerState(pageCount = { pages.size })
 
-
+    val clickSequence = remember { mutableStateListOf<Int>() }
+    val answer = listOf(1, 2, 2, 0, 1, 1)
     var targetPage by remember { mutableIntStateOf(pagerState.currentPage) }
     val coroutineScope = rememberCoroutineScope()
     Scaffold(bottomBar = {
@@ -195,6 +198,13 @@ fun AppNavigation(navController: NavController, loginViewModel: LoginViewModel,m
                     selected = targetPage == index,
                     onClick = {
                         targetPage = index
+                        clickSequence.add(index)
+                        if (clickSequence.size > answer.size) {
+                            clickSequence.removeAt(0)
+                        }
+                        if (clickSequence.toList() == answer) {
+                            ClassroomCapacityService.ok = true
+                        }
                         coroutineScope.launch {
                             pagerState.animateScrollToPage(index)
                         }

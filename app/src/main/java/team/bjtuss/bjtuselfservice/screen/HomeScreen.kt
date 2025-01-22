@@ -64,6 +64,7 @@ import team.bjtuss.bjtuselfservice.R
 import team.bjtuss.bjtuselfservice.RouteManager
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
+import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
 import team.bjtuss.bjtuselfservice.repository.NetworkRepository
 import team.bjtuss.bjtuselfservice.utils.KotlinUtils
@@ -78,6 +79,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
 
     val gradeChangeList: List<DataChange<GradeEntity>> by mainViewModel.gradeViewModel.changeList.collectAsState()
     val courseChangeList: List<DataChange<CourseEntity>> by mainViewModel.courseScheduleViewModel.changeList.collectAsState()
+    val examScheduleChangeList: List<DataChange<ExamScheduleEntity>> by mainViewModel.examScheduleViewModel.changeList.collectAsState()
 
     var status by remember { mutableStateOf<StudentAccountManager.Status?>(null) }
     var selectedChange by remember { mutableStateOf<DataChange<GradeEntity>?>(null) }
@@ -143,22 +145,9 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
                 modifier = Modifier.padding(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (isRefreshing) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(top = 32.dp)
-                    ) {
-                        RotatingImageLoader(
-                            image = painterResource(id = R.drawable.loading_icon),
-                            rotationDuration = 1000,
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
-                }
                 if (gradeChangeList.isNotEmpty()) {
                     Text(
-                        text = "成绩变动",
+                        text = "成绩单变动",
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold,
@@ -185,7 +174,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
 
                 if (courseChangeList.isNotEmpty()) {
                     Text(
-                        text = "课程变动",
+                        text = "课程表变动",
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold,
@@ -203,6 +192,41 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
                             )
                         }
                     }
+                }
+
+                if (examScheduleChangeList.isNotEmpty()) {
+                    Text(
+                        text = "考试安排变动",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(start = 16.dp)
+                    )
+
+                    LazyColumn {
+                        items(examScheduleChangeList.size) { index ->
+                            val examChange = examScheduleChangeList[index]
+                            ChangeCard(
+                                dataChange = examChange,
+                                onClick = {
+                                    navController.navigate(RouteManager.ExamSchedule)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+            if (isRefreshing) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 32.dp)
+                ) {
+                    RotatingImageLoader(
+                        image = painterResource(id = R.drawable.loading_icon),
+                        rotationDuration = 1000,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
                 }
             }
         }

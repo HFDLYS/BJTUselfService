@@ -61,7 +61,6 @@ fun ExamScheduleList(
 ) {
     var filterExpanded by remember { mutableStateOf(false) }
     var selectedFilter by remember { mutableStateOf("全部") }
-    var sortOrder by remember { mutableStateOf(SortOrder.ORIGINAL) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize()

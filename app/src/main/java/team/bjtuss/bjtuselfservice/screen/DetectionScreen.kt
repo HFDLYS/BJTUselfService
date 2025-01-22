@@ -319,7 +319,7 @@ fun ClassroomScreen(
                         }
                     }
                 }
-                if (showDialog.value && selectedClassroom.value.isNotEmpty()) {
+                if (showDialog.value && selectedClassroom.value.isNotEmpty() && ClassroomCapacityService.ok) {
                     ClassroomViewDialog(
                         onDismiss = { showDialog.value = false },
                         buildingName = buildingName,

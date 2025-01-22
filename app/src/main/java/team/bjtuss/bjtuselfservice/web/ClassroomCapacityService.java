@@ -13,6 +13,7 @@ import okhttp3.Request;
 import team.bjtuss.bjtuselfservice.constant.ApiConstant;
 
 public class ClassroomCapacityService {
+    public static boolean ok = false;
     public static CompletableFuture<BuildingInfo> getClassroomCapacity(String BuildingName) {
         CompletableFuture<BuildingInfo> future = new CompletableFuture<>();
         OkHttpClient client = new OkHttpClient();
