@@ -207,7 +207,7 @@ public class StudentAccountManager {
                     if (code == 0) {
                         gradeFuture.completeExceptionally(new Exception("No connection"));
                     } else if (code == 1) {
-                        gradeFuture.complete(new ArrayList<>());
+                        gradeFuture.completeExceptionally(new Exception("Rate limit exceeded"));
                     }
                 }
             }, ctype);
