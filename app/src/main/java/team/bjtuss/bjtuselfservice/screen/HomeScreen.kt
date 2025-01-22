@@ -1,6 +1,10 @@
 package team.bjtuss.bjtuselfservice.screen
 
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -10,7 +14,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,6 +31,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -45,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -86,7 +91,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
     // Status info formatting functions
     val ecardBalance = "校园卡余额：${status?.EcardBalance}".let {
         if (status?.EcardBalance?.toDoubleOrNull() ?: 0.0 < 20) {
-            "$it，会不会不够用了"
+            "$it，该充了"
         } else {
             it
         }
@@ -94,7 +99,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
 
     val netBalance = "校园网余额：${status?.NetBalance}".let {
         if (status?.NetBalance == "0") {
-            "$it，😱下个月要没网了"
+            "$it，😱没网了"
         } else {
             it
         }
@@ -112,8 +117,8 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
 
 
@@ -130,8 +135,8 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
 //            )
         ) {
             Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier.padding(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (isRefreshing) {
                     Box(
@@ -149,7 +154,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
                 if (gradeChangeList.isNotEmpty()) {
                     Text(
                         text = "成绩变动",
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold
                     )
@@ -157,12 +162,12 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
 
                     LazyColumn(
                         modifier = Modifier,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         items(gradeChangeList.size) { index ->
                             val gradeChange = gradeChangeList[index]
-                            GradeChangeCard(
-                                gradeChange = gradeChange,
+                            ChangeCard(
+                                dataChange = gradeChange,
                                 onClick = {
                                     selectedChange = gradeChange
                                     showDialog = true
@@ -175,7 +180,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
                 if (courseChangeList.isNotEmpty()) {
                     Text(
                         text = "课程变动",
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold
                     )
@@ -183,19 +188,12 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
                     LazyColumn {
                         items(courseChangeList.size) { index ->
                             val courseChange = courseChangeList[index]
-                            when (courseChange) {
-                                is DataChange.Added -> {
-                                    Text("新增 ${courseChange.items.size} 项课程")
+                            ChangeCard(
+                                dataChange = courseChange,
+                                onClick = {
+                                    navController.navigate(RouteManager.CourseSchedule)
                                 }
-
-                                is DataChange.Modified -> {
-                                    Text("变动 ${courseChange.items.size} 项课程")
-                                }
-
-                                is DataChange.Deleted -> {
-                                    Text("删除 ${courseChange.items.size} 项课程")
-                                }
-                            }
+                            )
                         }
                     }
                 }
@@ -204,7 +202,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
 
         Button(
             onClick = {
-                isRefreshing = true  // 开始刷新
+                isRefreshing = true
 
                 CoroutineScope(Dispatchers.Main).launch {
                     try {
@@ -219,13 +217,14 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
                     }
                 }
             },
-            modifier = Modifier.align(Alignment.CenterHorizontally),
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally),
             enabled = !isRefreshing
         ) {
             Icon(
                 imageVector = Icons.Default.Refresh,
                 contentDescription = "刷新",
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(18.dp)
             )
             Text("刷新",
                 fontSize = 18.sp
@@ -251,47 +250,164 @@ fun StatusInfo(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        shape = RoundedCornerShape(16.dp),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Email,
-                    contentDescription = "New Mail",
-                    tint = Color.Blue
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                BJTUMailLoginScreen({ Text(newMailCount, fontSize = 18.sp) }, navController)
+                MailButton({ Text(newMailCount, fontSize = 18.sp) }, navController)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.AccountBalanceWallet,
-                    contentDescription = "Ecard Balance",
-                    tint = Color.Green
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = ecardBalance, fontSize = 18.sp)
+                EcardButton({ Text(ecardBalance, fontSize = 18.sp) })
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Wifi,
-                    contentDescription = "Net Balance",
-                    tint = Color.Red
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = netBalance, fontSize = 18.sp)
+                NetButton({ Text(netBalance, fontSize = 18.sp) })
             }
         }
     }
 }
 
 @Composable
-private fun GradeChangeCard(
-    gradeChange: DataChange<GradeEntity>,
+fun MailButton(content: @Composable () -> Unit, navController: NavController) {
+    Button(
+        onClick = {
+            navController.navigate(RouteManager.Email)
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+    ) {
+        Icon(
+            imageVector = Icons.Default.Email,
+            contentDescription = "New Mail",
+            tint = Color.Blue
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        content()
+    }
+}
+
+@Composable
+fun EcardButton(content: @Composable () -> Unit) {
+    val context = LocalContext.current
+    var showDialog by remember { mutableStateOf(false) }
+
+    Button(
+        onClick = {
+            showDialog = true
+        },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Icon(
+            imageVector = Icons.Default.AccountBalanceWallet,
+            contentDescription = "Ecard Balance",
+            tint = Color.Green
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        content()
+    }
+
+    // 显示对话框
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("校园网续费") },
+            text = {
+                Text("不好意思直接转跳微信成本还是太高，不过\n注意：以下操作需微信绑定学校企业号\n请分享至微信，后打开（莫吐槽🙏）哦")
+            },
+            confirmButton = {
+                Button(onClick = {
+                    shareToWeChat(context)
+                    showDialog = false
+                }) {
+                    Text("分享至微信")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+}
+
+fun shareToWeChat(context: Context) {
+    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, "https://weixin.bjtu.edu.cn/pay/wap/network/recharge.html")
+    }
+    val chooser = Intent.createChooser(shareIntent, "请选择：“微信：发送给朋友”")
+
+    try {
+        context.startActivity(chooser)
+    } catch (e: Exception) {
+        Toast.makeText(context, "未找到“微信”app？？？？", Toast.LENGTH_LONG).show()
+    }
+}
+
+@Composable
+fun NetButton(content: @Composable () -> Unit) {
+    val context = LocalContext.current
+    var showDialog by remember { mutableStateOf(false) }
+
+    Button(
+        onClick = {
+            showDialog = true
+        },
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Icon(
+            imageVector = Icons.Default.Wifi,
+            contentDescription = "Net Balance",
+            tint = Color.Red
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        content()
+    }
+
+    // 显示充值提醒对话框
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text("校园卡充值") },
+            text = {
+                Text("请注意，接下来即将转跳“完美校园”app\n确保自己已安装哦☺️")
+            },
+            confirmButton = {
+                Button(onClick = {
+                    launchWanMeiCampusApp(context)
+                    showDialog = false
+                }) {
+                    Text("打开应用")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+}
+
+// 尝试启动“完美校园”应用
+fun launchWanMeiCampusApp(context: Context) {
+    val intent = Intent().apply {
+        component = ComponentName("com.newcapec.mobile.ncp", "com.wanxiao.basebusiness.activity.SplashActivity")
+    }
+
+    try {
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Toast.makeText(context, "未找到“完美校园”app", Toast.LENGTH_LONG).show()
+    }
+}
+
+@Composable
+private fun<T> ChangeCard(
+    dataChange: DataChange<T>,
     onClick: () -> Unit
 ) {
     Card(
@@ -301,7 +417,7 @@ private fun GradeChangeCard(
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        val (backgroundColor, textColor, icon) = when (gradeChange) {
+        val (backgroundColor, textColor, icon) = when (dataChange) {
             is DataChange.Added -> Triple(
                 MaterialTheme.colorScheme.primaryContainer,
                 MaterialTheme.colorScheme.onPrimaryContainer,
@@ -339,10 +455,10 @@ private fun GradeChangeCard(
                     tint = textColor
                 )
                 Text(
-                    text = when (gradeChange) {
-                        is DataChange.Added -> "新增 ${gradeChange.items.size}项"
-                        is DataChange.Modified -> "变化 ${gradeChange.items.size}项"
-                        is DataChange.Deleted -> "删除 ${gradeChange.items.size}项"
+                    text = when (dataChange) {
+                        is DataChange.Added -> "新增 ${dataChange.items.size}项"
+                        is DataChange.Modified -> "变化 ${dataChange.items.size}项"
+                        is DataChange.Deleted -> "删除 ${dataChange.items.size}项"
                     },
                     style = MaterialTheme.typography.bodyLarge,
                     color = textColor

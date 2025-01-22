@@ -87,25 +87,7 @@ fun EmailScreen() {
     )
 }
 
-@Composable
-fun BJTUMailLoginScreen(content: @Composable () -> Unit, navController: NavController) {
-    val context = LocalContext.current
-    val studentAccountManager = StudentAccountManager.getInstance()
 
-
-    Button(
-        onClick = {
-
-            navController.navigate(RouteManager.Email)
-
-
-        }
-    ) {
-        content()
-    }
-
-
-}
 
 object WebViewUtil {
     fun syncCookiesFromOkHttpToWebView(url: String, client: OkHttpClient) {
