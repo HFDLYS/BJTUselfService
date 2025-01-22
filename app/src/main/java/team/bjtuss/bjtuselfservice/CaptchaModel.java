@@ -1,13 +1,13 @@
 package team.bjtuss.bjtuselfservice;
 
-import org.pytorch.IValue;
-import org.pytorch.Module;
-import org.pytorch.Tensor;
+import static team.bjtuss.bjtuselfservice.utils.Utils.assetFilePath;
 
 import android.content.Context;
 import android.util.Log;
 
-import static team.bjtuss.bjtuselfservice.utils.Utils.assetFilePath;
+import org.pytorch.IValue;
+import org.pytorch.Module;
+import org.pytorch.Tensor;
 
 public class CaptchaModel {
     private static Module module;

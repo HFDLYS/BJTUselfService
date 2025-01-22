@@ -1,17 +1,16 @@
 package team.bjtuss.bjtuselfservice.web;
 
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
-
 import team.bjtuss.bjtuselfservice.constant.ApiConstant;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 public class ClassroomCapacityService {
     public static CompletableFuture<BuildingInfo> getClassroomCapacity(String BuildingName) {

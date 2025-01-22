@@ -11,8 +11,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-import okhttp3.HttpUrl;
-
 
 public class Utils {
     private static final Map<String, Integer> gradeToScoreMap = new HashMap<>();

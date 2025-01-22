@@ -20,8 +20,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import okhttp3.Call;
+import okhttp3.Callback;
 import okhttp3.CookieJar;
+import okhttp3.FormBody;
 import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import team.bjtuss.bjtuselfservice.CaptchaModel;
 import team.bjtuss.bjtuselfservice.StudentAccountManager;
 import team.bjtuss.bjtuselfservice.entity.CourseEntity;
@@ -30,12 +36,6 @@ import team.bjtuss.bjtuselfservice.entity.GradeEntity;
 import team.bjtuss.bjtuselfservice.utils.ImageToTensorConverter;
 import team.bjtuss.bjtuselfservice.utils.Network.WebCallback;
 import team.bjtuss.bjtuselfservice.utils.Utils;
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.FormBody;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 
 public class MisDataManager {
     public static void login(OkHttpClient client, String stuId, String stuPasswd, WebCallback loginCallback) {

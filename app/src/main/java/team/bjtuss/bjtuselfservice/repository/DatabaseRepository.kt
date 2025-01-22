@@ -50,7 +50,6 @@ object DatabaseRepository {
         observeCourseList(true)  // 本学期课程
         observeCourseList(false) // 下学期课程
         observeExamScheduleList()
-        loadClassroomMap()
     }
 
 
@@ -62,9 +61,6 @@ object DatabaseRepository {
         }
     }
 
-    init {
-
-    }
 
     // 通用的课程列表观察方法
     private fun observeCourseList(isCurrentTerm: Boolean) {
@@ -122,8 +118,6 @@ object DatabaseRepository {
         }
     }
 
-    fun loadClassroomMap() {
 
-    }
 
 }

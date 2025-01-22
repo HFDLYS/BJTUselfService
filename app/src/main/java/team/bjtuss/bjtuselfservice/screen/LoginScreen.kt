@@ -53,13 +53,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import team.bjtuss.bjtuselfservice.R
-import team.bjtuss.bjtuselfservice.StudentAccountManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
+import team.bjtuss.bjtuselfservice.R
+import team.bjtuss.bjtuselfservice.StudentAccountManager
 
 
 // Login View Model to handle login logic

@@ -4,8 +4,7 @@ import kotlinx.coroutines.flow.StateFlow
 import team.bjtuss.bjtuselfservice.database.AppDatabase
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
 import team.bjtuss.bjtuselfservice.repository.DatabaseRepository
-import team.bjtuss.bjtuselfservice.repository.NetWorkRepository
-
+import team.bjtuss.bjtuselfservice.repository.NetworkRepository
 
 
 class CourseScheduleViewModel : BaseSyncViewModel<CourseEntity>(
@@ -28,7 +27,7 @@ class CourseScheduleViewModel : BaseSyncViewModel<CourseEntity>(
     }
 
     override suspend fun fetchNetworkData(): List<CourseEntity> {
-        return NetWorkRepository.getCourseList()
+        return NetworkRepository.getCourseList()
     }
 
     override suspend fun fetchLocalData(): List<CourseEntity> {

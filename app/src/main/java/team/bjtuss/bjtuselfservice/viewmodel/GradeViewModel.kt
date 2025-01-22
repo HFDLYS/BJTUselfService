@@ -1,21 +1,10 @@
 package team.bjtuss.bjtuselfservice.viewmodel
 
-import android.util.Log
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import team.bjtuss.bjtuselfservice.dao.BaseDao
 import team.bjtuss.bjtuselfservice.database.AppDatabase
-import team.bjtuss.bjtuselfservice.entity.BaseEntity
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
 import team.bjtuss.bjtuselfservice.repository.DatabaseRepository
-
-import team.bjtuss.bjtuselfservice.repository.NetWorkRepository
+import team.bjtuss.bjtuselfservice.repository.NetworkRepository
 
 
 
@@ -32,7 +21,7 @@ class GradeViewModel : BaseSyncViewModel<GradeEntity>(
     }
 
     override suspend fun fetchNetworkData(): List<GradeEntity> {
-        return NetWorkRepository.getGradeList()
+        return NetworkRepository.getGradeList()
     }
 
     override suspend fun fetchLocalData(): List<GradeEntity> {

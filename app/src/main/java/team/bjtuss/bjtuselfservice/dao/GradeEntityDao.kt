@@ -5,11 +5,10 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Transaction
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
-import team.bjtuss.bjtuselfservice.entity.BaseEntity
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
+
 @Dao
 interface GradeEntityDao : BaseDao<GradeEntity> {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
