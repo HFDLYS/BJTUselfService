@@ -23,7 +23,9 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -39,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -54,6 +57,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
 import team.bjtuss.bjtuselfservice.utils.Utils
+import team.bjtuss.bjtuselfservice.viewmodel.ClassroomViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.CourseScheduleViewModel
 
 data class MenuItem(
@@ -93,7 +97,8 @@ fun GradeTopMenu(menuItemList: List<MenuItem>) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CourseScheduleScreen(
-    courseScheduleViewModel: CourseScheduleViewModel
+    courseScheduleViewModel: CourseScheduleViewModel,
+    classroomViewModel: ClassroomViewModel
 ) {
     LaunchedEffect(Unit) {
         courseScheduleViewModel.syncDataAndClearChange()
@@ -112,14 +117,36 @@ fun CourseScheduleScreen(
     var expanded by remember { mutableStateOf(false) }
 
     var currentTerm by remember { mutableStateOf(false) }
-
+    val allWeeks = listOf("全部") + (1..26).map { "第${it}周" }
+    var showWeekSelector by remember { mutableStateOf(false) }
+    val nowWeek = classroomViewModel.classroomMap.value["nowWeek"]?.get(0) ?: 0
+    var selectedWeek by remember { mutableIntStateOf(nowWeek) }
     val courseList by
     if (currentTerm) courseScheduleViewModel.currentTermCourseList.collectAsState() else courseScheduleViewModel.nextTermCourseList.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("课程表") },
+                title = {
+                    Row {
+                        if (!currentTerm) {
+                            Text(
+                                text = "本学期课表",
+                            )
+                        } else {
+                            Text(
+                                text = "选课课表",
+                            )
+                        }
+                        if (selectedWeek != 0) {
+                            Text(
+                                text = "「第${selectedWeek}周」",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
+                        },
                 actions = {
                     IconButton(onClick = { expanded = !expanded }) {
                         Icon(
@@ -131,10 +158,49 @@ fun CourseScheduleScreen(
                             menuItemList = listOf(
                                 MenuItem(
                                     content = { Text("切换学期") },
-                                    onClick = { currentTerm = !currentTerm }
+                                    onClick = {
+                                        currentTerm = !currentTerm
+                                        if (!currentTerm) {
+                                            selectedWeek = nowWeek
+                                        } else {
+                                            selectedWeek = 0
+                                        }
+                                    }
                                 ),
+                                MenuItem(
+                                    content = { Text("选择周数") },
+                                    onClick = { showWeekSelector = true }
+                                )
                             )
                         )
+                        if (showWeekSelector) {
+                            AlertDialog(
+                                onDismissRequest = { showWeekSelector = false },
+                                title = { Text("选择周数") },
+                                text = {
+                                    LazyColumn {
+                                        allWeeks.forEachIndexed { index, week ->
+                                            item {
+                                                Text(
+                                                    text = week,
+                                                    modifier = Modifier
+                                                        .clickable {
+                                                            selectedWeek = index
+                                                            showWeekSelector = false
+                                                        }
+                                                        .padding(8.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                },
+                                confirmButton = {
+                                    Button(onClick = { showWeekSelector = false }) {
+                                        Text("关闭")
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
             )
@@ -148,7 +214,8 @@ fun CourseScheduleScreen(
                 .padding(padding),
             courseList = courseList,
             weekDays = weekDays,
-            courseTimes = courseTimes
+            courseTimes = courseTimes,
+            selectedWeek = selectedWeek
         )
     }
 }
@@ -158,7 +225,8 @@ fun CourseScheduleContent(
     modifier: Modifier = Modifier,
     courseList: List<List<CourseEntity>>,
     weekDays: List<String>,
-    courseTimes: List<String>
+    courseTimes: List<String>,
+    selectedWeek: Int
 ) {
 
     Column(modifier = modifier) {
@@ -210,6 +278,7 @@ fun CourseScheduleContent(
             // 课程网格
             CourseScheduleGrid(
                 courseList = courseList,
+                nowWeek = selectedWeek
             )
         }
     }
@@ -218,7 +287,7 @@ fun CourseScheduleContent(
 @Composable
 fun CourseScheduleGrid(
     courseList: List<List<CourseEntity>>,
-
+    nowWeek: Int
     ) {
     val weekDays: Int = 7
     val courseTimes: Int = 7
@@ -235,7 +304,8 @@ fun CourseScheduleGrid(
 
                     CourseCell(
                         courses = courses,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        nowWeek = nowWeek
                     )
                 }
             }
@@ -243,14 +313,43 @@ fun CourseScheduleGrid(
     }
 }
 
+fun parseCourseTime(courseTime: String): List<Int> {
+    try {
+        val courseTime2 = courseTime.replace("第", "").replace("周", "")
+        val courseTimeList = mutableListOf<Int>()
+        val timeList = courseTime2.split(",")
+        for (time in timeList) {
+            if (time.contains("-")) {
+                val timeRange = time.split("-")
+                for (i in timeRange[0].toInt()..timeRange[1].toInt()) {
+                    courseTimeList.add(i)
+                }
+            } else {
+                courseTimeList.add(time.toInt())
+            }
+        }
+        return courseTimeList
+    } catch (e: Exception) {
+        return emptyList()
+    }
+}
 
 @Composable
 fun CourseCell(
     courses: List<CourseEntity>?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    nowWeek: Int,
 ) {
     var showDetailedCourseInformationDialog by remember { mutableStateOf(false) }
-
+    var courses2: List<CourseEntity>? = null
+    courses2 = if (nowWeek != 0) {
+        courses?.filter { course ->
+            val courseTimeList = parseCourseTime(course.courseTime)
+            courseTimeList.contains(nowWeek)
+        }
+    } else {
+        courses
+    }
     Box(
         modifier = modifier
             .border(
@@ -259,24 +358,26 @@ fun CourseCell(
             )
             .background(
                 when {
-                    courses != null -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                    courses2 != null -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
                     else -> Color.Transparent
                 }
             )
             .clickable(
                 onClick = {
+                    if (!courses2.isNullOrEmpty())
                     showDetailedCourseInformationDialog = true
                 }
             ),
         contentAlignment = Alignment.Center
     ) {
-        courses?.let {
+
+        courses2?.let {
+            var count = courses2.size
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxSize()
             ) {
-                courses.forEach {
+                courses2.forEach {
                     val backgroundColor = Color(
                         android.graphics.Color.parseColor(
                             Utils.generateRandomColor(
@@ -289,8 +390,10 @@ fun CourseCell(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .fillMaxHeight((1.0/count).toFloat())
                             .background(backgroundColor),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
                         Text(
                             text = it.courseName,
@@ -308,6 +411,7 @@ fun CourseCell(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
                     }
+                    count--
                 }
             }
         }

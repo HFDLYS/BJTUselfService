@@ -435,7 +435,9 @@ public class MisDataManager {
                                     }
 
                                     // 解析课程时间
-                                    String courseTime = child.select("div[style^=max-width]").first().text().split(" ")[0];
+                                    String courseTime = child.select("div[style^=max-width]").first().text().split("周")[0] + "周";
+                                    courseTime = courseTime.replace(" ", "")
+                                            .replace("\n", "");
 
                                     // 解析课程教师
                                     String courseTeacher = child.select("div[style^=max-width] i").first().text();
@@ -506,6 +508,7 @@ public class MisDataManager {
                                     return;
                                 }
                                 Map<String, List<Integer>> classroomMap = new HashMap<>();
+                                classroomMap.put("nowWeek", List.of(nowWeek));
                                 Elements rows = table.select("tr");
                                 Calendar calendar = Calendar.getInstance();
                                 int dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);

@@ -132,16 +132,18 @@ public class Utils {
         Random random = new Random(seed);
 
         int r, g, b;
+        int base1 = 20;
+        int base2 = 180;
         if (isDarkMode) {
             // 为暗色模式生成深色
-            r = random.nextInt(56);  // 0-55
-            g = random.nextInt(56);  // 0-55
-            b = random.nextInt(56);  // 0-55
+            r = base1 + random.nextInt(66);
+            g = base1 + random.nextInt(66);
+            b = base1 + random.nextInt(66);
         } else {
             // 为亮色模式生成浅色
-            r = 200 + random.nextInt(56);  // 200-255
-            g = 200 + random.nextInt(56);  // 200-255
-            b = 200 + random.nextInt(56);  // 200-255
+            r = base2 + random.nextInt(66);
+            g = base2 + random.nextInt(66);
+            b = base2 + random.nextInt(66);
         }
 
         return String.format("#%02X%02X%02X", r, g, b);

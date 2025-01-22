@@ -123,10 +123,10 @@ fun App(loginViewModel: LoginViewModel) {
         popExitTransition = { activityPopExitTransition() }
     ) {
         composable(RouteManager.Navigation) {
-            AppNavigation(navController, loginViewModel,mainViewModel)
+            AppNavigation(navController, loginViewModel, mainViewModel)
         }
         composable(RouteManager.CourseSchedule) {
-            CourseScheduleScreen(courseScheduleViewModel)
+            CourseScheduleScreen(courseScheduleViewModel, classroomViewModel)
         }
         composable(RouteManager.ExamSchedule) {
             ExamScheduleScreen(examScheduleViewModel)
