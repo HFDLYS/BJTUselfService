@@ -9,6 +9,7 @@ import kotlinx.coroutines.future.await
 import kotlinx.coroutines.withContext
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
+import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
 
 
@@ -55,6 +56,21 @@ object NetWorkRepository {
                 }
             }
             nextTermCourseListOfOneDim
+        }
+    }
+
+    suspend fun getExamScheduleList(): List<ExamScheduleEntity> {
+        return withContext(Dispatchers.IO) {
+            val examScheduleList = async {
+                try {
+                    studentAccountManager.getExamSchedule().await()
+                } catch (e: Exception) {
+                    println("Error fetching exam schedule list: ${e.message}")
+                    studentAccountManager.examScheduleList ?: emptyList()
+                }
+            }
+
+            examScheduleList.await()
         }
     }
 

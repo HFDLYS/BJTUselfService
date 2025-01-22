@@ -5,42 +5,29 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import team.bjtuss.bjtuselfservice.StudentAccountManager
+import team.bjtuss.bjtuselfservice.database.AppDatabase
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
+import team.bjtuss.bjtuselfservice.repository.DatabaseRepository
+import team.bjtuss.bjtuselfservice.repository.NetWorkRepository
 
-class ExamScheduleViewModel : ViewModel() {
-    private val studentAccountManager = StudentAccountManager.getInstance()
+class ExamScheduleViewModel : BaseSyncViewModel<ExamScheduleEntity>(
+    dataSyncManager = DefaultDataSyncManager<ExamScheduleEntity>(
+        AppDatabase.getInstance().examScheduleEntityDao()
+    ) { it.examType + it.courseName }
+) {
 
-    private var _examScheduleList =
-        MutableStateFlow<MutableList<ExamScheduleEntity>>(mutableListOf())
-
-    val examScheduleList: StateFlow<MutableList<ExamScheduleEntity>> =
-        _examScheduleList.asStateFlow()
+    val examScheduleList: StateFlow<List<ExamScheduleEntity>> = DatabaseRepository.examScheduleList
 
     init {
-        loadExamScheduleList()
+        loadDataAndDetectChanges()
     }
 
-    fun loadExamScheduleList() {
-        _examScheduleList.value = mutableListOf()
-        try {
-            studentAccountManager.getExamSchedule().thenAccept {
-                _examScheduleList.value.addAll(it)
-            }
-        } catch (e: Exception) {
-            handleLoginError(e)
-        }
+    override suspend fun fetchNetworkData(): List<ExamScheduleEntity> {
+        return NetWorkRepository.getExamScheduleList()
     }
 
-    private fun handleLoginError(throwable: Throwable) {
-        when (throwable.message) {
-            "Not loginAa", "Not login" -> {
-                val loginSuccessful = studentAccountManager.loginAa().thenAccept {
-                    if (it) {
-                        loadExamScheduleList()
-                    }
-                }
-            }
-            else -> _examScheduleList.value = mutableListOf()
-        }
+    override suspend fun fetchLocalData(): List<ExamScheduleEntity> {
+        return DatabaseRepository.getExamScheduleList()
     }
+
 }

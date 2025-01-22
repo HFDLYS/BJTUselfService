@@ -5,18 +5,20 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import team.bjtuss.bjtuselfservice.MainApplication
 import team.bjtuss.bjtuselfservice.dao.CourseEntityDao
+import team.bjtuss.bjtuselfservice.dao.ExamScheduleEntityDao
 import team.bjtuss.bjtuselfservice.dao.GradeEntityDao
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
+import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
 
 @Database(
-    entities = [GradeEntity::class, CourseEntity::class],
-    version = 1
+    entities = [GradeEntity::class, CourseEntity::class, ExamScheduleEntity::class],
+    version = 2
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun gradeEntityDao(): GradeEntityDao
     abstract fun courseEntityDao(): CourseEntityDao
-
+    abstract fun examScheduleEntityDao(): ExamScheduleEntityDao
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null

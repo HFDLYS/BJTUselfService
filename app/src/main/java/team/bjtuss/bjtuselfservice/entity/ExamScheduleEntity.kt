@@ -7,11 +7,11 @@ import androidx.room.PrimaryKey
 data class ExamScheduleEntity(
     @PrimaryKey(autoGenerate = true)
     override var id: Int = 0,
-    var examType: String? = null,
-    var courseName: String? = null,
-    var examTimeAndPlace: String? = null,
-    var examStatus: String? = null,
-    var detail: String? = "",
+    var examType: String,
+    var courseName: String,
+    var examTimeAndPlace: String,
+    var examStatus: String,
+    var detail: String,
 ) : BaseEntity() {
     constructor(
         examType: String,

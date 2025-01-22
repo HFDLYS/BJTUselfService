@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import team.bjtuss.bjtuselfservice.database.AppDatabase
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
+import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
 
 object DatabaseRepository {
@@ -17,12 +18,16 @@ object DatabaseRepository {
         AppDatabase.getInstance().gradeEntityDao()
     private val courseEntityDao =
         AppDatabase.getInstance().courseEntityDao()
-
+    private val examScheduleEntityDao =
+        AppDatabase.getInstance().examScheduleEntityDao()
 
     private var _gradeList =
         MutableStateFlow<List<GradeEntity>>(mutableListOf())
     val gradeList: StateFlow<List<GradeEntity>> = _gradeList.asStateFlow()
 
+    private var _examScheduleList =
+        MutableStateFlow<List<ExamScheduleEntity>>(mutableListOf())
+    val examScheduleList: StateFlow<List<ExamScheduleEntity>> = _examScheduleList.asStateFlow()
 
     private var _classroomMap =
         MutableStateFlow<Map<String, MutableList<Int>>>(mutableMapOf())
@@ -44,6 +49,7 @@ object DatabaseRepository {
         observeGradeList()
         observeCourseList(true)  // 本学期课程
         observeCourseList(false) // 下学期课程
+        observeExamScheduleList()
         loadClassroomMap()
     }
 
@@ -81,6 +87,15 @@ object DatabaseRepository {
         }
     }
 
+    // 烤熟安排的观察方法
+    private fun observeExamScheduleList() {
+        CoroutineScope(Dispatchers.IO).launch {
+            examScheduleEntityDao.getAll().collect {
+                _examScheduleList.value = it
+            }
+        }
+    }
+
     fun observeClassroomMap() {
         CoroutineScope(Dispatchers.IO).launch {
 
@@ -98,6 +113,12 @@ object DatabaseRepository {
     suspend fun getGradeList(): List<GradeEntity> {
         return withContext(Dispatchers.IO) {
             gradeEntityDao.getAll().first()
+        }
+    }
+
+    suspend fun getExamScheduleList(): List<ExamScheduleEntity> {
+        return withContext(Dispatchers.IO) {
+            examScheduleEntityDao.getAll().first()
         }
     }
 
