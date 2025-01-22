@@ -203,10 +203,10 @@ fun LoginScreen(
     LaunchedEffect(Unit) {
         if (loginState is LoginState.Idle) {
         } else {
-            username = SettingsRepository.getStoredCredentialsBlocking().first
-            password = SettingsRepository.getStoredCredentialsBlocking().second
             loginViewModel.autoLogin()
         }
+        username = SettingsRepository.getStoredCredentialsBlocking().first
+        password = SettingsRepository.getStoredCredentialsBlocking().second
     }
 
     Column(
