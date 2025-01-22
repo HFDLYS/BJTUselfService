@@ -186,7 +186,7 @@ fun ExamItemCard(exam: ExamScheduleEntity) {
                 Icon(
                     imageVector = Icons.Default.Api,
                     contentDescription = "Exam Type",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(16.dp),
                 )
                 Text(
@@ -203,7 +203,7 @@ fun ExamItemCard(exam: ExamScheduleEntity) {
                 Icon(
                     imageVector = Icons.Default.Schedule,
                     contentDescription = "Exam Time and Place",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(16.dp),
                 )
                 Text(
@@ -219,7 +219,7 @@ fun ExamItemCard(exam: ExamScheduleEntity) {
                 Icon(
                     imageVector = Icons.Default.Book,
                     contentDescription = "Exam Status",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(16.dp),
                 )
                 Text(
@@ -235,7 +235,7 @@ fun ExamItemCard(exam: ExamScheduleEntity) {
                 Icon(
                     imageVector = Icons.Default.Info,
                     contentDescription = "Detail",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(16.dp),
                 )
                 Text(
