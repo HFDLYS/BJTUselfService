@@ -16,8 +16,8 @@ class ClassroomViewModel : ViewModel() {
 
     init {
         viewModelScope.launch {
-            val map = getClassroomMap()
-            _classroomMap.value = (map ?: mutableMapOf()) as MutableMap<String, List<Int>>
+            val map = getClassroomMap() ?: emptyMap()
+            _classroomMap.value = map.toMutableMap()
         }
     }
 }

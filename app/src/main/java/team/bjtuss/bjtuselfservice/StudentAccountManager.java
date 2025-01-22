@@ -122,13 +122,20 @@ public class StudentAccountManager {
 
     // 登录教务系统
     public CompletableFuture<Boolean> loginAa() {
-        return checkIsLogin().thenCompose(isLogin -> {
-            if (isLogin) {
-                return attemptAaLogin();
-            } else {
-                return attemptInitAndLogin();
-            }
-        });
+        return checkIsLogin()
+                .thenCompose(isLogin -> isLogin
+                        ? attemptAaLogin()
+                        : attemptInitAndLogin()
+                        .thenCompose(
+                        isLoginMis -> isLoginMis
+                                ? attemptAaLogin()
+                                : CompletableFuture.completedFuture(false)
+                        )
+                )
+                .exceptionally(ex -> {
+                    System.err.println("Error during login process: " + ex.getMessage());
+                    return false;
+                });
     }
 
     private CompletableFuture<Boolean> attemptAaLogin() {
@@ -166,23 +173,35 @@ public class StudentAccountManager {
 
 
     public CompletableFuture<Boolean> loginBksy() {
-        return checkIsLogin().thenCompose(isLogin -> {
-            if (isLogin) {
-                return attemptBksyLogin();
-            } else {
-                return CompletableFuture.completedFuture(false);
-            }
-        });
+        return checkIsLogin()
+                .thenCompose(isLogin -> isLogin
+                        ? attemptBksyLogin()
+                        : attemptInitAndLogin()
+                        .thenCompose(isLoginMis -> isLoginMis
+                                ? attemptBksyLogin()
+                                : CompletableFuture.completedFuture(false)
+                        )
+                )
+                .exceptionally(ex -> {
+                    System.err.println("Error during login process: " + ex.getMessage());
+                    return false;
+                });
     }
 
     public CompletableFuture<Boolean> loginXsMis() {
-        return checkIsLogin().thenCompose(isLogin -> {
-            if (isLogin) {
-                return attemptXsMisLogin();
-            } else {
-                return CompletableFuture.completedFuture(false);
-            }
-        });
+        return checkIsLogin()
+                .thenCompose(isLogin -> isLogin
+                        ? attemptXsMisLogin()
+                        : attemptInitAndLogin()
+                        .thenCompose(isLoginMis -> isLoginMis
+                                ? attemptXsMisLogin()
+                                : CompletableFuture.completedFuture(false)
+                        )
+                )
+                .exceptionally(ex -> {
+                    System.err.println("Error during login process: " + ex.getMessage());
+                    return false;
+                });
     }
 
     private CompletableFuture<Boolean> attemptXsMisLogin() {

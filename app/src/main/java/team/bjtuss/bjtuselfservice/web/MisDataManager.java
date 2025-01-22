@@ -243,7 +243,25 @@ public class MisDataManager {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
                 if (response.request().url().toString().equals("https://bksy.bjtu.edu.cn/login_introduce_t.html")) {
-                    loginCallback.onResponse(response.request().url().toString());
+                    client.newCall(new Request.Builder()
+                            .url("https://bksycenter.bjtu.edu.cn/NoMasterJumpPage.aspx?URL=jwcZhjx&amp;FPC=page:jwcZhjx")
+                            .build()).enqueue(new Callback() {
+                        @Override
+                        public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                            loginCallback.onFailure(0);
+                        }
+
+                        @Override
+                        public void onResponse(@NonNull Call call, @NonNull Response response) throws IOException {
+                            String url = response.request().url().toString();
+                            if (response.request().url().toString().equals("http://123.121.147.7:88/ve/back/core/main/qx_kl.jsp")) {
+                                loginCallback.onResponse(response.request().url().toString());
+                            } else {
+                                loginCallback.onFailure(1);
+                            }
+                            response.close();
+                        }
+                    });
                 } else {
                     loginCallback.onFailure(1);
                 }
