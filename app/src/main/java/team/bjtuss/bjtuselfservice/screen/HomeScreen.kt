@@ -350,16 +350,16 @@ fun EcardButton(content: @Composable () -> Unit) {
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text("校园网续费") },
+            title = { Text("校园卡充值") },
             text = {
-                Text("不好意思直接转跳微信成本还是太高，不过\n注意：以下操作需微信绑定学校企业号\n请分享至微信，后打开（莫吐槽🙏）哦")
+                Text("请注意，接下来即将转跳“完美校园”app\n确保自己已安装哦☺️")
             },
             confirmButton = {
                 Button(onClick = {
-                    shareToWeChat(context)
+                    launchWanMeiCampusApp(context)
                     showDialog = false
                 }) {
-                    Text("分享至微信")
+                    Text("打开应用")
                 }
             },
             dismissButton = {
@@ -409,16 +409,16 @@ fun NetButton(content: @Composable () -> Unit) {
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text("校园卡充值") },
+            title = { Text("校园网续费") },
             text = {
-                Text("请注意，接下来即将转跳“完美校园”app\n确保自己已安装哦☺️")
+                Text("不好意思直接转跳微信成本还是太高，不过\n注意：以下操作需微信绑定学校企业号\n请分享至微信，后打开（莫吐槽🙏）哦")
             },
             confirmButton = {
                 Button(onClick = {
-                    launchWanMeiCampusApp(context)
+                    shareToWeChat(context)
                     showDialog = false
                 }) {
-                    Text("打开应用")
+                    Text("分享至微信")
                 }
             },
             dismissButton = {
