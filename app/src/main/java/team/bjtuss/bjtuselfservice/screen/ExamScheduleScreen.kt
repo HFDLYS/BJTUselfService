@@ -145,7 +145,7 @@ fun ExamSummaryCard(examList: List<ExamScheduleEntity>, selectedFilter: String) 
             Text(
                 text = "考试安排：${filteredExamList.size}项",
                 style = MaterialTheme.typography.headlineSmall.copy(
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )

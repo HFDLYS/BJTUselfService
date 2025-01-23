@@ -265,7 +265,7 @@ fun GpaCard(gradeList: List<GradeEntity>, selectedFilter: String) {
                     Text(
                         text = gradeInfo.formattedMessage,
                         style = MaterialTheme.typography.headlineSmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold
                         )
                     )

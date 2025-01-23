@@ -141,80 +141,94 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
 //                containerColor = MaterialTheme.colorScheme.surface,
 //            )
         ) {
-            Column(
+            Text(
+                text = "最新变动",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                ),
+                modifier = Modifier.padding(start = 16.dp)
+            )
+            LazyColumn(
                 modifier = Modifier.padding(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+
                 if (gradeChangeList.isNotEmpty()) {
-                    Text(
-                        text = "成绩单变动",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(start = 16.dp)
-                    )
+                    item {
+                        Text(
+                            text = "成绩单变动",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(start = 16.dp)
+                        )
 
 
-                    LazyColumn(
-                        modifier = Modifier,
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        items(gradeChangeList.size) { index ->
-                            val gradeChange = gradeChangeList[index]
-                            ChangeCard(
-                                dataChange = gradeChange,
-                                onClick = {
-                                    selectedChange = gradeChange
-                                    showDialog = true
-                                }
-                            )
+                        Column(
+                            modifier = Modifier,
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            gradeChangeList.forEach { gradeChange ->
+                                ChangeCard(
+                                    dataChange = gradeChange,
+                                    onClick = {
+                                        selectedChange = gradeChange
+                                        showDialog = true
+                                    }
+                                )
+                            }
                         }
                     }
                 }
 
                 if (courseChangeList.isNotEmpty()) {
-                    Text(
-                        text = "课程表变动",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(start = 16.dp)
-                    )
+                    item {
+                        Text(
+                            text = "课程表变动",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(start = 16.dp)
+                        )
 
-                    LazyColumn {
-                        items(courseChangeList.size) { index ->
-                            val courseChange = courseChangeList[index]
-                            ChangeCard(
-                                dataChange = courseChange,
-                                onClick = {
-                                    navController.navigate(RouteManager.CourseSchedule)
-                                }
-                            )
+                        Column {
+                            courseChangeList.forEach { courseChange ->
+                                ChangeCard(
+                                    dataChange = courseChange,
+                                    onClick = {
+                                        navController.navigate(RouteManager.CourseSchedule)
+                                    }
+                                )
+                            }
                         }
                     }
                 }
 
                 if (examScheduleChangeList.isNotEmpty()) {
-                    Text(
-                        text = "考试安排变动",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(start = 16.dp)
-                    )
+                    item {
+                        Text(
+                            text = "考试安排变动",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(start = 16.dp)
+                        )
 
-                    LazyColumn {
-                        items(examScheduleChangeList.size) { index ->
-                            val examChange = examScheduleChangeList[index]
-                            ChangeCard(
-                                dataChange = examChange,
-                                onClick = {
-                                    navController.navigate(RouteManager.ExamSchedule)
-                                }
-                            )
+                        Column {
+                            examScheduleChangeList.forEach { examChange ->
+                                ChangeCard(
+                                    dataChange = examChange,
+                                    onClick = {
+                                        navController.navigate(RouteManager.ExamSchedule)
+                                    }
+                                )
+                            }
                         }
                     }
                 }
+
+
             }
             if (isRefreshing) {
                 Box(
@@ -277,7 +291,9 @@ fun StatusInfo(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                MailButton({ Text(newMailCount, fontSize = 18.sp) }, navController)
+                MailButton({
+                    Text(newMailCount, fontSize = 18.sp)
+                           }, navController)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 EcardButton({ Text(ecardBalance, fontSize = 18.sp) })
