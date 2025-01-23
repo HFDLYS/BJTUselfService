@@ -4,7 +4,12 @@ package team.bjtuss.bjtuselfservice;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.MutableLiveData;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
+import okhttp3.OkHttpClient;
 import team.bjtuss.bjtuselfservice.entity.CourseEntity;
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity;
 import team.bjtuss.bjtuselfservice.entity.GradeEntity;
@@ -12,19 +17,12 @@ import team.bjtuss.bjtuselfservice.utils.Network;
 import team.bjtuss.bjtuselfservice.utils.Network.WebCallback;
 import team.bjtuss.bjtuselfservice.web.MisDataManager;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
-import okhttp3.OkHttpClient;
-
 public class StudentAccountManager {
     private final MutableLiveData<StudentInfo> stuInfoLiveData = new MutableLiveData<>();
     private final MutableLiveData<Boolean> isAaLoginLiveData = new MutableLiveData<>(false);
     private final MutableLiveData<Boolean> isMisLoginLiveData = new MutableLiveData<>(false);
     // 永续cookie的客户端
-    private OkHttpClient client = new OkHttpClient.Builder()
+    public OkHttpClient client = new OkHttpClient.Builder()
             .cookieJar(new Network.InMemoryCookieJar())
             .build();
     private StudentInfo stuInfo;

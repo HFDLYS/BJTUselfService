@@ -7,18 +7,21 @@ import team.bjtuss.bjtuselfservice.MainApplication
 import team.bjtuss.bjtuselfservice.dao.CourseEntityDao
 import team.bjtuss.bjtuselfservice.dao.ExamScheduleEntityDao
 import team.bjtuss.bjtuselfservice.dao.GradeEntityDao
+import team.bjtuss.bjtuselfservice.dao.HomeworkEntityDao
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
+import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
 
 @Database(
-    entities = [GradeEntity::class, CourseEntity::class, ExamScheduleEntity::class],
-    version = 2
+    entities = [GradeEntity::class, CourseEntity::class, ExamScheduleEntity::class, HomeworkEntity::class],
+    version = 1
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun gradeEntityDao(): GradeEntityDao
     abstract fun courseEntityDao(): CourseEntityDao
     abstract fun examScheduleEntityDao(): ExamScheduleEntityDao
+    abstract fun homeworkEntityDao(): HomeworkEntityDao
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
@@ -42,7 +45,7 @@ abstract class AppDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     MainApplication.appContext.applicationContext,
                     AppDatabase::class.java,
-                    "todolist_database"
+                    "bjtuselfservice_database"
                 )
 //                    .addMigrations(MIGRATION_4_5)
                     .fallbackToDestructiveMigration() // 可选：在没有提供迁移策略时使用

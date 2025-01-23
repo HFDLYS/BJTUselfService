@@ -60,6 +60,7 @@ import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
 import team.bjtuss.bjtuselfservice.R
 import team.bjtuss.bjtuselfservice.StudentAccountManager
+import team.bjtuss.bjtuselfservice.repository.SettingsRepository
 
 
 // Login View Model to handle login logic

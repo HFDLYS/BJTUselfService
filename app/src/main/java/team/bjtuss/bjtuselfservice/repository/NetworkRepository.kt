@@ -2,23 +2,21 @@ package team.bjtuss.bjtuselfservice.repository
 
 import android.util.Log
 import androidx.lifecycle.LiveData
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.future.await
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
+import team.bjtuss.bjtuselfservice.repository.NetworkRequestQueue
 
 
 object NetworkRepository {
-    private val requestQueue = NetworkRequestQueue()
+    private val requestQueue = NetworkRequestQueue
     private val studentAccountManager = StudentAccountManager.getInstance()
 
 
     suspend fun getClassroomMap(): Map<String, MutableList<Int>>? {
-        val result =  requestQueue.enqueue("getClassroomMap") {
+        val result = requestQueue.enqueue("getClassroomMap") {
 
             val classroomMap = try {
                 studentAccountManager.getClassroom().await()
@@ -114,6 +112,7 @@ object NetworkRepository {
         }
         return result.getOrElse { emptyList() }
     }
+
 }
 
 

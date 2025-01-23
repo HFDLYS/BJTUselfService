@@ -12,6 +12,7 @@ import team.bjtuss.bjtuselfservice.database.AppDatabase
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
+import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
 
 object DatabaseRepository {
     private val gradeEntityDao =
@@ -20,6 +21,8 @@ object DatabaseRepository {
         AppDatabase.getInstance().courseEntityDao()
     private val examScheduleEntityDao =
         AppDatabase.getInstance().examScheduleEntityDao()
+    private val homeworkEntityDao =
+        AppDatabase.getInstance().homeworkEntityDao()
 
     private var _gradeList =
         MutableStateFlow<List<GradeEntity>>(mutableListOf())
@@ -45,11 +48,16 @@ object DatabaseRepository {
     val nextTermCourseList: StateFlow<List<List<CourseEntity>>> =
         _nextTermCourseList.asStateFlow()
 
+    private var _homeworkList =
+        MutableStateFlow<List<HomeworkEntity>>(mutableListOf())
+    val homeworkList: StateFlow<List<HomeworkEntity>> = _homeworkList.asStateFlow()
+
     init {
         observeGradeList()
         observeCourseList(true)  // 本学期课程
         observeCourseList(false) // 下学期课程
         observeExamScheduleList()
+        observeHomeworkList()
     }
 
 
@@ -92,10 +100,17 @@ object DatabaseRepository {
         }
     }
 
-    fun observeClassroomMap() {
+    private fun observeHomeworkList() {
         CoroutineScope(Dispatchers.IO).launch {
-
+            homeworkEntityDao.getAll().collect {
+                _homeworkList.value = it
+            }
         }
+    }
+
+
+    fun observeClassroomMap() {
+
     }
 
 
@@ -118,6 +133,11 @@ object DatabaseRepository {
         }
     }
 
+    suspend fun getHomeworkList(): List<HomeworkEntity> {
+        return withContext(Dispatchers.IO) {
+            homeworkEntityDao.getAll().first()
+        }
+    }
 
 
 }

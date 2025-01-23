@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 const val MAX_CONCURRENT_JOBS = 2
 
-class NetworkRequestQueue {
+object NetworkRequestQueue {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val queue = Channel<NetworkRequest>(Channel.UNLIMITED)
 

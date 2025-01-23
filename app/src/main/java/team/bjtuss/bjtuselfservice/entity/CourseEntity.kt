@@ -18,21 +18,6 @@ data class CourseEntity(
     val coursePlace: String,
     val isCurrentSemester: Boolean
 ) : BaseEntity() {
-//    constructor(
-//        courseId: String,
-//        courseName: String,
-//        courseTeacher: String,
-//        courseTime: String,
-//        coursePlace: String
-//    ) : this(
-//        id = 0,
-//        courseId = courseId,
-//        courseName = courseName,
-//        courseTeacher = courseTeacher,
-//        courseTime = courseTime,
-//        coursePlace = coursePlace,
-//        isCurrentSemester = true
-//    )
 
     constructor(
         courseId: String,

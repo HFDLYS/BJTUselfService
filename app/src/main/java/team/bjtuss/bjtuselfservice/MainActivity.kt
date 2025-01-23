@@ -44,28 +44,39 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.google.gson.JsonParser
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import team.bjtuss.bjtuselfservice.RouteManager.ClassroomDetection
+import team.bjtuss.bjtuselfservice.jsonclass.HomeworkJsonType
+import team.bjtuss.bjtuselfservice.jsonclass.SemesterJsonType
+import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
+import team.bjtuss.bjtuselfservice.screen.BuildingScreen
+import team.bjtuss.bjtuselfservice.screen.ClassroomScreen
 import team.bjtuss.bjtuselfservice.screen.CourseScheduleScreen
 import team.bjtuss.bjtuselfservice.screen.EmailScreen
+import team.bjtuss.bjtuselfservice.screen.ExamScheduleScreen
 import team.bjtuss.bjtuselfservice.screen.GradeScreen
 import team.bjtuss.bjtuselfservice.screen.HomeScreen
+import team.bjtuss.bjtuselfservice.screen.HomeWorkScreen
 import team.bjtuss.bjtuselfservice.screen.LoginScreen
 import team.bjtuss.bjtuselfservice.screen.LoginViewModel
 import team.bjtuss.bjtuselfservice.screen.ScreenStatus
 import team.bjtuss.bjtuselfservice.screen.SettingScreen
 import team.bjtuss.bjtuselfservice.screen.SpaceScreen
 import team.bjtuss.bjtuselfservice.ui.theme.BJTUselfServicecomposeTheme
-import team.bjtuss.bjtuselfservice.viewmodel.CourseScheduleViewModel
-import team.bjtuss.bjtuselfservice.viewmodel.GradeViewModel
-import kotlinx.coroutines.launch
-import team.bjtuss.bjtuselfservice.RouteManager.ClassroomDetection
-import team.bjtuss.bjtuselfservice.screen.BuildingScreen
-import team.bjtuss.bjtuselfservice.screen.ClassroomScreen
-import team.bjtuss.bjtuselfservice.screen.ExamScheduleScreen
 import team.bjtuss.bjtuselfservice.viewmodel.ClassroomViewModel
+import team.bjtuss.bjtuselfservice.viewmodel.CourseScheduleViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.ExamScheduleViewModel
+import team.bjtuss.bjtuselfservice.viewmodel.GradeViewModel
+import team.bjtuss.bjtuselfservice.viewmodel.HomeworkViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModelFactory
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService
+import team.bjtuss.bjtuselfservice.web.MisDataManager
 
 
 class MainActivity : ComponentActivity() {
@@ -73,6 +84,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         CaptchaModel.init(this)
+
+
 
         setContent {
             BJTUselfServicecomposeTheme(dynamicColor = true) {
@@ -104,24 +117,20 @@ fun App(loginViewModel: LoginViewModel) {
     val gradeViewModel: GradeViewModel = viewModel()
     val courseScheduleViewModel: CourseScheduleViewModel = viewModel()
     val examScheduleViewModel: ExamScheduleViewModel = viewModel()
+    val homeworkViewModel: HomeworkViewModel = viewModel()
 
-    val mainViewModel: MainViewModel =
-        viewModel(
-            factory = MainViewModelFactory(
-                gradeViewModel,
-                courseScheduleViewModel,
-                examScheduleViewModel
-            )
+    val mainViewModel: MainViewModel = viewModel(
+        factory = MainViewModelFactory(
+            gradeViewModel, courseScheduleViewModel, examScheduleViewModel, homeworkViewModel
         )
+    )
 
-    NavHost(
-        navController = navController,
+    NavHost(navController = navController,
         startDestination = RouteManager.Navigation,
         enterTransition = { activityEnterTransition() },
         exitTransition = { activityExitTransition() },
         popEnterTransition = { activityPopEnterTransition() },
-        popExitTransition = { activityPopExitTransition() }
-    ) {
+        popExitTransition = { activityPopExitTransition() }) {
         composable(RouteManager.Navigation) {
             AppNavigation(navController, loginViewModel, mainViewModel)
         }
@@ -141,15 +150,16 @@ fun App(loginViewModel: LoginViewModel) {
             val buildingName = it.arguments?.getString("buildingName") ?: ""
             ClassroomScreen(buildingName = buildingName, classroomViewModel)
         }
-        composable(RouteManager.BJTUMiaoMiaoHouse) {
-            EmailScreen()
-        }
         composable(RouteManager.Grade) {
             GradeScreen(gradeViewModel)
         }
         composable(RouteManager.Email) {
             EmailScreen()
         }
+        composable(RouteManager.HomeWork) {
+            HomeWorkScreen(mainViewModel)
+        }
+
     }
 
 
@@ -157,9 +167,7 @@ fun App(loginViewModel: LoginViewModel) {
 
 
 data class PageItem(
-    val route: String,
-    val title: String,
-    val icon: ImageVector
+    val route: String, val title: String, val icon: ImageVector
 )
 
 object RouteManager {
@@ -174,10 +182,13 @@ object RouteManager {
     const val Grade: String = "Grade"
     const val CourseSchedule: String = "CourseSchedule"
     const val Email: String = "Email"
+    const val HomeWork: String = "HomeWork"
 }
 
 @Composable
-fun AppNavigation(navController: NavController, loginViewModel: LoginViewModel,mainViewModel: MainViewModel) {
+fun AppNavigation(
+    navController: NavController, loginViewModel: LoginViewModel, mainViewModel: MainViewModel
+) {
     val pages = listOf(
         PageItem(RouteManager.Home, "首页", Icons.Default.Home),
         PageItem(RouteManager.Space, "应用", Icons.Default.BorderAll),
@@ -194,27 +205,23 @@ fun AppNavigation(navController: NavController, loginViewModel: LoginViewModel,m
 
         NavigationBar {
             pages.forEachIndexed { index, pageItem ->
-                NavigationBarItem(
-                    selected = targetPage == index,
-                    onClick = {
-                        targetPage = index
-                        clickSequence.add(index)
-                        if (clickSequence.size > answer.size) {
-                            clickSequence.removeAt(0)
-                        }
-                        if (clickSequence.toList() == answer) {
-                            ClassroomCapacityService.ok = true
-                        }
-                        coroutineScope.launch {
-                            pagerState.animateScrollToPage(index)
-                        }
-                    },
-                    icon = {
-                        Icon(imageVector = pageItem.icon, contentDescription = pageItem.title)
-                    },
-                    label = {
-                        Text(text = pageItem.title)
-                    })
+                NavigationBarItem(selected = targetPage == index, onClick = {
+                    targetPage = index
+                    clickSequence.add(index)
+                    if (clickSequence.size > answer.size) {
+                        clickSequence.removeAt(0)
+                    }
+                    if (clickSequence.toList() == answer) {
+                        ClassroomCapacityService.ok = true
+                    }
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(index)
+                    }
+                }, icon = {
+                    Icon(imageVector = pageItem.icon, contentDescription = pageItem.title)
+                }, label = {
+                    Text(text = pageItem.title)
+                })
             }
         }
 
@@ -230,8 +237,7 @@ fun AppNavigation(navController: NavController, loginViewModel: LoginViewModel,m
             when (page) {
                 0 -> {
                     HomeScreen(
-                        navController = navController,
-                        mainViewModel = mainViewModel
+                        navController = navController, mainViewModel = mainViewModel
                     )
                 }
 
@@ -253,8 +259,7 @@ fun AppNavigation(navController: NavController, loginViewModel: LoginViewModel,m
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
     Text(
-        text = "Hello $name!",
-        modifier = modifier
+        text = "Hello $name!", modifier = modifier
     )
 }
 
@@ -263,18 +268,15 @@ private const val DEFAULT_ENTER_DURATION = 300
 private const val DEFAULT_EXIT_DURATION = 220
 
 private fun AnimatedContentTransitionScope<NavBackStackEntry>.activityEnterTransition(): EnterTransition {
-    return slideIntoContainer(
-        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+    return slideIntoContainer(towards = AnimatedContentTransitionScope.SlideDirection.Start,
         animationSpec = tween(DEFAULT_ENTER_DURATION, easing = LinearOutSlowInEasing),
-        initialOffset = { it }
-    )
+        initialOffset = { it })
 }
 
 @Suppress("UnusedReceiverParameter")
 private fun AnimatedContentTransitionScope<NavBackStackEntry>.activityExitTransition(): ExitTransition {
     return scaleOut(
-        animationSpec = tween(DEFAULT_ENTER_DURATION),
-        targetScale = 1F
+        animationSpec = tween(DEFAULT_ENTER_DURATION), targetScale = 1F
     )
 }
 
@@ -282,17 +284,14 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.activityExitTransi
 @Suppress("UnusedReceiverParameter")
 private fun AnimatedContentTransitionScope<NavBackStackEntry>.activityPopEnterTransition(): EnterTransition {
     return scaleIn(
-        animationSpec = tween(DEFAULT_EXIT_DURATION),
-        initialScale = 1F
+        animationSpec = tween(DEFAULT_EXIT_DURATION), initialScale = 1F
     )
 }
 
 private fun AnimatedContentTransitionScope<NavBackStackEntry>.activityPopExitTransition(): ExitTransition {
-    return slideOutOfContainer(
-        towards = AnimatedContentTransitionScope.SlideDirection.End,
+    return slideOutOfContainer(towards = AnimatedContentTransitionScope.SlideDirection.End,
         animationSpec = tween(DEFAULT_EXIT_DURATION, easing = FastOutLinearInEasing),
-        targetOffset = { it }
-    )
+        targetOffset = { it })
 }
 
 

@@ -96,6 +96,8 @@ abstract class BaseSyncViewModel<T : BaseEntity>(
     protected val _changeList = MutableStateFlow<List<DataChange<T>>>(mutableListOf())
     val changeList: StateFlow<List<DataChange<T>>> = _changeList.asStateFlow()
 
+
+
     // 数据加载与变更检测
     override fun loadDataAndDetectChanges() {
         viewModelScope.launch {
