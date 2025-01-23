@@ -28,7 +28,7 @@ fun HomeWorkScreen(mainViewModel: MainViewModel) {
                     Text(text = item.title)
                     Text(text = item.courseName)
                     Text(text = item.endTime)
-                    Text(text = item.content)
+                    // Text(text = item.content)
                     Text(text = item.createDate)
                 }
             }

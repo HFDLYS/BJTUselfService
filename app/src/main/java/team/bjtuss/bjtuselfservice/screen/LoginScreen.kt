@@ -92,11 +92,6 @@ class Authenticator(private val studentAccountManager: StudentAccountManager) {
                     Log.d("Authenticator", "XSMIS登录结果：$it")
                 })
 
-                val isBksyLoginSuccessful = studentAccountManager.loginBksy()
-                isBksyLoginSuccessful.thenAccept({
-                    Log.d("Authenticator", "BKSY登录结果：$it")
-                })
-
                 val isAaLoginSuccessful = studentAccountManager.loginAa().await()
                 Log.d("Authenticator", "AA登录结果：$isAaLoginSuccessful")
 
