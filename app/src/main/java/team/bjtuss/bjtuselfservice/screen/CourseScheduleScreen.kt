@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Code
@@ -47,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -191,11 +193,17 @@ fun CourseScheduleScreen(
                                                 Text(
                                                     text = week,
                                                     modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .background(if (index == selectedWeek) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else Color.Transparent)
                                                         .clickable {
                                                             selectedWeek = index
                                                             showWeekSelector = false
                                                         }
-                                                        .padding(8.dp)
+                                                        .padding(vertical = 12.dp, horizontal = 16.dp),
+                                                    fontSize = 18.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = if (index == selectedWeek) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                                 )
                                             }
                                         }

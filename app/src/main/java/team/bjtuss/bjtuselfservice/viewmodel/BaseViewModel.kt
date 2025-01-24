@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import team.bjtuss.bjtuselfservice.dao.BaseDao
 import team.bjtuss.bjtuselfservice.entity.BaseEntity
@@ -96,25 +98,32 @@ abstract class BaseSyncViewModel<T : BaseEntity>(
     protected val _changeList = MutableStateFlow<List<DataChange<T>>>(mutableListOf())
     val changeList: StateFlow<List<DataChange<T>>> = _changeList.asStateFlow()
 
-
+    private val dataLock = Mutex()
 
     // 数据加载与变更检测
     override fun loadDataAndDetectChanges() {
+
         viewModelScope.launch {
-            val networkData = fetchNetworkData()
-            val localData = fetchLocalData()
-            val changes = dataSyncManager.detectChanges(networkData, localData)
-            _changeList.value = changes
+            dataLock.withLock {
+                val networkData = fetchNetworkData()
+                val localData = fetchLocalData()
+                val changes = dataSyncManager.detectChanges(networkData, localData)
+                _changeList.value = changes
+            }
         }
+
     }
 
     // 数据同步与清理变更
     override fun syncDataAndClearChange() {
 
         viewModelScope.launch {
-            dataSyncManager.applyChanges(_changeList.value)
-            _changeList.value = emptyList()
+            dataLock.withLock {
+                dataSyncManager.applyChanges(_changeList.value)
+                _changeList.value = emptyList()
+            }
         }
+
     }
 
     // 供子类实现：从网络获取数据
