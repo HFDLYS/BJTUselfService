@@ -66,6 +66,9 @@ import team.bjtuss.bjtuselfservice.repository.NetworkRepository
 import team.bjtuss.bjtuselfservice.utils.KotlinUtils
 import team.bjtuss.bjtuselfservice.viewmodel.DataChange
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import kotlin.collections.component1
 import kotlin.collections.component2
 
@@ -77,6 +80,8 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
     val courseChangeList: List<DataChange<CourseEntity>> by mainViewModel.courseScheduleViewModel.changeList.collectAsState()
     val examScheduleChangeList: List<DataChange<ExamScheduleEntity>> by mainViewModel.examScheduleViewModel.changeList.collectAsState()
     val homeworkChangeList: List<DataChange<HomeworkEntity>> by mainViewModel.homeworkViewModel.changeList.collectAsState()
+
+    val homeworkList: List<HomeworkEntity> by mainViewModel.homeworkViewModel.homeworkList.collectAsState()
 
     var status by remember { mutableStateOf<StudentAccountManager.Status?>(null) }
     var selectedGradeChange by remember { mutableStateOf<DataChange<GradeEntity>?>(null) }
@@ -151,9 +156,11 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
             )
             LazyColumn(
                 modifier = Modifier.padding(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-
+                item {
+                    HomeworkNoticeCard(homeworkList, navController)
+                }
                 if (gradeChangeList.isNotEmpty()) {
                     item {
                         Text(
@@ -270,10 +277,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
 
         Button(
             onClick = {
-                mainViewModel.gradeViewModel.loadDataAndDetectChanges()
-                mainViewModel.courseScheduleViewModel.loadDataAndDetectChanges()
-                mainViewModel.examScheduleViewModel.loadDataAndDetectChanges()
-                mainViewModel.homeworkViewModel.loadDataAndDetectChanges()
+                mainViewModel.loadDataAndDetectChanges()
             },
             modifier = Modifier
                 .align(Alignment.CenterHorizontally),
@@ -479,6 +483,63 @@ fun launchWanMeiCampusApp(context: Context) {
         context.startActivity(intent)
     } catch (e: Exception) {
         Toast.makeText(context, "未找到“完美校园”app", Toast.LENGTH_LONG).show()
+    }
+}
+
+@Composable
+private fun HomeworkNoticeCard(
+    homeworkList: List<HomeworkEntity>,
+    navController: NavController
+) {
+    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+    val now = LocalDateTime.now()
+    var countForDeadline = 0
+    homeworkList.forEach {
+        try {
+            if (ChronoUnit.DAYS.between(now, LocalDateTime.parse(it.endTime, formatter)) in 0..2) {
+                if (it.subStatus != "已提交"){
+                    countForDeadline++
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
+    if (countForDeadline > 0) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            onClick = {
+                navController.navigate(RouteManager.HomeWork)
+            }
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.onErrorContainer)
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "有${countForDeadline}项作业已经迫在眉睫！",
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            color = MaterialTheme.colorScheme.errorContainer
+                        )
+                    )
+                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = "View Details",
+                    tint = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f),
+                )
+            }
+        }
     }
 }
 
@@ -735,6 +796,7 @@ fun<T> DetailedChangeDialog(
                                 )
                             }
                             cardItem(newGrade)
+                            cardItem(oldGrade)
                         }
                     }
 
