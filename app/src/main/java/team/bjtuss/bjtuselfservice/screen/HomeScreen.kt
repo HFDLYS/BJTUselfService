@@ -150,7 +150,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
                 ),
-                modifier = Modifier.padding(start = 16.dp)
+                modifier = Modifier.padding(start = 16.dp, top = 8.dp)
             )
             LazyColumn(
                 modifier = Modifier.padding(8.dp),
