@@ -1,5 +1,8 @@
 package team.bjtuss.bjtuselfservice
 
+import android.annotation.SuppressLint
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,30 +15,44 @@ import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BorderAll
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
@@ -44,8 +61,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import dev.jeziellago.compose.markdowntext.MarkdownText
 import kotlinx.coroutines.launch
+import team.bjtuss.bjtuselfservice.MainApplication.Companion.appContext
 import team.bjtuss.bjtuselfservice.RouteManager.ClassroomDetection
+import team.bjtuss.bjtuselfservice.repository.fetchLatestRelease
 import team.bjtuss.bjtuselfservice.screen.BuildingScreen
 import team.bjtuss.bjtuselfservice.screen.ClassroomScreen
 import team.bjtuss.bjtuselfservice.screen.CourseScheduleScreen
@@ -55,6 +75,7 @@ import team.bjtuss.bjtuselfservice.screen.GradeScreen
 import team.bjtuss.bjtuselfservice.screen.HomeScreen
 import team.bjtuss.bjtuselfservice.screen.HomeworkScreen
 import team.bjtuss.bjtuselfservice.screen.LoginScreen
+import team.bjtuss.bjtuselfservice.screen.RotatingImageLoader
 import team.bjtuss.bjtuselfservice.screen.SettingScreen
 import team.bjtuss.bjtuselfservice.screen.SpaceScreen
 import team.bjtuss.bjtuselfservice.ui.theme.BJTUselfServicecomposeTheme
@@ -69,6 +90,10 @@ import team.bjtuss.bjtuselfservice.viewmodel.MainViewModelFactory
 import team.bjtuss.bjtuselfservice.viewmodel.ScreenStatus
 import team.bjtuss.bjtuselfservice.viewmodel.StatusViewModel
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 
 class MainActivity : ComponentActivity() {
@@ -81,10 +106,10 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             BJTUselfServicecomposeTheme(dynamicColor = true) {
+                CheckForUpdate()
                 Surface {
                     val loginViewModel: LoginViewModel = viewModel()
                     val screenStatus by loginViewModel.screenStatus.collectAsState()
-
                     when (screenStatus) {
                         is ScreenStatus.LoginScreen -> {
                             LoginScreen(loginViewModel)
@@ -97,6 +122,83 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+}
+
+@SuppressLint("CoroutineCreationDuringComposition")
+@Composable
+fun CheckForUpdate() {
+    val versionName = appContext.packageManager.getPackageInfo(appContext.packageName, 0).versionName
+    var versionLatest by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+    var showDialog by remember { mutableStateOf(false) }
+    var updateMessage by remember { mutableStateOf("") }
+    var downloadUrl by remember { mutableStateOf<String?>(null) }
+    var updateMarkdown by remember { mutableStateOf("") }
+    var hasChecked by remember { mutableStateOf(false) }
+
+    scope.launch {
+        if (hasChecked) return@launch
+        hasChecked = true
+        val release = fetchLatestRelease()
+        updateMessage = release?.let {
+            val instant = Instant.parse(it.publishedAt)
+            val localDateTime = instant.atZone(ZoneId.systemDefault())
+            "发布时间: ${localDateTime.format(DateTimeFormatter.ofPattern("yyyy年M月d日 HH:mm", Locale.getDefault()))}"
+        } ?: "检查失败，请稍后再试"
+        updateMarkdown = release?.body ?: ""
+        versionLatest = release?.tagName ?: ""
+        downloadUrl = release?.htmlUrl
+        if (versionLatest.isNotEmpty() && (versionName < versionLatest))
+            showDialog = true
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            confirmButton = {
+                downloadUrl?.let { url ->
+                    Button(
+                        onClick = {
+                            showDialog = false
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            appContext.startActivity(intent)
+                        }
+                    ) {
+                        Text("前往下载")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("人习于枸且非一日")
+                }
+            },
+            text = {
+                Column {
+                    Text(
+                        "发现新版本${versionLatest}！",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                    Text(
+                        updateMessage,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    LazyColumn {
+                        item {
+                            MarkdownText(
+                                markdown = updateMarkdown
+                            )
+                        }
+                    }
+                }
+            },
+            title = { Text("检查更新") }
+        )
     }
 }
 

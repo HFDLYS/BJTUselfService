@@ -14,8 +14,8 @@ android {
         applicationId = "team.bjtuss.bjtuselfservice"
         minSdk = 28
         targetSdk = 34
-        versionCode = 2
-        versionName = "v1.0.0"
+        versionCode = 3
+        versionName = "v1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -71,6 +71,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.pytorch:pytorch_android:2.1.0")
     implementation("org.jsoup:jsoup:1.14.3")
+    implementation("com.github.jeziellago:compose-markdown:0.5.6")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("io.github.stoyan-vuchev:squircle-shape:2.0.0")
     implementation("androidx.datastore:datastore-preferences:1.1.1")

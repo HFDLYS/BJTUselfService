@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.jeziellago.compose.markdowntext.MarkdownText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -62,6 +63,10 @@ import team.bjtuss.bjtuselfservice.repository.SettingsRepository
 import team.bjtuss.bjtuselfservice.repository.fetchLatestRelease
 import team.bjtuss.bjtuselfservice.viewmodel.LoginViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun SettingsItemCard(
@@ -297,6 +302,7 @@ fun CheckForUpdateCard() {
     var showDialog by remember { mutableStateOf(false) }
     var isChecking by remember { mutableStateOf(false) }
     var updateMessage by remember { mutableStateOf("") }
+    var updateMarkdown by remember { mutableStateOf("") }
     var downloadUrl by remember { mutableStateOf<String?>(null) }
     SettingsItemCard(
         onClick = {
@@ -305,8 +311,11 @@ fun CheckForUpdateCard() {
                 isChecking = true
                 val release = fetchLatestRelease()
                 updateMessage = release?.let {
-                    "最新版本: ${it.tagName}\n发布时间: ${it.publishedAt}"
+                    val instant = Instant.parse(it.publishedAt)
+                    val localDateTime = instant.atZone(ZoneId.systemDefault())
+                    "发布时间: ${localDateTime.format(DateTimeFormatter.ofPattern("yyyy年M月d日 HH:mm", Locale.getDefault()))}"
                 } ?: "检查失败，请稍后再试"
+                updateMarkdown = release?.body ?: ""
                 versionLatest = release?.tagName ?: ""
                 downloadUrl = release?.htmlUrl
                 isChecking = false
@@ -368,13 +377,32 @@ fun CheckForUpdateCard() {
                     Column {
                         if (versionLatest.isNotEmpty() && (versionName < versionLatest)) {
                             Text(
-                                "发现新版本！",
+                                "发现新版本${versionLatest}！",
                                 style = MaterialTheme.typography.bodyLarge.copy(
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             )
+                            Text(
+                                updateMessage,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            LazyColumn {
+                                item {
+                                    MarkdownText(
+                                        markdown = updateMarkdown
+                                    )
+                                }
+                            }
+                        } else {
+                            Text(
+                                "最新版本：${versionLatest}！",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                updateMessage,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
                         }
-                        Text(updateMessage)
                     }
                 }
             },
