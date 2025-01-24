@@ -67,7 +67,7 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
 @Composable
-fun HomeWorkScreen(mainViewModel: MainViewModel) {
+fun HomeworkScreen(mainViewModel: MainViewModel) {
     LaunchedEffect(Unit) {
         mainViewModel.homeworkViewModel.syncDataAndClearChange()
     }

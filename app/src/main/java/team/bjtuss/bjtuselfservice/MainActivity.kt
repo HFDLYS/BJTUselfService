@@ -44,16 +44,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.google.gson.JsonParser
-import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import team.bjtuss.bjtuselfservice.RouteManager.ClassroomDetection
-import team.bjtuss.bjtuselfservice.jsonclass.HomeworkJsonType
-import team.bjtuss.bjtuselfservice.jsonclass.SemesterJsonType
-import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
 import team.bjtuss.bjtuselfservice.screen.BuildingScreen
 import team.bjtuss.bjtuselfservice.screen.ClassroomScreen
 import team.bjtuss.bjtuselfservice.screen.CourseScheduleScreen
@@ -61,10 +53,8 @@ import team.bjtuss.bjtuselfservice.screen.EmailScreen
 import team.bjtuss.bjtuselfservice.screen.ExamScheduleScreen
 import team.bjtuss.bjtuselfservice.screen.GradeScreen
 import team.bjtuss.bjtuselfservice.screen.HomeScreen
-import team.bjtuss.bjtuselfservice.screen.HomeWorkScreen
+import team.bjtuss.bjtuselfservice.screen.HomeworkScreen
 import team.bjtuss.bjtuselfservice.screen.LoginScreen
-import team.bjtuss.bjtuselfservice.screen.LoginViewModel
-import team.bjtuss.bjtuselfservice.screen.ScreenStatus
 import team.bjtuss.bjtuselfservice.screen.SettingScreen
 import team.bjtuss.bjtuselfservice.screen.SpaceScreen
 import team.bjtuss.bjtuselfservice.ui.theme.BJTUselfServicecomposeTheme
@@ -73,10 +63,12 @@ import team.bjtuss.bjtuselfservice.viewmodel.CourseScheduleViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.ExamScheduleViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.GradeViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.HomeworkViewModel
+import team.bjtuss.bjtuselfservice.viewmodel.LoginViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModelFactory
+import team.bjtuss.bjtuselfservice.viewmodel.ScreenStatus
+import team.bjtuss.bjtuselfservice.viewmodel.StatusViewModel
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService
-import team.bjtuss.bjtuselfservice.web.MisDataManager
 
 
 class MainActivity : ComponentActivity() {
@@ -118,10 +110,15 @@ fun App(loginViewModel: LoginViewModel) {
     val courseScheduleViewModel: CourseScheduleViewModel = viewModel()
     val examScheduleViewModel: ExamScheduleViewModel = viewModel()
     val homeworkViewModel: HomeworkViewModel = viewModel()
-
+    val statusViewModel: StatusViewModel = viewModel()
     val mainViewModel: MainViewModel = viewModel(
         factory = MainViewModelFactory(
-            gradeViewModel, courseScheduleViewModel, examScheduleViewModel, homeworkViewModel
+            gradeViewModel,
+            courseScheduleViewModel,
+            examScheduleViewModel,
+            classroomViewModel,
+            homeworkViewModel,
+            statusViewModel
         )
     )
 
@@ -135,10 +132,10 @@ fun App(loginViewModel: LoginViewModel) {
             AppNavigation(navController, loginViewModel, mainViewModel)
         }
         composable(RouteManager.CourseSchedule) {
-            CourseScheduleScreen(courseScheduleViewModel, classroomViewModel)
+            CourseScheduleScreen(mainViewModel)
         }
         composable(RouteManager.ExamSchedule) {
-            ExamScheduleScreen(examScheduleViewModel)
+            ExamScheduleScreen(mainViewModel)
         }
         composable(RouteManager.Building) {
             BuildingScreen(navController)
@@ -148,16 +145,16 @@ fun App(loginViewModel: LoginViewModel) {
             arguments = listOf(navArgument("buildingName") { type = NavType.StringType })
         ) {
             val buildingName = it.arguments?.getString("buildingName") ?: ""
-            ClassroomScreen(buildingName = buildingName, classroomViewModel)
+            ClassroomScreen(buildingName = buildingName, mainViewModel)
         }
         composable(RouteManager.Grade) {
-            GradeScreen(gradeViewModel)
+            GradeScreen(mainViewModel)
         }
         composable(RouteManager.Email) {
             EmailScreen()
         }
         composable(RouteManager.HomeWork) {
-            HomeWorkScreen(mainViewModel)
+            HomeworkScreen(mainViewModel)
         }
 
     }

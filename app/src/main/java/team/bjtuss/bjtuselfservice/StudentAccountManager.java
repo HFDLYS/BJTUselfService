@@ -430,6 +430,12 @@ public class StudentAccountManager {
         public String EcardBalance;
         public String NetBalance;
 
+        public Status() {
+            this.NewMailCount = "查询中";
+            this.EcardBalance = "查询中";
+            this.NetBalance = "查询中";
+        }
+
         public Status(String NewMailCount, String EcardBalance, String NetBalance) {
             this.NewMailCount = NewMailCount;
             this.EcardBalance = EcardBalance;

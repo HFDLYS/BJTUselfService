@@ -149,9 +149,9 @@ object SmartCurriculumPlatformRepository {
     private suspend fun getHomeWorkListByHomeworkType(homeworkType: Int): List<HomeworkEntity> {
         val semesterFromJson = getSemesterTypeList()
         val courseFromJson =
-            getCourseTypeList(xqCode = semesterFromJson.result[0].xqCode)
+            semesterFromJson.result?.get(0)?.xqCode?.let { getCourseTypeList(xqCode = it) }
         val listFromJson = mutableListOf<HomeworkJsonType>()
-        courseFromJson.courseList.forEach {
+        courseFromJson?.courseList?.forEach {
             val homeworkFromJson =
                 getHomeworkList(
                     it.id.toString(),
@@ -163,7 +163,7 @@ object SmartCurriculumPlatformRepository {
         val processedList = mutableListOf<HomeworkEntity>()
 
         listFromJson.forEach {
-            it.courseNoteList.forEach { homework ->
+            it.courseNoteList?.forEach { homework ->
                 val homeworkEntity = HomeworkEntity(
                     courseId = homework.course_id,
                     courseName = homework.course_name,
@@ -174,7 +174,7 @@ object SmartCurriculumPlatformRepository {
                     openDate = homework.open_date,
                     status = homework.status,
                     submitCount = homework.submitCount,
-                    allCount = homework.allCount,
+                    allCount = homework.allCount ,
                     subStatus = homework.subStatus,
                     homeworkType = 0
                 )

@@ -2,7 +2,7 @@ package team.bjtuss.bjtuselfservice.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import team.bjtuss.bjtuselfservice.jsonclass.ReviewMethod
+
 @Entity
 data class HomeworkEntity(
     @PrimaryKey(autoGenerate = true)

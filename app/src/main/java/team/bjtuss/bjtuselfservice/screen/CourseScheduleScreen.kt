@@ -62,6 +62,7 @@ import team.bjtuss.bjtuselfservice.utils.Utils
 import team.bjtuss.bjtuselfservice.viewmodel.ClassroomViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.CourseScheduleViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.DataChange
+import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 
 data class MenuItem(
     val content: @Composable () -> Unit,
@@ -100,9 +101,10 @@ fun GradeTopMenu(menuItemList: List<MenuItem>) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CourseScheduleScreen(
-    courseScheduleViewModel: CourseScheduleViewModel,
-    classroomViewModel: ClassroomViewModel
+    mainViewModel: MainViewModel,
 ) {
+    val courseScheduleViewModel = mainViewModel.courseScheduleViewModel
+    val classroomViewModel = mainViewModel.classroomViewModel
     LaunchedEffect(Unit) {
         courseScheduleViewModel.syncDataAndClearChange()
     }

@@ -53,12 +53,14 @@ import team.bjtuss.bjtuselfservice.entity.GradeEntity
 import team.bjtuss.bjtuselfservice.utils.Utils
 import team.bjtuss.bjtuselfservice.viewmodel.DataChange
 import team.bjtuss.bjtuselfservice.viewmodel.GradeViewModel
+import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 
 
 @Composable
 fun GradeScreen(
-    gradeViewModel: GradeViewModel
+    mainViewModel: MainViewModel
 ) {
+    val gradeViewModel = mainViewModel.gradeViewModel
     LaunchedEffect(Unit) {
         gradeViewModel.syncDataAndClearChange()
     }
