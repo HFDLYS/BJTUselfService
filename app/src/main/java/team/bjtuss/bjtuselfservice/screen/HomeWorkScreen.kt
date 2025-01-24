@@ -9,12 +9,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +24,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddTask
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Schedule
@@ -76,9 +80,26 @@ fun HomeworkList(homeworkList: List<HomeworkEntity>) {
     var filterExpanded by remember { mutableStateOf(false) }
     var selectedFilter by remember { mutableStateOf("所有课程") }
     var isFilterOutOfDate by remember { mutableStateOf(false) }
-    var sortOrder by remember { mutableStateOf(SortOrder.ORIGINAL) }
-
+    var sortOrder by remember { mutableStateOf(SortOrder.DESCENDING) }
     var filteredList by remember { mutableStateOf(homeworkList) }
+    filteredList = homeworkList.filter { homework ->
+        val isValidDate = try {
+            LocalDateTime.parse(homework.endTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+                .isAfter(LocalDateTime.now())
+        } catch (_: Exception) {
+            true
+        }
+
+        val dateCondition = !isFilterOutOfDate || isValidDate
+        val courseCondition = selectedFilter == "所有课程" || homework.courseName == selectedFilter
+
+        dateCondition && courseCondition
+    }
+    filteredList = if (sortOrder == SortOrder.ASCENDING) {
+        filteredList.sortedBy { it.endTime }
+    } else {
+        filteredList.sortedByDescending { it.endTime }
+    }
     Scaffold(
         modifier = Modifier.fillMaxSize()
     ) { paddingValues ->
@@ -121,28 +142,6 @@ fun HomeworkList(homeworkList: List<HomeworkEntity>) {
                         DropdownMenuItem(
                             onClick = {
                                 selectedFilter = option
-                                filteredList = if (isFilterOutOfDate) {
-                                    homeworkList.filter {
-                                        try {
-                                            !LocalDateTime.parse(it.endTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
-                                                .isBefore(LocalDateTime.now())
-                                        } catch (_: Exception) {
-                                            true
-                                        }
-                                    }
-                                } else {
-                                    homeworkList
-                                }
-                                filteredList = if (selectedFilter == "所有课程") {
-                                    filteredList
-                                } else {
-                                    filteredList.filter { it.courseName == selectedFilter }
-                                }
-                                filteredList = if (sortOrder == SortOrder.ASCENDING) {
-                                    filteredList.sortedBy { it.endTime }
-                                } else {
-                                    filteredList.sortedByDescending { it.endTime }
-                                }
                                 filterExpanded = false
                             },
                             text = {
@@ -160,28 +159,6 @@ fun HomeworkList(homeworkList: List<HomeworkEntity>) {
                     Button(
                         onClick = {
                             isFilterOutOfDate = !isFilterOutOfDate
-                            filteredList = if (isFilterOutOfDate) {
-                                homeworkList.filter {
-                                    try {
-                                        !LocalDateTime.parse(it.endTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
-                                            .isBefore(LocalDateTime.now())
-                                    } catch (_: Exception) {
-                                        true
-                                    }
-                                }
-                            } else {
-                                homeworkList
-                            }
-                            filteredList = if (selectedFilter == "所有课程") {
-                                filteredList
-                            } else {
-                                filteredList.filter { it.courseName == selectedFilter }
-                            }
-                            filteredList = if (sortOrder == SortOrder.ASCENDING) {
-                                filteredList.sortedBy { it.endTime }
-                            } else {
-                                filteredList.sortedByDescending { it.endTime }
-                            }
                         }
                     ) {
                         Text(
@@ -196,28 +173,6 @@ fun HomeworkList(homeworkList: List<HomeworkEntity>) {
                                 SortOrder.DESCENDING
                             } else {
                                 SortOrder.ASCENDING
-                            }
-                            filteredList = if (isFilterOutOfDate) {
-                                homeworkList.filter {
-                                    try {
-                                        !LocalDateTime.parse(it.endTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
-                                            .isBefore(LocalDateTime.now())
-                                    } catch (_: Exception) {
-                                        true
-                                    }
-                                }
-                            } else {
-                                homeworkList
-                            }
-                            filteredList = if (selectedFilter == "所有课程") {
-                                filteredList
-                            } else {
-                                filteredList.filter { it.courseName == selectedFilter }
-                            }
-                            filteredList = if (sortOrder == SortOrder.ASCENDING) {
-                                filteredList.sortedBy { it.endTime }
-                            } else {
-                                filteredList.sortedByDescending { it.endTime }
                             }
                         }
                     ) {
@@ -252,7 +207,7 @@ fun HomeworkSummaryCard(homeworkList: List<HomeworkEntity>) {
     var countForDeadline = 0
     homeworkList.forEach {
         try {
-            if (ChronoUnit.DAYS.between(now, LocalDateTime.parse(it.endTime, formatter)) in 0..2) {
+            if (ChronoUnit.HOURS.between(now, LocalDateTime.parse(it.endTime, formatter)) in 0..48) {
                 if (it.subStatus != "已提交"){
                     countForDeadline++
                 }
@@ -305,80 +260,99 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
         ),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = homework.title,
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                ),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = homework.courseName,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                ),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+        Row (
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ){
+            Column(
+                modifier = Modifier.weight(0.7f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Schedule,
-                    contentDescription = "Create Date",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp),
+                Text(
+                    text = homework.title,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
+                Text(
+                    text = homework.courseName,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "发起时间: ${homework.createDate}",
-                        style = MaterialTheme.typography.bodyMedium
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = "Create Date",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = "开放时间: ${homework.openDate}",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Text(
+                            text = "截止时间: ${homework.endTime}",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        )
+                    }
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AddTask,
+                        contentDescription = "subStatus",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp),
                     )
                     Text(
-                        text = "截止时间: ${homework.endTime}",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.error
-                        )
+                        text = "提交人数: ${homework.submitCount}/${homework.allCount}",
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Column (
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.Center
             ) {
+
+                val icon = if (homework.subStatus == "已提交") {
+                    Icons.Default.Check to Color.Green
+                } else {
+                    Icons.Default.Close to Color.Red
+                }
+
                 Icon(
-                    imageVector = Icons.Default.AddTask,
-                    contentDescription = "subStatus",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp),
+                    imageVector = icon.first,
+                    contentDescription = null,
+                    tint = icon.second,
+                    modifier = Modifier.size(36.dp)
+                        .align(Alignment.CenterHorizontally)
                 )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
                 Text(
-                    text = "提交人数: ${homework.submitCount}/${homework.allCount}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = "Status",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp),
-                )
-                Text(
-                    text = "状态: ${homework.subStatus}",
-                    style = MaterialTheme.typography.bodyMedium
+                    text = "${homework.subStatus}",
+                    style = MaterialTheme.typography.bodyLarge
                 )
             }
         }

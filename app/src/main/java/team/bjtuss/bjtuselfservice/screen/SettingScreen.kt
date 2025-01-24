@@ -331,25 +331,26 @@ fun CheckForUpdateCard() {
             onDismissRequest = { showDialog = false },
             confirmButton = {
                 downloadUrl?.let { url ->
-
-                    Button(
-                        onClick = {
-                            showDialog = false
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    if (versionLatest.isNotEmpty() && (versionName < versionLatest)) {
+                        Button(
+                            onClick = {
+                                showDialog = false
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                appContext.startActivity(intent)
                             }
-                            appContext.startActivity(intent)
+                        ) {
+                            Text("前往下载")
                         }
-                    ) {
-                        Text("前往下载")
                     }
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDialog = false }) {
-                    downloadUrl?.let {
+                    if (versionLatest.isNotEmpty() && (versionName < versionLatest)) {
                         Text("人习于枸且非一日")
-                    } ?: Text("关闭")
+                    } else Text("关闭")
                 }
             },
             text = {

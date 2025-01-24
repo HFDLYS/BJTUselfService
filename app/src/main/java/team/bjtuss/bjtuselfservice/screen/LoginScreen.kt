@@ -35,6 +35,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -269,12 +270,12 @@ fun ErrorDialog(
             Button(
                 onClick = onRetry
             ) {
-                Text(text = "重试")
+                Text(text = "再试试？")
             }
         },
         dismissButton = {
-            Button(onClick = onDismiss) {
-                Text(text = "好吧")
+            TextButton(onClick = onDismiss) {
+                Text(text = "算了")
             }
         }
     )

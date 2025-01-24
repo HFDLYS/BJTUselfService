@@ -119,8 +119,9 @@ fun CourseScheduleScreen(
     var currentTerm by remember { mutableStateOf(false) }
     val allWeeks = listOf("全部") + (1..26).map { "第${it}周" }
     var showWeekSelector by remember { mutableStateOf(false) }
-    val nowWeek = classroomViewModel.classroomMap.value["nowWeek"]?.get(0) ?: 0
-    var selectedWeek by remember { mutableIntStateOf(nowWeek) }
+    val classroomMap = classroomViewModel.classroomMap.collectAsState()
+    var selectedWeek by remember { mutableIntStateOf(0) }
+    selectedWeek = classroomMap.value["nowWeek"]?.get(0) ?: 0
     val courseList by
     if (currentTerm) courseScheduleViewModel.currentTermCourseList.collectAsState() else courseScheduleViewModel.nextTermCourseList.collectAsState()
 
@@ -161,7 +162,7 @@ fun CourseScheduleScreen(
                                     onClick = {
                                         currentTerm = !currentTerm
                                         if (!currentTerm) {
-                                            selectedWeek = nowWeek
+                                            selectedWeek = classroomMap.value["nowWeek"]?.get(0) ?: 0
                                         } else {
                                             selectedWeek = 0
                                         }

@@ -147,7 +147,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
 //            )
         ) {
             Text(
-                text = "Newest!!!",
+                text = "ATTENTION!!!",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
@@ -295,17 +295,17 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
     }
 
     if (showGradeDialog && selectedGradeChange != null) {
-        DetailedGradeChangeDialog(
+        DetailedChangeDialog(
             change = selectedGradeChange!!,
             onDismiss = { showGradeDialog = false },
-            navController = navController
+            cardItem = { GradeItemCard(it) },
+            onClick = { navController.navigate(RouteManager.Grade) }
         )
     }
     if (showHomeworkDialog && selectedHomeworkChange != null) {
         DetailedChangeDialog(
             change = selectedHomeworkChange!!,
             onDismiss = { showHomeworkDialog = false },
-            navController = navController,
             cardItem = { HomeworkItemCard(it) },
             onClick = { navController.navigate(RouteManager.HomeWork) }
         )
@@ -314,7 +314,6 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
         DetailedChangeDialog(
             change = selectedExamChange!!,
             onDismiss = { showExamDialog = false },
-            navController = navController,
             cardItem = { ExamItemCard(it) },
             onClick = { navController.navigate(RouteManager.ExamSchedule) }
         )
@@ -494,11 +493,14 @@ private fun HomeworkNoticeCard(
     val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
     val now = LocalDateTime.now()
     var countForDeadline = 0
+    val DDLList = mutableListOf<HomeworkEntity>()
+    var showDetail by remember { mutableStateOf(false) }
     homeworkList.forEach {
         try {
-            if (ChronoUnit.DAYS.between(now, LocalDateTime.parse(it.endTime, formatter)) in 0..2) {
+            if (ChronoUnit.HOURS.between(now, LocalDateTime.parse(it.endTime, formatter)) in 0..48) {
                 if (it.subStatus != "已提交"){
                     countForDeadline++
+                    DDLList.add(it)
                 }
             }
         } catch (_: Exception) {}
@@ -511,7 +513,7 @@ private fun HomeworkNoticeCard(
             shape = RoundedCornerShape(12.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
             onClick = {
-                navController.navigate(RouteManager.HomeWork)
+                showDetail = true
             }
         ) {
             Row(
@@ -539,6 +541,15 @@ private fun HomeworkNoticeCard(
                     tint = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f),
                 )
             }
+        }
+        if (showDetail) {
+            DetailedDialog(
+                title = "作业截止提醒",
+                items = DDLList,
+                onDismiss = { showDetail = false },
+                cardItem = { HomeworkItemCard(it) },
+                onClick = { navController.navigate(RouteManager.HomeWork) }
+            )
         }
     }
 }
@@ -626,9 +637,6 @@ fun DetailedGradeChangeDialog(
                 .verticalScroll(rememberScrollState()),
             shape = MaterialTheme.shapes.large,
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
-            onClick = {
-                navController.navigate(RouteManager.Grade)
-            }
         ) {
             Column(
                 modifier = Modifier
@@ -706,13 +714,24 @@ fun DetailedGradeChangeDialog(
                 }
 
                 // Dialog Actions
-                TextButton(
-                    onClick = onDismiss,
+                Row (
                     modifier = Modifier
                         .align(Alignment.End)
                         .padding(top = 16.dp)
                 ) {
-                    Text("关闭", color = MaterialTheme.colorScheme.primary)
+                    TextButton(
+                        onClick = onDismiss,
+                    ) {
+                        Text("撤了", color = MaterialTheme.colorScheme.primary)
+                    }
+
+                    Button(
+                        onClick = {
+                            navController.navigate(RouteManager.Grade)
+                        },
+                    ) {
+                        Text("查看更多", color = MaterialTheme.colorScheme.onPrimary)
+                    }
                 }
             }
         }
@@ -723,9 +742,8 @@ fun DetailedGradeChangeDialog(
 fun<T> DetailedChangeDialog(
     change: DataChange<T>,
     onDismiss: () -> Unit,
-    navController: NavController,
     cardItem: @Composable (T) -> Unit,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -735,7 +753,6 @@ fun<T> DetailedChangeDialog(
                 .verticalScroll(rememberScrollState()),
             shape = MaterialTheme.shapes.large,
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
-            onClick = onClick
         ) {
             Column(
                 modifier = Modifier
@@ -813,14 +830,101 @@ fun<T> DetailedChangeDialog(
                     }
                 }
 
-                // Dialog Actions
-                TextButton(
-                    onClick = onDismiss,
+                Row (
                     modifier = Modifier
                         .align(Alignment.End)
                         .padding(top = 16.dp)
                 ) {
-                    Text("关闭", color = MaterialTheme.colorScheme.primary)
+                    TextButton(
+                        onClick = onDismiss,
+                    ) {
+                        Text("撤了", color = MaterialTheme.colorScheme.primary)
+                    }
+
+                    Button(
+                        onClick = onClick,
+                    ) {
+                        Text("查看更多👀", color = MaterialTheme.colorScheme.onPrimary)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun<T> DetailedDialog(
+    title: String,
+    items: List<T>,
+    onDismiss: () -> Unit,
+    cardItem: @Composable (T) -> Unit,
+    onClick: () -> Unit = {},
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth()
+            ) {
+                // Dialog Header with count
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "${items.size}项",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 16.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+
+                // Dialog Content
+                items.forEachIndexed { index, item ->
+                    if (index > 0) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                    }
+                    cardItem(item)
+                }
+
+
+                Row (
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .padding(top = 16.dp)
+                ) {
+                    TextButton(
+                        onClick = onDismiss,
+                    ) {
+                        Text("撤了", color = MaterialTheme.colorScheme.primary)
+                    }
+
+                    Button(
+                        onClick = onClick,
+                    ) {
+                        Text("查看更多👀", color = MaterialTheme.colorScheme.onPrimary)
+                    }
                 }
             }
         }

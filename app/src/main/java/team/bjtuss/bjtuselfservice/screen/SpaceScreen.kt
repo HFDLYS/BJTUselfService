@@ -47,8 +47,8 @@ private val spaces = listOf(
     Space("成绩", R.drawable.grade, RouteManager.Grade),
     Space("课程表", R.drawable.course, RouteManager.CourseSchedule),
     Space("考试安排", R.drawable.exam, RouteManager.ExamSchedule),
-    Space("教室人数评估", R.drawable.detect, RouteManager.Building),
     Space("作业", R.drawable.homework, RouteManager.HomeWork),
+    Space("教室人数评估", R.drawable.detect, RouteManager.Building),
 )
 
 private data class Space(

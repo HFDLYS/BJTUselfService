@@ -18,7 +18,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.BasicAlertDialog
@@ -112,15 +111,7 @@ fun GradeList(
     var filterExpanded by remember { mutableStateOf(false) }
     var selectedFilter by remember { mutableStateOf("全部") }
     var sortOrder by remember { mutableStateOf(SortOrder.ORIGINAL) }
-    fun getScoreGrade(scoreStr: String): Int {
-        val cleanScore = scoreStr.replace(",", "").replace("[^0-9.]".toRegex(), "")
-        return try {
-            cleanScore.toDouble().toInt()
-        } catch (e: NumberFormatException) {
-            // 如果转换失败，可以返回一个默认等级或原始字符串
-            -1
-        }
-    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize()
     ) { paddingValues ->
@@ -208,16 +199,23 @@ fun GradeList(
                     SortOrder.DESCENDING -> filteredGradeList.sortedByDescending { getScoreGrade(it.courseScore) }
                 }
                 items(sortedGradeList.size) { index ->
-                    val GradeEntity = sortedGradeList[index]
-                    val score = getScoreGrade(GradeEntity.courseScore)
-                    val cardColor = Color(Utils.calculateGradeColor(score.toDouble()))
+                    val gradeEntity = sortedGradeList[index]
                     GradeItemCard(
-                        GradeEntity = GradeEntity,
-                        cardColor = cardColor
+                        GradeEntity = gradeEntity,
                     )
                 }
             }
         }
+    }
+}
+
+fun getScoreGrade(scoreStr: String): Int {
+    val cleanScore = scoreStr.replace(",", "").replace("[^0-9.]".toRegex(), "")
+    return try {
+        cleanScore.toDouble().toInt()
+    } catch (e: NumberFormatException) {
+        // 如果转换失败，可以返回一个默认等级或原始字符串
+        -1
     }
 }
 
@@ -301,10 +299,10 @@ fun GpaCard(gradeList: List<GradeEntity>, selectedFilter: String) {
 @Composable
 fun GradeItemCard(
     GradeEntity: GradeEntity,
-    cardColor: Color,
 ) {
     var showDetailedInformationDialog by remember { mutableStateOf(false) }
-
+    val score = getScoreGrade(GradeEntity.courseScore)
+    val cardColor = Color(Utils.calculateGradeColor(score.toDouble()))
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()

@@ -1,6 +1,7 @@
 package team.bjtuss.bjtuselfservice.viewmodel
 
 import androidx.lifecycle.ViewModel
+import kotlinx.coroutines.flow.StateFlow
 import team.bjtuss.bjtuselfservice.database.AppDatabase
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
 import team.bjtuss.bjtuselfservice.jsonclass.HomeworkJsonType
@@ -11,7 +12,7 @@ class HomeworkViewModel :
     BaseSyncViewModel<HomeworkEntity>(dataSyncManager = DefaultDataSyncManager<HomeworkEntity>(
         AppDatabase.getInstance().homeworkEntityDao()
     ) { Pair(it.courseName, it.title) }) {
-    val homeworkList = DatabaseRepository.homeworkList
+    val homeworkList: StateFlow<List<HomeworkEntity>> = DatabaseRepository.homeworkList
 
     init {
         loadDataAndDetectChanges()
