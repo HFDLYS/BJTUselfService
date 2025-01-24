@@ -88,6 +88,7 @@ class DefaultDataSyncManager<T : BaseEntity>(
 interface BaseViewModel<T : BaseEntity> {
     fun loadDataAndDetectChanges()
     fun syncDataAndClearChange()
+    fun clearChange()
 }
 
 
@@ -124,6 +125,11 @@ abstract class BaseSyncViewModel<T : BaseEntity>(
             }
         }
 
+    }
+
+    // 清理变更
+    override fun clearChange() {
+        _changeList.value = emptyList()
     }
 
     // 供子类实现：从网络获取数据

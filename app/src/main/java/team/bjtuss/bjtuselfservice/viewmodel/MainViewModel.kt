@@ -18,6 +18,13 @@ class MainViewModel(
         homeworkViewModel.loadDataAndDetectChanges()
         statusViewModel.loadData()
     }
+
+    fun clearChange() {
+        gradeViewModel.clearChange()
+        courseScheduleViewModel.clearChange()
+        examScheduleViewModel.clearChange()
+        homeworkViewModel.clearChange()
+    }
 }
 
 

@@ -243,7 +243,7 @@ fun AppNavigation(
                 }
 
                 2 -> {
-                    SettingScreen(loginViewModel = loginViewModel)
+                    SettingScreen(loginViewModel = loginViewModel, mainViewModel = mainViewModel)
                 }
             }
         }

@@ -61,6 +61,7 @@ import team.bjtuss.bjtuselfservice.database.AppDatabase
 import team.bjtuss.bjtuselfservice.repository.SettingsRepository
 import team.bjtuss.bjtuselfservice.repository.fetchLatestRelease
 import team.bjtuss.bjtuselfservice.viewmodel.LoginViewModel
+import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 
 @Composable
 fun SettingsItemCard(
@@ -167,7 +168,7 @@ class SettingViewModel : ViewModel() {
 
 
 @Composable
-fun SettingScreen(loginViewModel: LoginViewModel) {
+fun SettingScreen(loginViewModel: LoginViewModel, mainViewModel: MainViewModel) {
     val studentInfo = StudentAccountManager.getInstance().studentInfo
     LazyColumn(
         modifier = Modifier
@@ -199,7 +200,7 @@ fun SettingScreen(loginViewModel: LoginViewModel) {
             CheckForUpdateCard()
         }
         item {
-            ClearLocalCacheItem()
+            ClearLocalCacheItem(mainViewModel)
         }
         item {
             Button(
@@ -215,7 +216,7 @@ fun SettingScreen(loginViewModel: LoginViewModel) {
 }
 
 @Composable
-fun ClearLocalCacheItem() {
+fun ClearLocalCacheItem(mainViewModel: MainViewModel) {
     val scope = rememberCoroutineScope()
     var showConfirmationDialog by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
@@ -242,6 +243,7 @@ fun ClearLocalCacheItem() {
                                 AppDatabase.getInstance().gradeEntityDao().deleteAll()
                                 AppDatabase.getInstance().courseEntityDao().deleteAll()
                                 AppDatabase.getInstance().homeworkEntityDao().deleteAll()
+                                mainViewModel.clearChange()
                             } catch (e: Exception) {
                                 e.printStackTrace()
                             } finally {
