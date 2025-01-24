@@ -81,9 +81,10 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
     var status by remember { mutableStateOf<StudentAccountManager.Status?>(null) }
     var selectedGradeChange by remember { mutableStateOf<DataChange<GradeEntity>?>(null) }
     var selectedHomeworkChange by remember { mutableStateOf<DataChange<HomeworkEntity>?>(null) }
+    var selectedExamChange by remember { mutableStateOf<DataChange<ExamScheduleEntity>?>(null) }
     var showGradeDialog by remember { mutableStateOf(false) }
     var showHomeworkDialog by remember { mutableStateOf(false) }
-
+    var showExamDialog by remember { mutableStateOf(false) }
     var isRefreshing by remember { mutableStateOf(false) }
 
     studentAccountManager.status.thenAccept {
@@ -219,7 +220,8 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
                                 ChangeCard(
                                     dataChange = examChange,
                                     onClick = {
-                                        navController.navigate(RouteManager.ExamSchedule)
+                                        selectedExamChange = examChange
+                                        showExamDialog = true
                                     }
                                 )
                             }
@@ -302,6 +304,15 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
             navController = navController,
             cardItem = { HomeworkItemCard(it) },
             onClick = { navController.navigate(RouteManager.HomeWork) }
+        )
+    }
+    if (showExamDialog && selectedExamChange != null) {
+        DetailedChangeDialog(
+            change = selectedExamChange!!,
+            onDismiss = { showExamDialog = false },
+            navController = navController,
+            cardItem = { ExamItemCard(it) },
+            onClick = { navController.navigate(RouteManager.ExamSchedule) }
         )
     }
 }
