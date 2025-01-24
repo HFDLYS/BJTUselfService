@@ -1,15 +1,20 @@
 package team.bjtuss.bjtuselfservice.screen
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -24,6 +29,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,9 +61,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import team.bjtuss.bjtuselfservice.MainApplication.Companion.appContext
+import team.bjtuss.bjtuselfservice.R
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.database.AppDatabase
 import team.bjtuss.bjtuselfservice.repository.SettingsRepository
+import team.bjtuss.bjtuselfservice.repository.fetchLatestRelease
 
 @Composable
 fun SettingsItemCard(
@@ -69,7 +77,8 @@ fun SettingsItemCard(
     content: @Composable RowScope.() -> Unit,
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth()
+            .padding(bottom = 16.dp),
         shape = RoundedCornerShape(cornerRadius),
         elevation = CardDefaults.elevatedCardElevation(
             6.dp
@@ -164,12 +173,12 @@ class SettingViewModel : ViewModel() {
 
 @Composable
 fun SettingScreen(loginViewModel: LoginViewModel) {
-
     val studentInfo = StudentAccountManager.getInstance().studentInfo
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
+        contentPadding = PaddingValues(bottom = 16.dp)
     ) {
         item {
             Text(
@@ -192,6 +201,9 @@ fun SettingScreen(loginViewModel: LoginViewModel) {
             )
         }
         item {
+            CheckForUpdateCard()
+        }
+        item {
             ClearLocalCacheItem()
         }
         item {
@@ -209,18 +221,13 @@ fun SettingScreen(loginViewModel: LoginViewModel) {
 
 @Composable
 fun ClearLocalCacheItem() {
-    // 协程作用域，用于启动协程
     val scope = rememberCoroutineScope()
-    // 是否显示确认弹窗
     var showConfirmationDialog by remember { mutableStateOf(false) }
-    // 是否显示加载弹窗(或加载进度)
     var isLoading by remember { mutableStateOf(false) }
 
-    // 如果需要显示确认弹窗
     if (showConfirmationDialog) {
         AlertDialog(
             onDismissRequest = {
-                // 用户点击对话框外区域或者返回键时的处理，可自行决定是否关闭弹窗
                 showConfirmationDialog = false
             },
             title = {
@@ -232,19 +239,15 @@ fun ClearLocalCacheItem() {
             confirmButton = {
                 Button(
                     onClick = {
-                        // 先关闭确认弹窗
                         showConfirmationDialog = false
-                        // 在协程中执行挂起操作
                         scope.launch {
                             isLoading = true
                             try {
-                                // 这里分别删除不同表数据，仅做演示
                                 AppDatabase.getInstance().examScheduleEntityDao().deleteAll()
                                 AppDatabase.getInstance().gradeEntityDao().deleteAll()
                                 AppDatabase.getInstance().courseEntityDao().deleteAll()
                             } catch (e: Exception) {
                                 e.printStackTrace()
-                                // 根据需求处理异常
                             } finally {
                                 isLoading = false
                             }
@@ -255,26 +258,18 @@ fun ClearLocalCacheItem() {
                 }
             },
             dismissButton = {
-                Button(
-                    onClick = {
-                        // 用户取消时关闭弹窗
-                        showConfirmationDialog = false
-                    }
-                ) {
-                    Text("取消")
+                TextButton(onClick = { showConfirmationDialog = false }) {
+                    Text("算乐")
                 }
             }
         )
     }
 
-    // 如果需要显示加载进度(可替换成您自定义的 LoadingDialog)
     if (isLoading) {
-        // 一种半透明遮罩 + 中心圆形进度指示器的示例
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.3f))
-                // 用于屏蔽背后控件点击
                 .clickable(enabled = false) {},
             contentAlignment = Alignment.Center
         ) {
@@ -282,10 +277,8 @@ fun ClearLocalCacheItem() {
         }
     }
 
-    // 清除本地缓存的条目
     SettingsItemCard(
         onClick = {
-            // 点击后弹出确认对话框
             showConfirmationDialog = true
         },
         content = {
@@ -297,4 +290,93 @@ fun ClearLocalCacheItem() {
     )
 }
 
+@Composable
+fun CheckForUpdateCard() {
+    val versionName = appContext.packageManager.getPackageInfo(appContext.packageName, 0).versionName
+    var versionLatest by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+    var showDialog by remember { mutableStateOf(false) }
+    var isChecking by remember { mutableStateOf(false) }
+    var updateMessage by remember { mutableStateOf("") }
+    var downloadUrl by remember { mutableStateOf<String?>(null) }
+    SettingsItemCard(
+        onClick = {
+            showDialog = true
+            scope.launch {
+                isChecking = true
+                val release = fetchLatestRelease()
+                updateMessage = release?.let {
+                    "最新版本: ${it.tagName}\n发布时间: ${it.publishedAt}"
+                } ?: "检查失败，请稍后再试"
+                versionLatest = release?.tagName ?: ""
+                downloadUrl = release?.htmlUrl
+                isChecking = false
+            }
+        },
+        content = {
+            Text(
+                text = "检查更新",
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                text = versionName,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    )
 
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            confirmButton = {
+                downloadUrl?.let { url ->
+
+                    Button(
+                        onClick = {
+                            showDialog = false
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            appContext.startActivity(intent)
+                        }
+                    ) {
+                        Text("前往下载")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("关闭")
+                }
+            },
+            text = {
+                if (isChecking) {
+                    Box(
+                        modifier = Modifier
+                            .width(100.dp)
+                            .height(100.dp)
+                    ) {
+                        RotatingImageLoader(
+                            image = painterResource(id = R.drawable.loading_icon),
+                            rotationDuration = 1000,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
+                } else {
+                    Column {
+                        if (versionLatest.isNotEmpty() && (versionName < versionLatest)) {
+                            Text(
+                                "发现新版本！",
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            )
+                        }
+                        Text(updateMessage)
+                    }
+                }
+            },
+            title = { Text("检查更新") }
+        )
+    }
+}

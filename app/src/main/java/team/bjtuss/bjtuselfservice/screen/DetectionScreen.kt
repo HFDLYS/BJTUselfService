@@ -414,7 +414,7 @@ fun ClassroomCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(bottom = 16.dp),
+            .padding(vertical = 8.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
