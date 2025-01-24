@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
+import team.bjtuss.bjtuselfservice.viewmodel.DataChange
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -71,6 +72,11 @@ fun HomeWorkScreen(mainViewModel: MainViewModel) {
         mainViewModel.homeworkViewModel.syncDataAndClearChange()
     }
     val homeworkList by mainViewModel.homeworkViewModel.homeworkList.collectAsState()
+    val homeworkChangeList: List<DataChange<HomeworkEntity>> by mainViewModel.homeworkViewModel.changeList.collectAsState()
+
+    LaunchedEffect(homeworkChangeList) {
+        mainViewModel.homeworkViewModel.syncDataAndClearChange()
+    }
 
     HomeworkList(homeworkList)
 }

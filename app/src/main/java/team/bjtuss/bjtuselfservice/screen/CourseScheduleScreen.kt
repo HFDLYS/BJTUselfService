@@ -59,6 +59,7 @@ import team.bjtuss.bjtuselfservice.entity.CourseEntity
 import team.bjtuss.bjtuselfservice.utils.Utils
 import team.bjtuss.bjtuselfservice.viewmodel.ClassroomViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.CourseScheduleViewModel
+import team.bjtuss.bjtuselfservice.viewmodel.DataChange
 
 data class MenuItem(
     val content: @Composable () -> Unit,
@@ -103,6 +104,12 @@ fun CourseScheduleScreen(
     LaunchedEffect(Unit) {
         courseScheduleViewModel.syncDataAndClearChange()
     }
+    val courseChangeList: List<DataChange<CourseEntity>> by courseScheduleViewModel.changeList.collectAsState()
+
+    LaunchedEffect(courseChangeList) {
+        courseScheduleViewModel.syncDataAndClearChange()
+    }
+
     val weekDays = listOf("", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日")
     val courseTimes = listOf(
         "第一节\n08:00\n09:50",
@@ -120,8 +127,7 @@ fun CourseScheduleScreen(
     val allWeeks = listOf("全部") + (1..26).map { "第${it}周" }
     var showWeekSelector by remember { mutableStateOf(false) }
     val classroomMap = classroomViewModel.classroomMap.collectAsState()
-    var selectedWeek by remember { mutableIntStateOf(0) }
-    selectedWeek = classroomMap.value["nowWeek"]?.get(0) ?: 0
+    var selectedWeek by remember { mutableIntStateOf(classroomMap.value["nowWeek"]?.get(0) ?: 0) }
     val courseList by
     if (currentTerm) courseScheduleViewModel.currentTermCourseList.collectAsState() else courseScheduleViewModel.nextTermCourseList.collectAsState()
 
@@ -161,10 +167,10 @@ fun CourseScheduleScreen(
                                     content = { Text("切换学期") },
                                     onClick = {
                                         currentTerm = !currentTerm
-                                        if (!currentTerm) {
-                                            selectedWeek = classroomMap.value["nowWeek"]?.get(0) ?: 0
+                                        selectedWeek = if (!currentTerm) {
+                                            classroomMap.value["nowWeek"]?.get(0) ?: 0
                                         } else {
-                                            selectedWeek = 0
+                                            0
                                         }
                                     }
                                 ),

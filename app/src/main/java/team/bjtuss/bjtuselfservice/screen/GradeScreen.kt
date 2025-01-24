@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
 import team.bjtuss.bjtuselfservice.utils.Utils
+import team.bjtuss.bjtuselfservice.viewmodel.DataChange
 import team.bjtuss.bjtuselfservice.viewmodel.GradeViewModel
 
 
@@ -62,7 +63,12 @@ fun GradeScreen(
         gradeViewModel.syncDataAndClearChange()
     }
     val gradeList by gradeViewModel.gradeList.collectAsState()
+    val gradeChangeList: List<DataChange<GradeEntity>> by gradeViewModel.changeList.collectAsState()
 //    gradeViewModel.syncDataAndClearChange()
+    LaunchedEffect(gradeChangeList) {
+        gradeViewModel.syncDataAndClearChange()
+    }
+
     GradeList(
         gradeList = gradeList,
     )

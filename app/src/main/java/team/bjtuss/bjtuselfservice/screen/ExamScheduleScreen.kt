@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
+import team.bjtuss.bjtuselfservice.viewmodel.DataChange
 import team.bjtuss.bjtuselfservice.viewmodel.ExamScheduleViewModel
 import java.time.format.DateTimeFormatter
 
@@ -52,6 +53,11 @@ fun ExamScheduleScreen(
         examScheduleViewModel.syncDataAndClearChange()
     }
     val examScheduleList by examScheduleViewModel.examScheduleList.collectAsState()
+    val examScheduleChangeList: List<DataChange<ExamScheduleEntity>> by examScheduleViewModel.changeList.collectAsState()
+
+    LaunchedEffect(examScheduleChangeList) {
+        examScheduleViewModel.syncDataAndClearChange()
+    }
 
     ExamScheduleList(examScheduleList)
 }
