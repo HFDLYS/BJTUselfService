@@ -257,18 +257,20 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
                         }
                     }
                 }
-            }
-            if (isRefreshing) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 32.dp)
-                ) {
-                    RotatingImageLoader(
-                        image = painterResource(id = R.drawable.loading_icon),
-                        rotationDuration = 1000,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                if (isRefreshing) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(top = 32.dp)
+                        ) {
+                            RotatingImageLoader(
+                                image = painterResource(id = R.drawable.loading_icon),
+                                rotationDuration = 1000,
+                                modifier = Modifier.align(Alignment.Center)
+                            )
+                        }
+                    }
                 }
             }
         }
