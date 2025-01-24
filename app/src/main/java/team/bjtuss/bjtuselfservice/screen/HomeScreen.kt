@@ -3,7 +3,6 @@ package team.bjtuss.bjtuselfservice.screen
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -41,7 +40,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,10 +55,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
 import team.bjtuss.bjtuselfservice.R
 import team.bjtuss.bjtuselfservice.RouteManager
 import team.bjtuss.bjtuselfservice.StudentAccountManager
@@ -68,9 +62,7 @@ import team.bjtuss.bjtuselfservice.entity.CourseEntity
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
-import team.bjtuss.bjtuselfservice.jsonclass.HomeworkJsonType
 import team.bjtuss.bjtuselfservice.repository.NetworkRepository
-import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
 import team.bjtuss.bjtuselfservice.utils.KotlinUtils
 import team.bjtuss.bjtuselfservice.viewmodel.DataChange
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
@@ -87,8 +79,10 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
     val homeworkChangeList: List<DataChange<HomeworkEntity>> by mainViewModel.homeworkViewModel.changeList.collectAsState()
 
     var status by remember { mutableStateOf<StudentAccountManager.Status?>(null) }
-    var selectedChange by remember { mutableStateOf<DataChange<GradeEntity>?>(null) }
-    var showDialog by remember { mutableStateOf(false) }
+    var selectedGradeChange by remember { mutableStateOf<DataChange<GradeEntity>?>(null) }
+    var selectedHomeworkChange by remember { mutableStateOf<DataChange<HomeworkEntity>?>(null) }
+    var showGradeDialog by remember { mutableStateOf(false) }
+    var showHomeworkDialog by remember { mutableStateOf(false) }
 
     var isRefreshing by remember { mutableStateOf(false) }
 
@@ -178,8 +172,8 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
                                 ChangeCard(
                                     dataChange = gradeChange,
                                     onClick = {
-                                        selectedChange = gradeChange
-                                        showDialog = true
+                                        selectedGradeChange = gradeChange
+                                        showGradeDialog = true
                                     }
                                 )
                             }
@@ -248,7 +242,8 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
                                 ChangeCard(
                                     dataChange = homeworkChange,
                                     onClick = {
-
+                                        selectedHomeworkChange = homeworkChange
+                                        showHomeworkDialog = true
                                     }
                                 )
                             }
@@ -293,11 +288,20 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
         }
     }
 
-    if (showDialog && selectedChange != null) {
+    if (showGradeDialog && selectedGradeChange != null) {
         DetailedGradeChangeDialog(
-            change = selectedChange!!,
-            onDismiss = { showDialog = false },
+            change = selectedGradeChange!!,
+            onDismiss = { showGradeDialog = false },
             navController = navController
+        )
+    }
+    if (showHomeworkDialog && selectedHomeworkChange != null) {
+        DetailedChangeDialog(
+            change = selectedHomeworkChange!!,
+            onDismiss = { showHomeworkDialog = false },
+            navController = navController,
+            cardItem = { HomeworkItemCard(it) },
+            onClick = { navController.navigate(RouteManager.HomeWork) }
         )
     }
 }
@@ -625,6 +629,113 @@ fun DetailedGradeChangeDialog(
                                 )
                             }
                             DetailedGradeItem(grade)
+                        }
+                    }
+                }
+
+                // Dialog Actions
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .padding(top = 16.dp)
+                ) {
+                    Text("关闭", color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun<T> DetailedChangeDialog(
+    change: DataChange<T>,
+    onDismiss: () -> Unit,
+    navController: NavController,
+    cardItem: @Composable (T) -> Unit,
+    onClick: () -> Unit = {}
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
+            onClick = onClick
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth()
+            ) {
+                // Dialog Header with count
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = when (change) {
+                            is DataChange.Added -> "新增详情"
+                            is DataChange.Modified -> "变动详情"
+                            is DataChange.Deleted -> "删除详情"
+                        },
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = when (change) {
+                            is DataChange.Added -> "${change.items.size}项"
+                            is DataChange.Modified -> "${change.items.size}项"
+                            is DataChange.Deleted -> "${change.items.size}项"
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 16.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+
+                // Dialog Content
+                when (change) {
+                    is DataChange.Added -> {
+                        change.items.forEachIndexed { index, grade ->
+                            if (index > 0) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                )
+                            }
+                            cardItem(grade)
+                        }
+                    }
+
+                    is DataChange.Modified -> {
+                        change.items.forEachIndexed { index, (newGrade, oldGrade) ->
+                            if (index > 0) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                )
+                            }
+                            cardItem(newGrade)
+                        }
+                    }
+
+                    is DataChange.Deleted -> {
+                        change.items.forEachIndexed { index, grade ->
+                            if (index > 0) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                )
+                            }
+                            cardItem(grade)
                         }
                     }
                 }
