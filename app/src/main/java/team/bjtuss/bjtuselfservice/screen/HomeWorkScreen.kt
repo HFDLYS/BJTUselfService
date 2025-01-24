@@ -253,7 +253,9 @@ fun HomeworkSummaryCard(homeworkList: List<HomeworkEntity>) {
     homeworkList.forEach {
         try {
             if (ChronoUnit.DAYS.between(now, LocalDateTime.parse(it.endTime, formatter)) in 0..2) {
-                countForDeadline++
+                if (it.subStatus != "已提交"){
+                    countForDeadline++
+                }
             }
         } catch (_: Exception) {}
     }

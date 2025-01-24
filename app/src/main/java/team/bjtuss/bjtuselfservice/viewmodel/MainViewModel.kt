@@ -9,7 +9,14 @@ class MainViewModel(
     val courseScheduleViewModel: CourseScheduleViewModel,
     val examScheduleViewModel: ExamScheduleViewModel,
     val homeworkViewModel: HomeworkViewModel
-) : ViewModel()
+) : ViewModel() {
+     fun loadDataAndDetectChanges() {
+        gradeViewModel.loadDataAndDetectChanges()
+        courseScheduleViewModel.loadDataAndDetectChanges()
+        examScheduleViewModel.loadDataAndDetectChanges()
+        homeworkViewModel.loadDataAndDetectChanges()
+     }
+}
 
 
 class MainViewModelFactory(
