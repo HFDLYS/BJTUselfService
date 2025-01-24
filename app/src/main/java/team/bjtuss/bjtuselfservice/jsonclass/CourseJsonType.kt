@@ -2,8 +2,8 @@ package team.bjtuss.bjtuselfservice.jsonclass
 
 data class CourseJsonType(
     val STATUS: String? = "default value",
-    val courseList: List<Course> = emptyList(),
-    val currentRows: Int? = 0,
+    val courseList: List<Course>? = emptyList(),
+    val currentRows: Int? = 32363237,
     val message: String? = "default value",
     val page: Int? = 32363237,
     val rows: Int? = 32363237,
