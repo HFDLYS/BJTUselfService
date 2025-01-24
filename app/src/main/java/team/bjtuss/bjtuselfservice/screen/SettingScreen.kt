@@ -227,10 +227,10 @@ fun ClearLocalCacheItem(mainViewModel: MainViewModel) {
                 showConfirmationDialog = false
             },
             title = {
-                Text(text = "确认清除本地缓存？")
+                Text(text = "确认清除本地数据？")
             },
             text = {
-                Text(text = "此操作将清除您所有本地缓存数据且无法恢复，确定要继续吗？")
+                Text(text = "此操作将清除您所有本地数据且无法恢复，确定要继续吗？")
             },
             confirmButton = {
                 Button(
@@ -281,7 +281,7 @@ fun ClearLocalCacheItem(mainViewModel: MainViewModel) {
         },
         content = {
             Text(
-                text = "清除本地缓存",
+                text = "清除本地数据",
                 style = MaterialTheme.typography.bodyLarge
             )
         }
