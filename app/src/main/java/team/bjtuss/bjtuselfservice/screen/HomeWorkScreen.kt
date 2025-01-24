@@ -301,6 +301,13 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
+                        var isDDLSoon = false
+                        try {
+                            isDDLSoon = ChronoUnit.HOURS.between(
+                                LocalDateTime.now(),
+                                LocalDateTime.parse(homework.endTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+                            ) in 0..48
+                        } catch (_: Exception) {}
                         Text(
                             text = "开放时间: ${homework.openDate}",
                             style = MaterialTheme.typography.bodyMedium
@@ -308,7 +315,7 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
                         Text(
                             text = "截止时间: ${homework.endTime}",
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                color = MaterialTheme.colorScheme.error
+                                color = if (isDDLSoon) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                             )
                         )
                     }
