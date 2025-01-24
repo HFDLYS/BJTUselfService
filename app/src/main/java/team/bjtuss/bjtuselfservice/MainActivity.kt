@@ -44,16 +44,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.google.gson.JsonParser
-import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import team.bjtuss.bjtuselfservice.RouteManager.ClassroomDetection
-import team.bjtuss.bjtuselfservice.jsonclass.HomeworkJsonType
-import team.bjtuss.bjtuselfservice.jsonclass.SemesterJsonType
-import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
 import team.bjtuss.bjtuselfservice.screen.BuildingScreen
 import team.bjtuss.bjtuselfservice.screen.ClassroomScreen
 import team.bjtuss.bjtuselfservice.screen.CourseScheduleScreen
@@ -61,7 +53,7 @@ import team.bjtuss.bjtuselfservice.screen.EmailScreen
 import team.bjtuss.bjtuselfservice.screen.ExamScheduleScreen
 import team.bjtuss.bjtuselfservice.screen.GradeScreen
 import team.bjtuss.bjtuselfservice.screen.HomeScreen
-import team.bjtuss.bjtuselfservice.screen.HomeWorkScreen
+import team.bjtuss.bjtuselfservice.screen.HomeworkScreen
 import team.bjtuss.bjtuselfservice.screen.LoginScreen
 import team.bjtuss.bjtuselfservice.screen.LoginViewModel
 import team.bjtuss.bjtuselfservice.screen.ScreenStatus
@@ -76,7 +68,6 @@ import team.bjtuss.bjtuselfservice.viewmodel.HomeworkViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModelFactory
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService
-import team.bjtuss.bjtuselfservice.web.MisDataManager
 
 
 class MainActivity : ComponentActivity() {
@@ -157,7 +148,7 @@ fun App(loginViewModel: LoginViewModel) {
             EmailScreen()
         }
         composable(RouteManager.HomeWork) {
-            HomeWorkScreen(mainViewModel)
+            HomeworkScreen(mainViewModel)
         }
 
     }

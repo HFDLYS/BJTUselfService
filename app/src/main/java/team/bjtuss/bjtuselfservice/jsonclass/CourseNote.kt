@@ -2,7 +2,7 @@ package team.bjtuss.bjtuselfservice.jsonclass
 
 data class CourseNote(
     val allCount: Int,
-    val calendar_id: Any??,
+    val calendar_id: Any?,
     val comment_num: Int?,
     val content: String?,
     val content_type: Int?,

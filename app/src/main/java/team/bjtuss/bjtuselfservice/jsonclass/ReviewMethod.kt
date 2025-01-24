@@ -1,5 +1,5 @@
 package team.bjtuss.bjtuselfservice.jsonclass
 
 data class ReviewMethod(
-    val type: String
+    val type: String?="default value"
 )
