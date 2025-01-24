@@ -246,6 +246,7 @@ fun ClearLocalCacheItem() {
                                 AppDatabase.getInstance().examScheduleEntityDao().deleteAll()
                                 AppDatabase.getInstance().gradeEntityDao().deleteAll()
                                 AppDatabase.getInstance().courseEntityDao().deleteAll()
+                                AppDatabase.getInstance().homeworkEntityDao().deleteAll()
                             } catch (e: Exception) {
                                 e.printStackTrace()
                             } finally {

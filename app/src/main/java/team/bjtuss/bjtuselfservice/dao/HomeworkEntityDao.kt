@@ -23,6 +23,6 @@ interface HomeworkEntityDao : BaseDao<HomeworkEntity> {
     @Query("select * from HomeworkEntity")
     override fun getAll(): Flow<List<HomeworkEntity>>
 
-    @Query("delete from GradeEntity")
+    @Query("delete from HomeworkEntity")
     override suspend fun deleteAll()
 }

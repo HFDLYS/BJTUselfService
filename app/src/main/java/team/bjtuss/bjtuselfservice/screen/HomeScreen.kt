@@ -67,6 +67,7 @@ import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
+import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
 import team.bjtuss.bjtuselfservice.jsonclass.HomeworkJsonType
 import team.bjtuss.bjtuselfservice.repository.NetworkRepository
 import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
@@ -83,6 +84,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
     val gradeChangeList: List<DataChange<GradeEntity>> by mainViewModel.gradeViewModel.changeList.collectAsState()
     val courseChangeList: List<DataChange<CourseEntity>> by mainViewModel.courseScheduleViewModel.changeList.collectAsState()
     val examScheduleChangeList: List<DataChange<ExamScheduleEntity>> by mainViewModel.examScheduleViewModel.changeList.collectAsState()
+    val homeworkChangeList: List<DataChange<HomeworkEntity>> by mainViewModel.homeworkViewModel.changeList.collectAsState()
 
     var status by remember { mutableStateOf<StudentAccountManager.Status?>(null) }
     var selectedChange by remember { mutableStateOf<DataChange<GradeEntity>?>(null) }
@@ -145,7 +147,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
 //            )
         ) {
             Text(
-                text = "最新变动",
+                text = "Newest!!!",
                 style = MaterialTheme.typography.headlineMedium.copy(
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
@@ -231,7 +233,28 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
                     }
                 }
 
+                if (homeworkChangeList.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "作业变动",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(start = 16.dp)
+                        )
 
+                        Column {
+                            homeworkChangeList.forEach { homeworkChange ->
+                                ChangeCard(
+                                    dataChange = homeworkChange,
+                                    onClick = {
+
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
             }
             if (isRefreshing) {
                 Box(
@@ -253,6 +276,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
                 mainViewModel.gradeViewModel.loadDataAndDetectChanges()
                 mainViewModel.courseScheduleViewModel.loadDataAndDetectChanges()
                 mainViewModel.examScheduleViewModel.loadDataAndDetectChanges()
+                mainViewModel.homeworkViewModel.loadDataAndDetectChanges()
             },
             modifier = Modifier
                 .align(Alignment.CenterHorizontally),
@@ -543,9 +567,9 @@ fun DetailedGradeChangeDialog(
                 ) {
                     Text(
                         text = when (change) {
-                            is DataChange.Added -> "新增成绩详情"
-                            is DataChange.Modified -> "成绩变动详情"
-                            is DataChange.Deleted -> "删除成绩详情"
+                            is DataChange.Added -> "新增详情"
+                            is DataChange.Modified -> "变动详情"
+                            is DataChange.Deleted -> "删除详情"
                         },
                         style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.primary
