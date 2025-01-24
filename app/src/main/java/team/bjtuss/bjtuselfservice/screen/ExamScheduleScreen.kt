@@ -43,15 +43,19 @@ import androidx.compose.ui.unit.dp
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.viewmodel.DataChange
 import team.bjtuss.bjtuselfservice.viewmodel.ExamScheduleViewModel
+import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import java.time.format.DateTimeFormatter
 
 @Composable
 fun ExamScheduleScreen(
-    examScheduleViewModel: ExamScheduleViewModel
+    mainViewModel: MainViewModel
 ) {
+    val examScheduleViewModel = mainViewModel.examScheduleViewModel
     LaunchedEffect(Unit) {
         examScheduleViewModel.syncDataAndClearChange()
     }
+
+
     val examScheduleList by examScheduleViewModel.examScheduleList.collectAsState()
     val examScheduleChangeList: List<DataChange<ExamScheduleEntity>> by examScheduleViewModel.changeList.collectAsState()
 
