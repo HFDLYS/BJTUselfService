@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -136,10 +137,14 @@ fun GradeList(
                     .padding(8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = { filterExpanded = true }) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Filter Options"
+                Button(
+                    onClick = {
+                        filterExpanded = true
+                    }
+                ) {
+                    Text(
+                        text = selectedFilter,
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
                 // 筛选条件

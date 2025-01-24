@@ -19,9 +19,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddTask
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -52,6 +56,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 @Composable
 fun HomeWorkScreen(mainViewModel: MainViewModel) {
@@ -66,10 +73,11 @@ fun HomeWorkScreen(mainViewModel: MainViewModel) {
 @Composable
 fun HomeworkList(homeworkList: List<HomeworkEntity>) {
     var filterExpanded by remember { mutableStateOf(false) }
-    var selectedFilter by remember { mutableStateOf("全部") }
-    var sortOrder by remember { mutableStateOf(SortOrder.DESCENDING) }
+    var selectedFilter by remember { mutableStateOf("所有课程") }
+    var isFilterOutOfDate by remember { mutableStateOf(false) }
+    var sortOrder by remember { mutableStateOf(SortOrder.ORIGINAL) }
 
-    var filteredList = homeworkList
+    var filteredList by remember { mutableStateOf(homeworkList) }
     Scaffold(
         modifier = Modifier.fillMaxSize()
     ) { paddingValues ->
@@ -86,10 +94,14 @@ fun HomeworkList(homeworkList: List<HomeworkEntity>) {
                     .padding(8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = { filterExpanded = true }) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Filter Options"
+                Button(
+                    onClick = {
+                        filterExpanded = true
+                    }
+                ) {
+                    Text(
+                        text = selectedFilter,
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
 
@@ -97,16 +109,33 @@ fun HomeworkList(homeworkList: List<HomeworkEntity>) {
                     expanded = filterExpanded,
                     onDismissRequest = { filterExpanded = false }
                 ) {
-                    val filterOptions = mutableListOf("全部")
+                    val filterOptions = mutableListOf("所有课程")
                     filterOptions.addAll(homeworkList.map { it.courseName }.distinct())
                     filterOptions.forEach { option ->
                         DropdownMenuItem(
                             onClick = {
                                 selectedFilter = option
-                                filteredList = if (option == "全部") {
-                                    homeworkList
+                                filteredList = if (isFilterOutOfDate) {
+                                    homeworkList.filter {
+                                        try {
+                                            !LocalDateTime.parse(it.endTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+                                                .isBefore(LocalDateTime.now())
+                                        } catch (_: Exception) {
+                                            true
+                                        }
+                                    }
                                 } else {
-                                    homeworkList.filter { it.courseName == option }
+                                    homeworkList
+                                }
+                                filteredList = if (selectedFilter == "所有课程") {
+                                    filteredList
+                                } else {
+                                    filteredList.filter { it.courseName == selectedFilter }
+                                }
+                                filteredList = if (sortOrder == SortOrder.ASCENDING) {
+                                    filteredList.sortedBy { it.endTime }
+                                } else {
+                                    filteredList.sortedByDescending { it.endTime }
                                 }
                                 filterExpanded = false
                             },
@@ -117,6 +146,82 @@ fun HomeworkList(homeworkList: List<HomeworkEntity>) {
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
+                        )
+                    }
+                }
+
+                Row {
+                    Button(
+                        onClick = {
+                            isFilterOutOfDate = !isFilterOutOfDate
+                            filteredList = if (isFilterOutOfDate) {
+                                homeworkList.filter {
+                                    try {
+                                        !LocalDateTime.parse(it.endTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+                                            .isBefore(LocalDateTime.now())
+                                    } catch (_: Exception) {
+                                        true
+                                    }
+                                }
+                            } else {
+                                homeworkList
+                            }
+                            filteredList = if (selectedFilter == "所有课程") {
+                                filteredList
+                            } else {
+                                filteredList.filter { it.courseName == selectedFilter }
+                            }
+                            filteredList = if (sortOrder == SortOrder.ASCENDING) {
+                                filteredList.sortedBy { it.endTime }
+                            } else {
+                                filteredList.sortedByDescending { it.endTime }
+                            }
+                        }
+                    ) {
+                        Text(
+                            text = if (isFilterOutOfDate) "悟已往之不谏" else "展示全部",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+
+                    IconButton(
+                        onClick = {
+                            sortOrder = if (sortOrder == SortOrder.ASCENDING) {
+                                SortOrder.DESCENDING
+                            } else {
+                                SortOrder.ASCENDING
+                            }
+                            filteredList = if (isFilterOutOfDate) {
+                                homeworkList.filter {
+                                    try {
+                                        !LocalDateTime.parse(it.endTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+                                            .isBefore(LocalDateTime.now())
+                                    } catch (_: Exception) {
+                                        true
+                                    }
+                                }
+                            } else {
+                                homeworkList
+                            }
+                            filteredList = if (selectedFilter == "所有课程") {
+                                filteredList
+                            } else {
+                                filteredList.filter { it.courseName == selectedFilter }
+                            }
+                            filteredList = if (sortOrder == SortOrder.ASCENDING) {
+                                filteredList.sortedBy { it.endTime }
+                            } else {
+                                filteredList.sortedByDescending { it.endTime }
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = when (sortOrder) {
+                                SortOrder.ASCENDING -> Icons.Default.ArrowUpward
+                                SortOrder.DESCENDING -> Icons.Default.ArrowDownward
+                                SortOrder.ORIGINAL -> Icons.Default.Sort
+                            },
+                            contentDescription = "Sort Order"
                         )
                     }
                 }
@@ -136,6 +241,16 @@ fun HomeworkList(homeworkList: List<HomeworkEntity>) {
 
 @Composable
 fun HomeworkSummaryCard(homeworkList: List<HomeworkEntity>) {
+    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+    val now = LocalDateTime.now()
+    var countForDeadline = 0
+    homeworkList.forEach {
+        try {
+            if (ChronoUnit.DAYS.between(now, LocalDateTime.parse(it.endTime, formatter)) in 0..2) {
+                countForDeadline++
+            }
+        } catch (_: Exception) {}
+    }
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -150,11 +265,19 @@ fun HomeworkSummaryCard(homeworkList: List<HomeworkEntity>) {
         ) {
             Text(
                 text = "作业安排：${homeworkList.size}项",
-                style = MaterialTheme.typography.headlineSmall.copy(
+                style = MaterialTheme.typography.headlineLarge.copy(
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
             )
+            if (countForDeadline > 0) {
+                Text(
+                    text = "其中有${countForDeadline}项作业已经迫在眉睫！",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.error
+                    )
+                )
+            }
         }
     }
 }

@@ -346,7 +346,9 @@ fun CheckForUpdateCard() {
             },
             dismissButton = {
                 TextButton(onClick = { showDialog = false }) {
-                    Text("关闭")
+                    downloadUrl?.let {
+                        Text("人习于枸且非一日")
+                    } ?: Text("关闭")
                 }
             },
             text = {

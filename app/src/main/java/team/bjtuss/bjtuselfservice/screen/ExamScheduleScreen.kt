@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -41,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.viewmodel.ExamScheduleViewModel
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun ExamScheduleScreen(
@@ -77,10 +79,14 @@ fun ExamScheduleList(
                     .padding(8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = { filterExpanded = true }) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Filter Options"
+                Button(
+                    onClick = {
+                        filterExpanded = true
+                    }
+                ) {
+                    Text(
+                        text = selectedFilter,
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
                 DropdownMenu(
@@ -143,7 +149,7 @@ fun ExamSummaryCard(examList: List<ExamScheduleEntity>, selectedFilter: String) 
         ) {
             Text(
                 text = "考试安排：${filteredExamList.size}项",
-                style = MaterialTheme.typography.headlineSmall.copy(
+                style = MaterialTheme.typography.headlineLarge.copy(
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
