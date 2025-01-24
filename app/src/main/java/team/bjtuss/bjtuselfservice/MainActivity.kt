@@ -67,6 +67,7 @@ import team.bjtuss.bjtuselfservice.viewmodel.GradeViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.HomeworkViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModelFactory
+import team.bjtuss.bjtuselfservice.viewmodel.StatusViewModel
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService
 
 
@@ -109,10 +110,10 @@ fun App(loginViewModel: LoginViewModel) {
     val courseScheduleViewModel: CourseScheduleViewModel = viewModel()
     val examScheduleViewModel: ExamScheduleViewModel = viewModel()
     val homeworkViewModel: HomeworkViewModel = viewModel()
-
+    val statusViewModel: StatusViewModel = viewModel()
     val mainViewModel: MainViewModel = viewModel(
         factory = MainViewModelFactory(
-            gradeViewModel, courseScheduleViewModel, examScheduleViewModel, homeworkViewModel
+            gradeViewModel, courseScheduleViewModel, examScheduleViewModel, homeworkViewModel, statusViewModel
         )
     )
 
