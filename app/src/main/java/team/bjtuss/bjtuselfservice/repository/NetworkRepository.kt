@@ -7,7 +7,6 @@ import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
-import team.bjtuss.bjtuselfservice.repository.NetworkRequestQueue
 
 
 object NetworkRepository {

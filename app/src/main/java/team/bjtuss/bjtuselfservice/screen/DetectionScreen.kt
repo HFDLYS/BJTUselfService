@@ -30,7 +30,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -65,7 +64,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import team.bjtuss.bjtuselfservice.R
 import team.bjtuss.bjtuselfservice.constant.ApiConstant.CLASSROOM_VIEW_URL
-import team.bjtuss.bjtuselfservice.viewmodel.ClassroomViewModel
+import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService.ClassroomCapacity
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService.getClassroomCapacity
@@ -193,8 +192,9 @@ fun getCurrentClassIndex(): Int {
 @Composable
 fun ClassroomScreen(
     buildingName: String,
-    classroomViewModel: ClassroomViewModel
+    mainViewModel: MainViewModel
 ) {
+    val classroomViewModel = mainViewModel.classroomViewModel
     val classroomMap by classroomViewModel.classroomMap.collectAsState()
     val buildingInfo = remember { mutableStateOf<ClassroomCapacityService.BuildingInfo?>(null) }
     var filterExpanded by remember { mutableStateOf(false) }
@@ -234,7 +234,8 @@ fun ClassroomScreen(
                             fontWeight = FontWeight.Bold,
                         ),
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
                             .padding(vertical = 1.dp),
                     )
                     Text(
@@ -243,7 +244,8 @@ fun ClassroomScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         ),
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
                             .padding(vertical = 8.dp),
                     )
                 }
@@ -411,7 +413,7 @@ fun ClassroomViewDialog(
 @Composable
 fun ClassroomCard(
     classroom: ClassroomCapacity,
-    classroomMap: Map<String,List<Int>>,
+    classroomMap: Map<String, List<Int>>,
     onClick: () -> Unit = {}
 ) {
     ElevatedCard(
@@ -423,7 +425,7 @@ fun ClassroomCard(
             containerColor = MaterialTheme.colorScheme.surface
         ),
     ) {
-        Column  (
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(),
@@ -501,7 +503,11 @@ fun ClassroomCard(
                         modifier = Modifier
                             .size(16.dp)
                             .clip(CircleShape)
-                            .border(2.dp, if (getCurrentClassIndex() == index) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary, CircleShape)
+                            .border(
+                                2.dp,
+                                if (getCurrentClassIndex() == index) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                                CircleShape
+                            )
                             .padding(4.dp),
                     ) {
                         Box(

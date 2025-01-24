@@ -83,7 +83,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
 
     val homeworkList: List<HomeworkEntity> by mainViewModel.homeworkViewModel.homeworkList.collectAsState()
 
-    var status by remember { mutableStateOf<StudentAccountManager.Status?>(null) }
+    val status by mainViewModel.statusViewModel.status.collectAsState()
     var selectedGradeChange by remember { mutableStateOf<DataChange<GradeEntity>?>(null) }
     var selectedHomeworkChange by remember { mutableStateOf<DataChange<HomeworkEntity>?>(null) }
     var selectedExamChange by remember { mutableStateOf<DataChange<ExamScheduleEntity>?>(null) }
@@ -92,9 +92,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
     var showExamDialog by remember { mutableStateOf(false) }
     var isRefreshing by remember { mutableStateOf(false) }
 
-    studentAccountManager.status.thenAccept {
-        status = it
-    }
+
 
     NetworkRepository.getQueueStatus().observeForever {
         isRefreshing = it

@@ -1,6 +1,5 @@
 package team.bjtuss.bjtuselfservice.viewmodel
 
-import android.util.Printer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 
@@ -8,14 +7,17 @@ class MainViewModel(
     val gradeViewModel: GradeViewModel,
     val courseScheduleViewModel: CourseScheduleViewModel,
     val examScheduleViewModel: ExamScheduleViewModel,
-    val homeworkViewModel: HomeworkViewModel
+    val classroomViewModel: ClassroomViewModel,
+    val homeworkViewModel: HomeworkViewModel,
+    val statusViewModel: StatusViewModel,
 ) : ViewModel() {
-     fun loadDataAndDetectChanges() {
+    fun loadDataAndDetectChanges() {
         gradeViewModel.loadDataAndDetectChanges()
         courseScheduleViewModel.loadDataAndDetectChanges()
         examScheduleViewModel.loadDataAndDetectChanges()
         homeworkViewModel.loadDataAndDetectChanges()
-     }
+        statusViewModel.loadData()
+    }
 }
 
 
@@ -23,7 +25,9 @@ class MainViewModelFactory(
     private val gradeViewModel: GradeViewModel,
     private val courseScheduleViewModel: CourseScheduleViewModel,
     private val examScheduleViewModel: ExamScheduleViewModel,
-    private val homeworkViewModel: HomeworkViewModel
+    private val classroomViewModel: ClassroomViewModel,
+    private val homeworkViewModel: HomeworkViewModel,
+    private val statusViewModel: StatusViewModel
 ) : ViewModelProvider.Factory {
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -33,7 +37,9 @@ class MainViewModelFactory(
                 gradeViewModel,
                 courseScheduleViewModel,
                 examScheduleViewModel,
-                homeworkViewModel
+                classroomViewModel,
+                homeworkViewModel,
+                statusViewModel
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

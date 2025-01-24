@@ -1,6 +1,5 @@
 package team.bjtuss.bjtuselfservice.screen
 
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -45,18 +44,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -66,6 +60,7 @@ import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.database.AppDatabase
 import team.bjtuss.bjtuselfservice.repository.SettingsRepository
 import team.bjtuss.bjtuselfservice.repository.fetchLatestRelease
+import team.bjtuss.bjtuselfservice.viewmodel.LoginViewModel
 
 @Composable
 fun SettingsItemCard(
@@ -77,7 +72,8 @@ fun SettingsItemCard(
     content: @Composable RowScope.() -> Unit,
 ) {
     Card(
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
             .padding(bottom = 16.dp),
         shape = RoundedCornerShape(cornerRadius),
         elevation = CardDefaults.elevatedCardElevation(
@@ -132,7 +128,6 @@ fun SettingsBasicLinkItem(
         )
     }
 }
-
 
 
 class SettingViewModel : ViewModel() {
@@ -293,7 +288,8 @@ fun ClearLocalCacheItem() {
 
 @Composable
 fun CheckForUpdateCard() {
-    val versionName = appContext.packageManager.getPackageInfo(appContext.packageName, 0).versionName
+    val versionName =
+        appContext.packageManager.getPackageInfo(appContext.packageName, 0).versionName
     var versionLatest by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     var showDialog by remember { mutableStateOf(false) }

@@ -16,5 +16,11 @@ class StatusViewModel : ViewModel() {
         }
     }
 
+    fun loadData() {
+        StudentAccountManager.getInstance().status.thenAccept {
+            _status.value = it
+        }
+    }
+
 
 }
