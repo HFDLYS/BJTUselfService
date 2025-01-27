@@ -99,7 +99,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
     }
 
     // Status info formatting functions
-    val ecardBalance = "校园卡余额：${status?.EcardBalance}".let {
+    val ecardBalance = "校园卡余额：${status.EcardBalance}".let {
         if (status?.EcardBalance?.toDoubleOrNull() ?: 0.0 < 20) {
             "$it，该充了"
         } else {
@@ -107,7 +107,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
         }
     }
 
-    val netBalance = "校园网余额：${status?.NetBalance}".let {
+    val netBalance = "校园网余额：${status.NetBalance}".let {
         if (status?.NetBalance == "0") {
             "$it，😱没网了"
         } else {
@@ -115,7 +115,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
         }
     }
 
-    val newMailCount = "新邮件：${status?.NewMailCount}".let {
+    val newMailCount = "新邮件：${status.NewMailCount}".let {
         if (status?.NewMailCount != "0") {
             "$it，记得去看哦"
         } else {
@@ -623,120 +623,6 @@ private fun<T> ChangeCard(
 }
 
 
-@Composable
-fun DetailedGradeChangeDialog(
-    change: DataChange<GradeEntity>,
-    onDismiss: () -> Unit,
-    navController: NavController
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            shape = MaterialTheme.shapes.large,
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth()
-            ) {
-                // Dialog Header with count
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = when (change) {
-                            is DataChange.Added -> "新增详情"
-                            is DataChange.Modified -> "变动详情"
-                            is DataChange.Deleted -> "删除详情"
-                        },
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = when (change) {
-                            is DataChange.Added -> "${change.items.size}项"
-                            is DataChange.Modified -> "${change.items.size}项"
-                            is DataChange.Deleted -> "${change.items.size}项"
-                        },
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 16.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
-
-                // Dialog Content
-                when (change) {
-                    is DataChange.Added -> {
-                        change.items.forEachIndexed { index, grade ->
-                            if (index > 0) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(vertical = 8.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                )
-                            }
-                            DetailedGradeItem(grade)
-                        }
-                    }
-
-                    is DataChange.Modified -> {
-                        change.items.forEachIndexed { index, (newGrade, oldGrade) ->
-                            if (index > 0) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(vertical = 8.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                )
-                            }
-                            ModifiedGradeItem(newGrade, oldGrade)
-                        }
-                    }
-
-                    is DataChange.Deleted -> {
-                        change.items.forEachIndexed { index, grade ->
-                            if (index > 0) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(vertical = 8.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                )
-                            }
-                            DetailedGradeItem(grade)
-                        }
-                    }
-                }
-
-                // Dialog Actions
-                Row (
-                    modifier = Modifier
-                        .align(Alignment.End)
-                        .padding(top = 16.dp)
-                ) {
-                    TextButton(
-                        onClick = onDismiss,
-                    ) {
-                        Text("撤了", color = MaterialTheme.colorScheme.primary)
-                    }
-
-                    Button(
-                        onClick = {
-                            navController.navigate(RouteManager.Grade)
-                        },
-                    ) {
-                        Text("查看更多", color = MaterialTheme.colorScheme.onPrimary)
-                    }
-                }
-            }
-        }
-    }
-}
 
 @Composable
 fun<T> DetailedChangeDialog(
@@ -931,23 +817,7 @@ fun<T> DetailedDialog(
     }
 }
 
-@Composable
-private fun DetailedGradeItem(grade: GradeEntity) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .background(
-                MaterialTheme.colorScheme.surface,
-                MaterialTheme.shapes.small
-            )
-            .padding(8.dp)
-    ) {
-        GradeInfoRow("课程名称", grade.courseName)
-        GradeInfoRow("成绩", grade.courseScore)
-        GradeInfoRow("学分", grade.courseCredits)
-    }
-}
+
 
 @Composable
 private fun ModifiedGradeItem(newGrade: GradeEntity, oldGrade: GradeEntity) {

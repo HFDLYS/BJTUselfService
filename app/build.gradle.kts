@@ -28,6 +28,12 @@ android {
                 "proguard-rules.pro"
             )
         }
+        debug {
+            applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = false
+        }
+
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
