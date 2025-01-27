@@ -40,7 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -67,72 +66,6 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-
-@Composable
-fun SettingsItemCard(
-    modifier: Modifier = Modifier,
-    cornerRadius: Dp = 16.dp,
-    hPadding: Dp = 12.dp,
-    vPadding: Dp = 14.dp,
-    onClick: () -> Unit = {},
-    content: @Composable RowScope.() -> Unit,
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp),
-        shape = RoundedCornerShape(cornerRadius),
-        elevation = CardDefaults.elevatedCardElevation(
-            6.dp
-        )
-    ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .clickable { onClick() }
-                .padding(horizontal = hPadding, vertical = vPadding),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            content = content
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SettingsBasicLinkItem(
-    title: String,
-    subtitle: String = "",
-    icon: Int,
-    link: String = "",
-) {
-    val uriHandler = LocalUriHandler.current
-    SettingsItemCard(
-        cornerRadius = 16.dp,
-        onClick = {
-            if (link.isNotBlank()) {
-                uriHandler.openUri(link)
-            }
-        }
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                painter = painterResource(id = icon),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(Modifier.width(12.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        }
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodyMedium,
-        )
-    }
-}
 
 
 class SettingViewModel : ViewModel() {
@@ -188,7 +121,7 @@ fun SettingScreen(loginViewModel: LoginViewModel, mainViewModel: MainViewModel) 
             )
         }
         item {
-            SettingsItemCard(
+            SettingItemCard(
                 onClick = {},
                 content = {
                     studentInfo.value?.let {
@@ -201,13 +134,13 @@ fun SettingScreen(loginViewModel: LoginViewModel, mainViewModel: MainViewModel) 
             )
         }
         item {
-            CheckForUpdateCard()
+            CheckForUpdateSettingItemCard()
         }
         item {
             ClearLocalCacheItem(mainViewModel)
         }
         item {
-            SettingsBasicLinkItem(
+            SettingLinkItem(
                 title = "Github项目",
                 subtitle = "",
                 icon = R.drawable.ic_github,
@@ -288,7 +221,7 @@ fun ClearLocalCacheItem(mainViewModel: MainViewModel) {
         }
     }
 
-    SettingsItemCard(
+    SettingItemCard(
         onClick = {
             showConfirmationDialog = true
         },
@@ -301,8 +234,107 @@ fun ClearLocalCacheItem(mainViewModel: MainViewModel) {
     )
 }
 
+
 @Composable
-fun CheckForUpdateCard() {
+fun SettingItemCard(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
+    content: @Composable RowScope.() -> Unit,
+) {
+    val cornerRadius: Dp = 16.dp
+    val hPadding: Dp = 12.dp
+    val vPadding: Dp = 14.dp
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp),
+        shape = RoundedCornerShape(cornerRadius),
+        elevation = CardDefaults.elevatedCardElevation(
+            6.dp
+        )
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clickable { onClick() }
+                .padding(horizontal = hPadding, vertical = vPadding),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            content = content
+        )
+    }
+}
+
+@Composable
+fun SettingItemCard(
+    title: String,
+    subtitle: String = "",
+    icon: Int? = null,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
+) {
+    val cornerRadius: Dp = 16.dp
+    val hPadding: Dp = 12.dp
+    val vPadding: Dp = 14.dp
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp),
+        shape = RoundedCornerShape(cornerRadius),
+        elevation = CardDefaults.elevatedCardElevation(
+            6.dp
+        )
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clickable { onClick() }
+                .padding(horizontal = hPadding, vertical = vPadding),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                icon?.let {
+                    Icon(
+                        painter = painterResource(id = it),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                }
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+            }
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingLinkItem(
+    title: String,
+    subtitle: String = "",
+    icon: Int? = null,
+    link: String = "",
+) {
+    val uriHandler = LocalUriHandler.current
+
+    SettingItemCard(title = title, subtitle = subtitle, icon = icon) {
+        if (link.isNotBlank()) {
+            uriHandler.openUri(link)
+        }
+    }
+}
+
+
+@Composable
+fun CheckForUpdateSettingItemCard() {
     val versionName =
         appContext.packageManager.getPackageInfo(appContext.packageName, 0).versionName
     var versionLatest by remember { mutableStateOf("") }
@@ -312,41 +344,33 @@ fun CheckForUpdateCard() {
     var updateMessage by remember { mutableStateOf("") }
     var updateMarkdown by remember { mutableStateOf("") }
     var downloadUrl by remember { mutableStateOf<String?>(null) }
-    SettingsItemCard(
-        onClick = {
-            showDialog = true
-            scope.launch {
-                isChecking = true
-                val release = fetchLatestRelease()
-                updateMessage = release?.let {
-                    val instant = Instant.parse(it.publishedAt)
-                    val localDateTime = instant.atZone(ZoneId.systemDefault())
-                    "发布时间: ${
-                        localDateTime.format(
-                            DateTimeFormatter.ofPattern(
-                                "yyyy年M月d日 HH:mm",
-                                Locale.getDefault()
-                            )
+
+    SettingItemCard(title = "检查更新", subtitle = versionName, icon = R.drawable.ic_code) {
+        showDialog = true
+        scope.launch {
+            isChecking = true
+            val release = fetchLatestRelease()
+            updateMessage = release?.let {
+                val instant = Instant.parse(it.publishedAt)
+                val localDateTime = instant.atZone(ZoneId.systemDefault())
+                "发布时间: ${
+                    localDateTime.format(
+                        DateTimeFormatter.ofPattern(
+                            "yyyy年M月d日 HH:mm",
+                            Locale.getDefault()
                         )
-                    }"
-                } ?: "检查失败，请稍后再试"
-                updateMarkdown = release?.body ?: ""
-                versionLatest = release?.tagName ?: ""
-                downloadUrl = release?.htmlUrl
-                isChecking = false
-            }
-        },
-        content = {
-            Text(
-                text = "检查更新",
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Text(
-                text = versionName,
-                style = MaterialTheme.typography.bodyMedium
-            )
+                    )
+                }"
+            } ?: "检查失败，请稍后再试"
+            updateMarkdown = release?.body ?: ""
+            versionLatest = release?.tagName ?: ""
+            downloadUrl = release?.htmlUrl
+            isChecking = false
         }
-    )
+
+    }
+
+
 
     if (showDialog) {
         AlertDialog(

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -34,12 +35,16 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,9 +60,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.SwipeRefreshIndicator
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import kotlinx.coroutines.delay
 import team.bjtuss.bjtuselfservice.R
 import team.bjtuss.bjtuselfservice.RouteManager
 import team.bjtuss.bjtuselfservice.StudentAccountManager
+import team.bjtuss.bjtuselfservice.component.CalendarComponent
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
@@ -72,54 +82,48 @@ import java.time.temporal.ChronoUnit
 import kotlin.collections.component1
 import kotlin.collections.component2
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
     val studentAccountManager = StudentAccountManager.getInstance()
+
+    // 使用 mutableStateOf 来追踪刷新状态
+    var isRefreshing by remember { mutableStateOf(false) }
+    val refreshState = rememberSwipeRefreshState(isRefreshing = isRefreshing)
+
+    // 使用 LaunchedEffect 来监听网络请求队列状态
+    LaunchedEffect(Unit) {
+        NetworkRepository.getQueueStatus().observeForever { queueStatus ->
+            isRefreshing = queueStatus
+        }
+    }
+
+    // 清理网络状态观察者
+    DisposableEffect(Unit) {
+        onDispose {
+            NetworkRepository.getQueueStatus().removeObserver { }
+        }
+    }
 
     val gradeChangeList: List<DataChange<GradeEntity>> by mainViewModel.gradeViewModel.changeList.collectAsState()
     val courseChangeList: List<DataChange<CourseEntity>> by mainViewModel.courseScheduleViewModel.changeList.collectAsState()
     val examScheduleChangeList: List<DataChange<ExamScheduleEntity>> by mainViewModel.examScheduleViewModel.changeList.collectAsState()
     val homeworkChangeList: List<DataChange<HomeworkEntity>> by mainViewModel.homeworkViewModel.changeList.collectAsState()
-
     val homeworkList: List<HomeworkEntity> by mainViewModel.homeworkViewModel.homeworkList.collectAsState()
-
     val status by mainViewModel.statusViewModel.status.collectAsState()
+
     var selectedGradeChange by remember { mutableStateOf<DataChange<GradeEntity>?>(null) }
     var selectedHomeworkChange by remember { mutableStateOf<DataChange<HomeworkEntity>?>(null) }
     var selectedExamChange by remember { mutableStateOf<DataChange<ExamScheduleEntity>?>(null) }
     var showGradeDialog by remember { mutableStateOf(false) }
     var showHomeworkDialog by remember { mutableStateOf(false) }
     var showExamDialog by remember { mutableStateOf(false) }
-    var isRefreshing by remember { mutableStateOf(false) }
 
-
-
-    NetworkRepository.getQueueStatus().observeForever {
-        isRefreshing = it
-    }
-
-    // Status info formatting functions
-    val ecardBalance = "校园卡余额：${status.EcardBalance}".let {
-        if (status?.EcardBalance?.toDoubleOrNull() ?: 0.0 < 20) {
-            "$it，该充了"
-        } else {
-            it
-        }
-    }
-
-    val netBalance = "校园网余额：${status.NetBalance}".let {
-        if (status?.NetBalance == "0") {
-            "$it，😱没网了"
-        } else {
-            it
-        }
-    }
-
-    val newMailCount = "新邮件：${status.NewMailCount}".let {
-        if (status?.NewMailCount != "0") {
-            "$it，记得去看哦"
-        } else {
-            it
+    // 刷新处理函数
+    val handleRefresh = {
+        if (!isRefreshing) {
+            isRefreshing = true
+            mainViewModel.loadDataAndDetectChanges()
         }
     }
 
@@ -130,19 +134,19 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
             .padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        // Status Info Section
+        StatusInfo(
+            ecardBalance = formatEcardBalance(status?.EcardBalance),
+            netBalance = formatNetBalance(status?.NetBalance),
+            newMailCount = formatNewMailCount(status?.NewMailCount),
+            navController = navController
+        )
 
-
-        StatusInfo(ecardBalance, netBalance, newMailCount, navController)
-
-        // Grade Changes Section
         Card(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-//            colors = CardDefaults.cardColors(
-//                containerColor = MaterialTheme.colorScheme.surface,
-//            )
+            shape = RoundedCornerShape(16.dp)
         ) {
             Text(
                 text = "ATTENTION!!!",
@@ -152,148 +156,82 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
                 ),
                 modifier = Modifier.padding(start = 16.dp, top = 8.dp)
             )
-            LazyColumn(
-                modifier = Modifier.padding(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+
+            CalendarComponent(mainViewModel)
+
+            SwipeRefresh(
+                state = refreshState,
+                onRefresh = handleRefresh,
+                modifier = Modifier.fillMaxSize()
             ) {
-                item {
-                    HomeworkNoticeCard(homeworkList, navController)
-                }
-                if (gradeChangeList.isNotEmpty()) {
+                LazyColumn(
+                    modifier = Modifier.padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                     item {
-                        Text(
-                            text = "成绩单变动",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 16.dp)
-                        )
+                        HomeworkNoticeCard(homeworkList, navController)
+                    }
 
-
-                        Column(
-                            modifier = Modifier,
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            gradeChangeList.forEach { gradeChange ->
-                                ChangeCard(
-                                    dataChange = gradeChange,
-                                    onClick = {
-                                        selectedGradeChange = gradeChange
-                                        showGradeDialog = true
-                                    }
-                                )
-                            }
+                    // Grade Changes Section
+                    if (gradeChangeList.isNotEmpty()) {
+                        item {
+                            ChangeSection(
+                                title = "成绩单变动",
+                                changes = gradeChangeList,
+                                onItemClick = { change ->
+                                    selectedGradeChange = change
+                                    showGradeDialog = true
+                                }
+                            )
                         }
                     }
-                }
 
-                if (courseChangeList.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = "课程表变动",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 16.dp)
-                        )
-
-                        Column {
-                            courseChangeList.forEach { courseChange ->
-                                ChangeCard(
-                                    dataChange = courseChange,
-                                    onClick = {
-                                        navController.navigate(RouteManager.CourseSchedule)
-                                    }
-                                )
-                            }
+                    // Course Changes Section
+                    if (courseChangeList.isNotEmpty()) {
+                        item {
+                            ChangeSection(
+                                title = "课程表变动",
+                                changes = courseChangeList,
+                                onItemClick = { _ ->
+                                    navController.navigate(RouteManager.CourseSchedule)
+                                }
+                            )
                         }
                     }
-                }
 
-                if (examScheduleChangeList.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = "考试安排变动",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 16.dp)
-                        )
-
-                        Column {
-                            examScheduleChangeList.forEach { examChange ->
-                                ChangeCard(
-                                    dataChange = examChange,
-                                    onClick = {
-                                        selectedExamChange = examChange
-                                        showExamDialog = true
-                                    }
-                                )
-                            }
+                    // Exam Schedule Changes Section
+                    if (examScheduleChangeList.isNotEmpty()) {
+                        item {
+                            ChangeSection(
+                                title = "考试安排变动",
+                                changes = examScheduleChangeList,
+                                onItemClick = { change ->
+                                    selectedExamChange = change
+                                    showExamDialog = true
+                                }
+                            )
                         }
                     }
-                }
 
-                if (homeworkChangeList.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = "作业变动",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 16.dp)
-                        )
-
-                        Column {
-                            homeworkChangeList.forEach { homeworkChange ->
-                                ChangeCard(
-                                    dataChange = homeworkChange,
-                                    onClick = {
-                                        selectedHomeworkChange = homeworkChange
-                                        showHomeworkDialog = true
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-                if (isRefreshing) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(top = 32.dp)
-                        ) {
-                            RotatingImageLoader(
-                                image = painterResource(id = R.drawable.loading_icon),
-                                rotationDuration = 1000,
-                                modifier = Modifier.align(Alignment.Center)
+                    // Homework Changes Section
+                    if (homeworkChangeList.isNotEmpty()) {
+                        item {
+                            ChangeSection(
+                                title = "作业变动",
+                                changes = homeworkChangeList,
+                                onItemClick = { change ->
+                                    selectedHomeworkChange = change
+                                    showHomeworkDialog = true
+                                }
                             )
                         }
                     }
                 }
             }
         }
-
-        Button(
-            onClick = {
-                mainViewModel.loadDataAndDetectChanges()
-            },
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally),
-            enabled = !isRefreshing
-        ) {
-            Icon(
-                imageVector = Icons.Default.Refresh,
-                contentDescription = "刷新",
-                modifier = Modifier.size(18.dp)
-            )
-            Text("刷新",
-                fontSize = 18.sp
-            )
-        }
     }
 
+    // Dialogs
     if (showGradeDialog && selectedGradeChange != null) {
         DetailedChangeDialog(
             change = selectedGradeChange!!,
@@ -302,6 +240,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
             onClick = { navController.navigate(RouteManager.Grade) }
         )
     }
+
     if (showHomeworkDialog && selectedHomeworkChange != null) {
         DetailedChangeDialog(
             change = selectedHomeworkChange!!,
@@ -310,6 +249,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
             onClick = { navController.navigate(RouteManager.HomeWork) }
         )
     }
+
     if (showExamDialog && selectedExamChange != null) {
         DetailedChangeDialog(
             change = selectedExamChange!!,
@@ -317,6 +257,62 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
             cardItem = { ExamItemCard(it) },
             onClick = { navController.navigate(RouteManager.ExamSchedule) }
         )
+    }
+}
+
+
+@Composable
+private fun <T> ChangeSection(
+    title: String,
+    changes: List<DataChange<T>>,
+    onItemClick: (DataChange<T>) -> Unit
+) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.headlineSmall,
+        color = MaterialTheme.colorScheme.onSurface,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(start = 16.dp)
+    )
+
+    Column(
+        modifier = Modifier.padding(vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        changes.forEach { change ->
+            ChangeCard(
+                dataChange = change,
+                onClick = { onItemClick(change) }
+            )
+        }
+    }
+}
+
+// 格式化工具函数
+private fun formatEcardBalance(balance: String?): String {
+    val balanceText = "校园卡余额：$balance"
+    return if (balance?.toDoubleOrNull() ?: 0.0 < 20) {
+        "$balanceText，该充了"
+    } else {
+        balanceText
+    }
+}
+
+private fun formatNetBalance(balance: String?): String {
+    val balanceText = "校园网余额：$balance"
+    return if (balance == "0") {
+        "$balanceText，😱没网了"
+    } else {
+        balanceText
+    }
+}
+
+private fun formatNewMailCount(count: String?): String {
+    val mailText = "新邮件：$count"
+    return if (count != "0") {
+        "$mailText，记得去看哦"
+    } else {
+        mailText
     }
 }
 
@@ -338,7 +334,7 @@ fun StatusInfo(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 MailButton({
                     Text(newMailCount, fontSize = 18.sp)
-                           }, navController)
+                }, navController)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 EcardButton({ Text(ecardBalance, fontSize = 18.sp) })
@@ -475,7 +471,10 @@ fun NetButton(content: @Composable () -> Unit) {
 // 尝试启动“完美校园”应用
 fun launchWanMeiCampusApp(context: Context) {
     val intent = Intent().apply {
-        component = ComponentName("com.newcapec.mobile.ncp", "com.wanxiao.basebusiness.activity.SplashActivity")
+        component = ComponentName(
+            "com.newcapec.mobile.ncp",
+            "com.wanxiao.basebusiness.activity.SplashActivity"
+        )
     }
 
     try {
@@ -497,13 +496,18 @@ private fun HomeworkNoticeCard(
     var showDetail by remember { mutableStateOf(false) }
     homeworkList.forEach {
         try {
-            if (ChronoUnit.HOURS.between(now, LocalDateTime.parse(it.endTime, formatter)) in 0..48) {
-                if (it.subStatus != "已提交"){
+            if (ChronoUnit.HOURS.between(
+                    now,
+                    LocalDateTime.parse(it.endTime, formatter)
+                ) in 0..48
+            ) {
+                if (it.subStatus != "已提交") {
                     countForDeadline++
                     DDLList.add(it)
                 }
             }
-        } catch (_: Exception) {}
+        } catch (_: Exception) {
+        }
     }
 
     if (countForDeadline > 0) {
@@ -555,7 +559,7 @@ private fun HomeworkNoticeCard(
 }
 
 @Composable
-private fun<T> ChangeCard(
+private fun <T> ChangeCard(
     dataChange: DataChange<T>,
     onClick: () -> Unit
 ) {
@@ -623,9 +627,8 @@ private fun<T> ChangeCard(
 }
 
 
-
 @Composable
-fun<T> DetailedChangeDialog(
+fun <T> DetailedChangeDialog(
     change: DataChange<T>,
     onDismiss: () -> Unit,
     cardItem: @Composable (T) -> Unit,
@@ -716,7 +719,7 @@ fun<T> DetailedChangeDialog(
                     }
                 }
 
-                Row (
+                Row(
                     modifier = Modifier
                         .align(Alignment.End)
                         .padding(top = 16.dp)
@@ -739,7 +742,7 @@ fun<T> DetailedChangeDialog(
 }
 
 @Composable
-fun<T> DetailedDialog(
+fun <T> DetailedDialog(
     title: String,
     items: List<T>,
     onDismiss: () -> Unit,
@@ -795,7 +798,7 @@ fun<T> DetailedDialog(
                 }
 
 
-                Row (
+                Row(
                     modifier = Modifier
                         .align(Alignment.End)
                         .padding(top = 16.dp)
@@ -816,7 +819,6 @@ fun<T> DetailedDialog(
         }
     }
 }
-
 
 
 @Composable

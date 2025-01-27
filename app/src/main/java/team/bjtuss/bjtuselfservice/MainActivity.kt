@@ -205,8 +205,6 @@ fun CheckForUpdate() {
 @Composable
 fun App(loginViewModel: LoginViewModel) {
     val navController = rememberNavController()
-
-
     val classroomViewModel: ClassroomViewModel = viewModel()
     val gradeViewModel: GradeViewModel = viewModel()
     val courseScheduleViewModel: CourseScheduleViewModel = viewModel()

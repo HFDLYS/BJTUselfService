@@ -94,7 +94,7 @@ dependencies {
 
     implementation("com.squareup.moshi:moshi-kotlin:1.13.0")
     implementation("com.kizitonwose.calendar:compose:2.6.0")
-
+    implementation ("com.google.accompanist:accompanist-swiperefresh:0.30.1")
 }
 kapt {
     correctErrorTypes = true
