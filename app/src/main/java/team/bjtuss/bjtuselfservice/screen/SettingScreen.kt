@@ -101,11 +101,10 @@ fun SettingsItemCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsBasicLinkItem(
-    title: Int,
+    title: String,
     subtitle: String = "",
     icon: Int,
     link: String = "",
-    onClick: () -> Unit = {}
 ) {
     val uriHandler = LocalUriHandler.current
     SettingsItemCard(
@@ -113,18 +112,18 @@ fun SettingsBasicLinkItem(
         onClick = {
             if (link.isNotBlank()) {
                 uriHandler.openUri(link)
-            } else onClick()
+            }
         }
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 painter = painterResource(id = icon),
-                contentDescription = stringResource(id = title),
+                contentDescription = null,
                 modifier = Modifier.size(24.dp)
             )
             Spacer(Modifier.width(12.dp))
             Text(
-                text = stringResource(id = title),
+                text = title,
                 style = MaterialTheme.typography.bodyLarge,
             )
         }
@@ -208,13 +207,22 @@ fun SettingScreen(loginViewModel: LoginViewModel, mainViewModel: MainViewModel) 
             ClearLocalCacheItem(mainViewModel)
         }
         item {
+            SettingsBasicLinkItem(
+                title = "Github项目",
+                subtitle = "",
+                icon = R.drawable.ic_github,
+                link = "https://github.com/HFDLYS/BJTUselfService"
+            )
+        }
+
+        item {
             Button(
                 onClick = {
                     loginViewModel.logout()
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = "Logout", fontSize = 18.sp)
+                Text(text = "退出账号", fontSize = 18.sp)
             }
         }
     }
@@ -313,7 +321,14 @@ fun CheckForUpdateCard() {
                 updateMessage = release?.let {
                     val instant = Instant.parse(it.publishedAt)
                     val localDateTime = instant.atZone(ZoneId.systemDefault())
-                    "发布时间: ${localDateTime.format(DateTimeFormatter.ofPattern("yyyy年M月d日 HH:mm", Locale.getDefault()))}"
+                    "发布时间: ${
+                        localDateTime.format(
+                            DateTimeFormatter.ofPattern(
+                                "yyyy年M月d日 HH:mm",
+                                Locale.getDefault()
+                            )
+                        )
+                    }"
                 } ?: "检查失败，请稍后再试"
                 updateMarkdown = release?.body ?: ""
                 versionLatest = release?.tagName ?: ""
