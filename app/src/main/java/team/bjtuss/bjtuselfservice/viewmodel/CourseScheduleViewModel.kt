@@ -11,7 +11,7 @@ class CourseScheduleViewModel : BaseSyncViewModel<CourseEntity>(
     dataSyncManager = DefaultDataSyncManager<CourseEntity>(
         AppDatabase.getInstance().courseEntityDao()
     ) {
-        Pair(it.courseId, it.courseLocationIndex)
+        Pair(it.courseId, Pair(it.isCurrentSemester, it.courseLocationIndex))
     }
 ) {
 

@@ -398,7 +398,7 @@ fun CourseCell(
                     val backgroundColor = Color(
                         android.graphics.Color.parseColor(
                             Utils.generateRandomColor(
-                                it.courseName,
+                                it.courseId,
                                 isSystemInDarkTheme()
                             )
                         )
@@ -495,7 +495,7 @@ fun DetailedCourseInformationDialog(
                                 Color(
                                     android.graphics.Color.parseColor(
                                         Utils.generateRandomColor(
-                                            course.courseName,
+                                            course.courseId,
                                             isSystemInDarkTheme()
                                         )
                                     )

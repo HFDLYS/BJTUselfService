@@ -165,7 +165,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
                 modifier = Modifier.fillMaxSize()
             ) {
                 LazyColumn(
-                    modifier = Modifier.padding(8.dp),
+                    modifier = Modifier.padding(8.dp).fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     item {

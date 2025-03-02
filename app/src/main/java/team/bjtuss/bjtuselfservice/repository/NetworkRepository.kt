@@ -39,7 +39,7 @@ object NetworkRepository {
                 result
             } catch (e: Exception) {
                 Log.e("NetworkRepository", "Error fetching exam schedule list: ${e.message}")
-                studentAccountManager.examScheduleList ?: emptyList()
+                DatabaseRepository.getExamScheduleList()
             }
         }
         return result.getOrElse { emptyList() }
@@ -50,7 +50,7 @@ object NetworkRepository {
 
         val result = requestQueue.enqueue("getCourseList") {
             val courseListOfOneDim: MutableList<CourseEntity> = mutableListOf()
-
+            val preCourseList = DatabaseRepository.getCourseList();
             // 当前学期课程
             val currentTermCourses = try {
                 studentAccountManager.getCourseList(true).await()
@@ -74,15 +74,28 @@ object NetworkRepository {
                 }
             }
 
+            if (currentTermCourses.isEmpty()) {
+                for (course in preCourseList) {
+                    if (course.isCurrentSemester) {
+                        courseListOfOneDim.add(course)
+                    }
+                }
+            }
+
             nextTermCourses.forEach { termCourses ->
                 if (!termCourses.isNullOrEmpty()) {
                     courseListOfOneDim.addAll(termCourses)
                 }
             }
 
-            if (courseListOfOneDim.isEmpty()) {
-                throw Exception("Empty course list")
+            if (nextTermCourses.isEmpty()) {
+                for (course in preCourseList) {
+                    if (!course.isCurrentSemester) {
+                        courseListOfOneDim.add(course)
+                    }
+                }
             }
+
 
             courseListOfOneDim
         }
