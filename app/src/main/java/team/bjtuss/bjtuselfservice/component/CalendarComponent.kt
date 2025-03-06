@@ -128,7 +128,7 @@ fun getWeekNumberSinceStart(
 private fun WeekHeader(week: Week, daysOfWeek: List<DayOfWeek>, mainViewModel: MainViewModel) {
     Column(
         modifier = Modifier
-            .background(surface)
+            .background(surfaceContainer)
             .padding(vertical = 8.dp)
     ) {
         val firstDayOfWeek = week.days.first().date
@@ -484,7 +484,7 @@ private fun DayContent(
     Box(
         modifier = Modifier
             .aspectRatio(1f)
-            .background(surface)
+            .background(surfaceContainer)
             .clickable(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() },
@@ -530,7 +530,7 @@ private fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(surface)
+            .background(surfaceContainer)
             .padding(bottom = 8.dp)
     ) {
         for (dayOfWeek in daysOfWeek) {
