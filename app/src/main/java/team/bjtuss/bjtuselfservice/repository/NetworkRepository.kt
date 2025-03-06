@@ -46,8 +46,6 @@ object NetworkRepository {
     }
 
     suspend fun getCourseList(): List<CourseEntity> {
-
-
         val result = requestQueue.enqueue("getCourseList") {
             val courseListOfOneDim: MutableList<CourseEntity> = mutableListOf()
             val preCourseList = DatabaseRepository.getCourseList();
@@ -124,6 +122,8 @@ object NetworkRepository {
         }
         return result.getOrElse { emptyList() }
     }
+
+
 
 }
 

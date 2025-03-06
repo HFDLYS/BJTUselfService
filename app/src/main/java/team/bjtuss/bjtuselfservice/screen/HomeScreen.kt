@@ -122,7 +122,6 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
     // 刷新处理函数
     val handleRefresh = {
         if (!isRefreshing) {
-            isRefreshing = true
             mainViewModel.loadDataAndDetectChanges()
         }
     }
@@ -141,7 +140,10 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
             newMailCount = formatNewMailCount(status?.NewMailCount),
             navController = navController
         )
+        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
 
+            CalendarComponent(mainViewModel)
+        }
         Card(
             modifier = Modifier
                 .weight(1f)
@@ -157,7 +159,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
                 modifier = Modifier.padding(start = 16.dp, top = 8.dp)
             )
 
-            CalendarComponent(mainViewModel)
+
 
             SwipeRefresh(
                 state = refreshState,
@@ -165,7 +167,9 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
                 modifier = Modifier.fillMaxSize()
             ) {
                 LazyColumn(
-                    modifier = Modifier.padding(8.dp).fillMaxSize(),
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     item {

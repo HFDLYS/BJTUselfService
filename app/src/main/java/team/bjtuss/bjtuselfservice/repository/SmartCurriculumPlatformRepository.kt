@@ -2,6 +2,7 @@ package team.bjtuss.bjtuselfservice.repository
 
 
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -128,6 +129,7 @@ object SmartCurriculumPlatformRepository {
     }
 
     suspend fun getHomework(): List<HomeworkEntity> {
+
         return NetworkRequestQueue.enqueue("getHomework") {
             getHomeWorkListByHomeworkType(0)
         }.getOrElse { emptyList() }
@@ -145,6 +147,24 @@ object SmartCurriculumPlatformRepository {
         }.getOrElse { emptyList() }
     }
 
+    suspend fun getCurrentWeek(): Int {
+        val url = "http://123.121.147.7:88/ve/back/coursePlatform/course.shtml?method=getTimeList"
+        var request = Request.Builder()
+            .url(url)
+            .header("User-Agent", userAgent)
+            .build()
+
+        val type = Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
+        val adapter = moshi.adapter<Map<String, Any>>(type)
+
+        return withContext(Dispatchers.IO) {
+            val response = client.newCall(request).execute()
+            response.body?.string()?.let {
+                val jsonMap = adapter.fromJson(it)
+                (jsonMap?.get("weekCode") as String).toIntOrNull()
+            } ?: throw IOException("Response body is null")
+        }
+    }
 
     private suspend fun getHomeWorkListByHomeworkType(homeworkType: Int): List<HomeworkEntity> {
         val semesterFromJson = getSemesterTypeList()
@@ -174,7 +194,7 @@ object SmartCurriculumPlatformRepository {
                     openDate = homework.open_date,
                     status = homework.status,
                     submitCount = homework.submitCount,
-                    allCount = homework.allCount ,
+                    allCount = homework.allCount,
                     subStatus = homework.subStatus,
                     homeworkType = 0
                 )

@@ -19,7 +19,7 @@ class HomeworkViewModel :
     }
 
     override suspend fun fetchNetworkData(): List<HomeworkEntity> {
-        return SmartCurriculumPlatformRepository.getHomework()
+        return SmartCurriculumPlatformRepository.getHomework() + SmartCurriculumPlatformRepository.getCourseDesign() + SmartCurriculumPlatformRepository.getExperimentReport()
 
     }
 
