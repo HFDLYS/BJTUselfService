@@ -7,13 +7,11 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,10 +27,10 @@ import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,7 +39,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -54,17 +51,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import com.google.accompanist.swiperefresh.SwipeRefresh
-import com.google.accompanist.swiperefresh.SwipeRefreshIndicator
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
-import kotlinx.coroutines.delay
-import team.bjtuss.bjtuselfservice.R
 import team.bjtuss.bjtuselfservice.RouteManager
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.component.CalendarComponent
@@ -85,7 +78,6 @@ import kotlin.collections.component2
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
-    val studentAccountManager = StudentAccountManager.getInstance()
 
     // 使用 mutableStateOf 来追踪刷新状态
     var isRefreshing by remember { mutableStateOf(false) }
@@ -107,7 +99,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
 
     val gradeChangeList: List<DataChange<GradeEntity>> by mainViewModel.gradeViewModel.changeList.collectAsState()
     val courseChangeList: List<DataChange<CourseEntity>> by mainViewModel.courseScheduleViewModel.changeList.collectAsState()
-    val examScheduleChangeList: List<DataChange<ExamScheduleEntity>> by mainViewModel.examScheduleViewModel.changeList.collectAsState()
+    val examChangeList: List<DataChange<ExamScheduleEntity>> by mainViewModel.examScheduleViewModel.changeList.collectAsState()
     val homeworkChangeList: List<DataChange<HomeworkEntity>> by mainViewModel.homeworkViewModel.changeList.collectAsState()
     val homeworkList: List<HomeworkEntity> by mainViewModel.homeworkViewModel.homeworkList.collectAsState()
     val status by mainViewModel.statusViewModel.status.collectAsState()
@@ -119,6 +111,11 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
     var showHomeworkDialog by remember { mutableStateOf(false) }
     var showExamDialog by remember { mutableStateOf(false) }
 
+
+    val autoSyncGradeEnable by mainViewModel.settingViewModel.autoSyncGradeEnable.collectAsState()
+    val autoSyncHomeworkEnable by mainViewModel.settingViewModel.autoSyncHomeworkEnable.collectAsState()
+    val autoSyncScheduleEnable by mainViewModel.settingViewModel.autoSyncScheduleEnable.collectAsState()
+    val autoSyncExamEnable by mainViewModel.settingViewModel.autoSyncExamEnable.collectAsState()
     // 刷新处理函数
     val handleRefresh = {
         if (!isRefreshing) {
@@ -178,56 +175,73 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
 
                     // Grade Changes Section
                     if (gradeChangeList.isNotEmpty()) {
-                        item {
-                            ChangeSection(
-                                title = "成绩单变动",
-                                changes = gradeChangeList,
-                                onItemClick = { change ->
-                                    selectedGradeChange = change
-                                    showGradeDialog = true
-                                }
-                            )
+                        if (autoSyncGradeEnable) {
+                            mainViewModel.gradeViewModel.syncDataAndClearChange()
+                        } else {
+                            item {
+                                ChangeSection(
+                                    title = "成绩单变动",
+                                    changes = gradeChangeList,
+                                    onItemClick = { change ->
+                                        selectedGradeChange = change
+                                        showGradeDialog = true
+                                    }
+                                )
+                            }
                         }
                     }
 
                     // Course Changes Section
                     if (courseChangeList.isNotEmpty()) {
-                        item {
-                            ChangeSection(
-                                title = "课程表变动",
-                                changes = courseChangeList,
-                                onItemClick = { _ ->
-                                    navController.navigate(RouteManager.CourseSchedule)
-                                }
-                            )
+                        if (autoSyncScheduleEnable) {
+                            mainViewModel.courseScheduleViewModel.syncDataAndClearChange()
+                        } else {
+                            item {
+                                ChangeSection(
+                                    title = "课程表变动",
+                                    changes = courseChangeList,
+                                    onItemClick = { _ ->
+                                        navController.navigate(RouteManager.CourseSchedule)
+                                    }
+                                )
+                            }
                         }
                     }
 
-                    // Exam Schedule Changes Section
-                    if (examScheduleChangeList.isNotEmpty()) {
-                        item {
-                            ChangeSection(
-                                title = "考试安排变动",
-                                changes = examScheduleChangeList,
-                                onItemClick = { change ->
-                                    selectedExamChange = change
-                                    showExamDialog = true
-                                }
-                            )
+                    // Exam Changes Section
+                    if (examChangeList.isNotEmpty()) {
+                        if (autoSyncExamEnable) {
+                            mainViewModel.examScheduleViewModel.syncDataAndClearChange()
+                        } else {
+                            item {
+                                ChangeSection(
+                                    title = "考试安排变动",
+                                    changes = examChangeList,
+                                    onItemClick = { change ->
+                                        selectedExamChange = change
+                                        showExamDialog = true
+                                    }
+                                )
+                            }
                         }
+
                     }
 
                     // Homework Changes Section
                     if (homeworkChangeList.isNotEmpty()) {
-                        item {
-                            ChangeSection(
-                                title = "作业变动",
-                                changes = homeworkChangeList,
-                                onItemClick = { change ->
-                                    selectedHomeworkChange = change
-                                    showHomeworkDialog = true
-                                }
-                            )
+                        if (autoSyncHomeworkEnable) {
+                            mainViewModel.homeworkViewModel.syncDataAndClearChange()
+                        } else {
+                            item {
+                                ChangeSection(
+                                    title = "作业变动",
+                                    changes = homeworkChangeList,
+                                    onItemClick = { change ->
+                                        selectedHomeworkChange = change
+                                        showHomeworkDialog = true
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -356,15 +370,36 @@ fun MailButton(content: @Composable () -> Unit, navController: NavController) {
         onClick = {
             navController.navigate(RouteManager.Email)
         },
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        ),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
     ) {
-        Icon(
-            imageVector = Icons.Default.Email,
-            contentDescription = "New Mail",
-            tint = Color.Blue
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        content()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start
+        ) {
+            Icon(
+                imageVector = Icons.Default.Email,
+                contentDescription = "New Mail",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            content()
+            Spacer(modifier = Modifier.weight(1f))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "Open",
+                tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+            )
+        }
     }
 }
 
@@ -374,18 +409,37 @@ fun EcardButton(content: @Composable () -> Unit) {
     var showDialog by remember { mutableStateOf(false) }
 
     Button(
-        onClick = {
-            showDialog = true
-        },
-        modifier = Modifier.fillMaxWidth()
+        onClick = { showDialog = true },
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        ),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
     ) {
-        Icon(
-            imageVector = Icons.Default.AccountBalanceWallet,
-            contentDescription = "Ecard Balance",
-            tint = Color.Green
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        content()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start
+        ) {
+            Icon(
+                imageVector = Icons.Default.AccountBalanceWallet,
+                contentDescription = "Ecard Balance",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            content()
+            Spacer(modifier = Modifier.weight(1f))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "Open",
+                tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+            )
+        }
     }
 
     // 显示对话框
@@ -394,13 +448,18 @@ fun EcardButton(content: @Composable () -> Unit) {
             onDismissRequest = { showDialog = false },
             title = { Text("校园卡充值") },
             text = {
-                Text("请注意，接下来即将转跳“完美校园”app\n确保自己已安装哦☺️")
+                Text("请注意，接下来即将转跳完美校园app\n确保自己已安装哦☺️")
             },
             confirmButton = {
-                Button(onClick = {
-                    launchWanMeiCampusApp(context)
-                    showDialog = false
-                }) {
+                Button(
+                    onClick = {
+                        launchWanMeiCampusApp(context)
+                        showDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
                     Text("打开应用")
                 }
             },
@@ -426,25 +485,43 @@ fun shareToWeChat(context: Context) {
         Toast.makeText(context, "未找到“微信”app？？？？", Toast.LENGTH_LONG).show()
     }
 }
-
 @Composable
 fun NetButton(content: @Composable () -> Unit) {
     val context = LocalContext.current
     var showDialog by remember { mutableStateOf(false) }
 
     Button(
-        onClick = {
-            showDialog = true
-        },
-        modifier = Modifier.fillMaxWidth()
+        onClick = { showDialog = true },
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        ),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
     ) {
-        Icon(
-            imageVector = Icons.Default.Wifi,
-            contentDescription = "Net Balance",
-            tint = Color.Red
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        content()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start
+        ) {
+            Icon(
+                imageVector = Icons.Default.Wifi,
+                contentDescription = "Net Balance",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            content()
+            Spacer(modifier = Modifier.weight(1f))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "Open",
+                tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+            )
+        }
     }
 
     // 显示充值提醒对话框
@@ -456,10 +533,15 @@ fun NetButton(content: @Composable () -> Unit) {
                 Text("不好意思直接转跳微信成本还是太高，不过\n注意：以下操作需微信绑定学校企业号\n请分享至微信，后打开（莫吐槽🙏）哦")
             },
             confirmButton = {
-                Button(onClick = {
-                    shareToWeChat(context)
-                    showDialog = false
-                }) {
+                Button(
+                    onClick = {
+                        shareToWeChat(context)
+                        showDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
                     Text("分享至微信")
                 }
             },
@@ -471,6 +553,7 @@ fun NetButton(content: @Composable () -> Unit) {
         )
     }
 }
+
 
 // 尝试启动“完美校园”应用
 fun launchWanMeiCampusApp(context: Context) {

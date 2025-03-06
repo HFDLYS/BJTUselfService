@@ -7,7 +7,6 @@ import team.bjtuss.bjtuselfservice.repository.DatabaseRepository
 import team.bjtuss.bjtuselfservice.repository.NetworkRepository
 
 
-
 class GradeViewModel : BaseSyncViewModel<GradeEntity>(
     dataSyncManager = DefaultDataSyncManager<GradeEntity>(
         AppDatabase.getInstance().gradeEntityDao()

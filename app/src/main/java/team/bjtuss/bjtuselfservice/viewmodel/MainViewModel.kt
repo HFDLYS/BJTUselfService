@@ -10,6 +10,7 @@ class MainViewModel(
     val classroomViewModel: ClassroomViewModel,
     val homeworkViewModel: HomeworkViewModel,
     val statusViewModel: StatusViewModel,
+    val settingViewModel: SettingViewModel,
 ) : ViewModel() {
     fun loadDataAndDetectChanges() {
         gradeViewModel.loadDataAndDetectChanges()
@@ -34,7 +35,8 @@ class MainViewModelFactory(
     private val examScheduleViewModel: ExamScheduleViewModel,
     private val classroomViewModel: ClassroomViewModel,
     private val homeworkViewModel: HomeworkViewModel,
-    private val statusViewModel: StatusViewModel
+    private val statusViewModel: StatusViewModel,
+    private val settingViewModel: SettingViewModel
 ) : ViewModelProvider.Factory {
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -46,7 +48,8 @@ class MainViewModelFactory(
                 examScheduleViewModel,
                 classroomViewModel,
                 homeworkViewModel,
-                statusViewModel
+                statusViewModel,
+                settingViewModel
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

@@ -539,7 +539,7 @@ private fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
                 textAlign = TextAlign.Center,
                 text = dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
                 fontWeight = FontWeight.Medium,
-                color = if (dayOfWeek == LocalDate.now().dayOfWeek) primary else MaterialTheme.colorScheme.onSurface
+                color = onSurface,
             )
         }
     }

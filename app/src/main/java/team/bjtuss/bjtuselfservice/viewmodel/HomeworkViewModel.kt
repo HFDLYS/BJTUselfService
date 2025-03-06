@@ -16,6 +16,7 @@ class HomeworkViewModel :
 
     init {
         loadDataAndDetectChanges()
+
     }
 
     override suspend fun fetchNetworkData(): List<HomeworkEntity> {

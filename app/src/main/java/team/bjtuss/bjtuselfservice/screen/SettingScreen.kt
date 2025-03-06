@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +18,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -27,9 +28,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,25 +43,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import dev.jeziellago.compose.markdowntext.MarkdownText
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import team.bjtuss.bjtuselfservice.MainApplication.Companion.appContext
 import team.bjtuss.bjtuselfservice.R
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.database.AppDatabase
-import team.bjtuss.bjtuselfservice.repository.SettingsRepository
 import team.bjtuss.bjtuselfservice.repository.fetchLatestRelease
 import team.bjtuss.bjtuselfservice.viewmodel.LoginViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
@@ -68,94 +62,114 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 
-class SettingViewModel : ViewModel() {
-    private val _loginStatus = MutableStateFlow(false)
-    val loginStatus: StateFlow<Boolean> = _loginStatus.asStateFlow()
-
-    private val _credentials = MutableStateFlow<Pair<String?, String?>>(null to null)
-    val credentials: StateFlow<Pair<String?, String?>> = _credentials.asStateFlow()
-
-    init {
-        viewModelScope.launch {
-            SettingsRepository.getStoredCredentials().collect { storedCredentials ->
-                _credentials.value = storedCredentials
-                _loginStatus.value = !storedCredentials.first.isNullOrBlank()
-                        && !storedCredentials.second.isNullOrBlank()
-            }
-        }
-    }
-
-    fun getCredentials(): Pair<String?, String?> {
-        return runBlocking {
-            withContext(Dispatchers.IO) {
-                SettingsRepository.getStoredCredentials().first()
-            }
-        }
-    }
-
-    fun setCredentials(username: String, password: String) = viewModelScope.launch {
-        SettingsRepository.setCredentials(username, password)
-    }
-
-    fun clearCredentials() = viewModelScope.launch {
-        SettingsRepository.clearCredentials()
-    }
-
-}
-
-
 @Composable
 fun SettingScreen(loginViewModel: LoginViewModel, mainViewModel: MainViewModel) {
     val studentInfo = StudentAccountManager.getInstance().studentInfo
+    val settingViewModel = mainViewModel.settingViewModel
+
+    // Collect all settings states at once
+    val autoSyncGradeEnable by settingViewModel.autoSyncGradeEnable.collectAsState()
+    val autoSyncHomeworkEnable by settingViewModel.autoSyncHomeworkEnable.collectAsState()
+    val autoSyncScheduleEnable by settingViewModel.autoSyncScheduleEnable.collectAsState()
+    val autoSyncExamEnable by settingViewModel.autoSyncExamEnable.collectAsState()
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        contentPadding = PaddingValues(bottom = 16.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        contentPadding = PaddingValues(bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
             Text(
                 text = "设置",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold
+                ),
+                modifier = Modifier.padding(vertical = 16.dp)
             )
         }
+
+        // User profile section
         item {
-            SettingItemCard(
-                onClick = {},
-                content = {
-                    studentInfo.value?.let {
-                        Text(
-                            text = it.stuName,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                }
+            SettingItem(
+                title = studentInfo.value?.stuName ?: "未登录",
             )
         }
+
+        // App info section
         item {
-            CheckForUpdateSettingItemCard()
+            CheckForUpdateSettingItem()
         }
+
         item {
             ClearLocalCacheItem(mainViewModel)
         }
+
         item {
-            SettingLinkItem(
+            LinkSettingItem(
                 title = "Github项目",
-                subtitle = "",
+                subtitle = "查看源代码",
                 icon = R.drawable.ic_github,
                 link = "https://github.com/HFDLYS/BJTUselfService"
             )
         }
 
+        // Auto sync settings section
         item {
+            Text(
+                text = "自动同步设置",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+            )
+        }
+
+        // Auto sync toggle items
+        item {
+            SwitchSettingItem(
+                title = "自动同步成绩",
+                checked = autoSyncGradeEnable,
+                onCheckedChange = { settingViewModel.setGradeAutoSyncOption(it) }
+            )
+        }
+
+        item {
+            SwitchSettingItem(
+                title = "自动同步作业",
+                checked = autoSyncHomeworkEnable,
+                onCheckedChange = { settingViewModel.setHomeworkAutoSyncOption(it) }
+            )
+        }
+
+        item {
+            SwitchSettingItem(
+                title = "自动同步课表",
+                checked = autoSyncScheduleEnable,
+                onCheckedChange = { settingViewModel.setScheduleAutoSyncOption(it) }
+            )
+        }
+
+        item {
+            SwitchSettingItem(
+                title = "自动同步考试",
+                checked = autoSyncExamEnable,
+                onCheckedChange = { settingViewModel.setAutoSyncExamsEnable(it) }
+            )
+        }
+
+        // Logout button
+        item {
+            Spacer(modifier = Modifier.height(8.dp))
             Button(
-                onClick = {
-                    loginViewModel.logout()
-                },
-                modifier = Modifier.fillMaxWidth()
+                onClick = { loginViewModel.logout() },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Text(text = "退出账号", fontSize = 18.sp)
+                Text(
+                    text = "退出账号",
+                    fontSize = 16.sp,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
             }
         }
     }
@@ -169,15 +183,9 @@ fun ClearLocalCacheItem(mainViewModel: MainViewModel) {
 
     if (showConfirmationDialog) {
         AlertDialog(
-            onDismissRequest = {
-                showConfirmationDialog = false
-            },
-            title = {
-                Text(text = "确认清除本地数据？")
-            },
-            text = {
-                Text(text = "此操作将清除您所有本地数据且无法恢复，确定要继续吗？")
-            },
+            onDismissRequest = { showConfirmationDialog = false },
+            title = { Text(text = "确认清除本地数据？") },
+            text = { Text(text = "此操作将清除您所有本地数据且无法恢复，确定要继续吗？") },
             confirmButton = {
                 Button(
                     onClick = {
@@ -185,10 +193,12 @@ fun ClearLocalCacheItem(mainViewModel: MainViewModel) {
                         scope.launch {
                             isLoading = true
                             try {
-                                AppDatabase.getInstance().examScheduleEntityDao().deleteAll()
-                                AppDatabase.getInstance().gradeEntityDao().deleteAll()
-                                AppDatabase.getInstance().courseEntityDao().deleteAll()
-                                AppDatabase.getInstance().homeworkEntityDao().deleteAll()
+                                with(AppDatabase.getInstance()) {
+                                    examScheduleEntityDao().deleteAll()
+                                    gradeEntityDao().deleteAll()
+                                    courseEntityDao().deleteAll()
+                                    homeworkEntityDao().deleteAll()
+                                }
                                 mainViewModel.clearChange()
                             } catch (e: Exception) {
                                 e.printStackTrace()
@@ -203,121 +213,112 @@ fun ClearLocalCacheItem(mainViewModel: MainViewModel) {
             },
             dismissButton = {
                 TextButton(onClick = { showConfirmationDialog = false }) {
-                    Text("算乐")
+                    Text("取消")
                 }
             }
         )
     }
 
+    // Loading overlay
     if (isLoading) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.3f))
+                .background(Color.Black.copy(alpha = 0.5f))
                 .clickable(enabled = false) {},
             contentAlignment = Alignment.Center
         ) {
-            CircularProgressIndicator()
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator(
+                    color = MaterialTheme.colorScheme.primary,
+                    strokeWidth = 4.dp
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "正在清除数据...",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
         }
     }
 
-    SettingItemCard(
-        onClick = {
-            showConfirmationDialog = true
-        },
-        content = {
-            Text(
-                text = "清除本地数据",
-                style = MaterialTheme.typography.bodyLarge
-            )
-        }
+    SettingItem(
+        title = "清除本地数据",
+        icon = R.drawable.ic_github, // Replace with trash/delete icon
+        onClick = { showConfirmationDialog = true }
     )
 }
 
-
 @Composable
-fun SettingItemCard(
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit = {},
-    content: @Composable RowScope.() -> Unit,
-) {
-    val cornerRadius: Dp = 16.dp
-    val hPadding: Dp = 12.dp
-    val vPadding: Dp = 14.dp
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp),
-        shape = RoundedCornerShape(cornerRadius),
-        elevation = CardDefaults.elevatedCardElevation(
-            6.dp
-        )
-    ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .clickable { onClick() }
-                .padding(horizontal = hPadding, vertical = vPadding),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            content = content
-        )
-    }
-}
-
-@Composable
-fun SettingItemCard(
+fun SettingItem(
     title: String,
     subtitle: String = "",
     icon: Int? = null,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
 ) {
-    val cornerRadius: Dp = 16.dp
-    val hPadding: Dp = 12.dp
-    val vPadding: Dp = 14.dp
+    SettingItemBase(
+        modifier = modifier,
+        onClick = onClick
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            icon?.let {
+                Icon(
+                    painter = painterResource(id = it),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.width(16.dp))
+            }
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                if (subtitle.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingItemBase(
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
+    content: @Composable () -> Unit,
+) {
     Card(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp),
-        shape = RoundedCornerShape(cornerRadius),
-        elevation = CardDefaults.elevatedCardElevation(
-            6.dp
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
-        Row(
+        Box(
             Modifier
                 .fillMaxWidth()
                 .clickable { onClick() }
-                .padding(horizontal = hPadding, vertical = vPadding),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .padding(16.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                icon?.let {
-                    Icon(
-                        painter = painterResource(id = it),
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(Modifier.width(12.dp))
-                }
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            }
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            content()
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingLinkItem(
+fun LinkSettingItem(
     title: String,
     subtitle: String = "",
     icon: Int? = null,
@@ -325,18 +326,51 @@ fun SettingLinkItem(
 ) {
     val uriHandler = LocalUriHandler.current
 
-    SettingItemCard(title = title, subtitle = subtitle, icon = icon) {
-        if (link.isNotBlank()) {
-            uriHandler.openUri(link)
+    SettingItemBase(
+        onClick = { if (link.isNotBlank()) uriHandler.openUri(link) }
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                icon?.let {
+                    Icon(
+                        painter = painterResource(id = it),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(16.dp))
+                }
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    if (subtitle.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+            Icon(
+                painter = painterResource(id = R.drawable.ic_github), // Replace with arrow icon
+                contentDescription = "Open Link",
+                tint = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }
 
-
 @Composable
-fun CheckForUpdateSettingItemCard() {
-    val versionName =
-        appContext.packageManager.getPackageInfo(appContext.packageName, 0).versionName
+fun CheckForUpdateSettingItem() {
+    val versionName = appContext.packageManager.getPackageInfo(appContext.packageName, 0).versionName
     var versionLatest by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     var showDialog by remember { mutableStateOf(false) }
@@ -345,32 +379,63 @@ fun CheckForUpdateSettingItemCard() {
     var updateMarkdown by remember { mutableStateOf("") }
     var downloadUrl by remember { mutableStateOf<String?>(null) }
 
-    SettingItemCard(title = "检查更新", subtitle = versionName, icon = R.drawable.ic_code) {
-        showDialog = true
-        scope.launch {
-            isChecking = true
-            val release = fetchLatestRelease()
-            updateMessage = release?.let {
-                val instant = Instant.parse(it.publishedAt)
-                val localDateTime = instant.atZone(ZoneId.systemDefault())
-                "发布时间: ${
-                    localDateTime.format(
-                        DateTimeFormatter.ofPattern(
-                            "yyyy年M月d日 HH:mm",
-                            Locale.getDefault()
-                        )
-                    )
-                }"
-            } ?: "检查失败，请稍后再试"
-            updateMarkdown = release?.body ?: ""
-            versionLatest = release?.tagName ?: ""
-            downloadUrl = release?.htmlUrl
-            isChecking = false
+    SettingItemBase(
+        onClick = {
+            showDialog = true
+            scope.launch {
+                isChecking = true
+                try {
+                    val release = fetchLatestRelease()
+                    release?.let {
+                        val instant = Instant.parse(it.publishedAt)
+                        val localDateTime = instant.atZone(ZoneId.systemDefault())
+                        updateMessage = "发布时间: ${
+                            localDateTime.format(
+                                DateTimeFormatter.ofPattern(
+                                    "yyyy年M月d日 HH:mm",
+                                    Locale.getDefault()
+                                )
+                            )
+                        }"
+                        updateMarkdown = it.body ?: ""
+                        versionLatest = it.tagName ?: ""
+                        downloadUrl = it.htmlUrl
+                    } ?: run {
+                        updateMessage = "检查失败，请稍后再试"
+                    }
+                } catch (e: Exception) {
+                    updateMessage = "检查失败: ${e.message}"
+                } finally {
+                    isChecking = false
+                }
+            }
         }
-
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_code),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.width(16.dp))
+                Text(
+                    text = "检查更新",
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+            Text(
+                text = "当前版本: $versionName",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+        }
     }
-
-
 
     if (showDialog) {
         AlertDialog(
@@ -403,44 +468,70 @@ fun CheckForUpdateSettingItemCard() {
                 if (isChecking) {
                     Box(
                         modifier = Modifier
-                            .width(100.dp)
-                            .height(100.dp)
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        RotatingImageLoader(
-                            image = painterResource(id = R.drawable.loading_icon),
-                            rotationDuration = 1000,
-                            modifier = Modifier.align(Alignment.Center)
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator()
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("正在检查更新...")
+                        }
                     }
                 } else {
                     Column {
                         if (versionLatest.isNotEmpty() && (versionName < versionLatest)) {
                             Text(
-                                "发现新版本${versionLatest}！",
-                                style = MaterialTheme.typography.bodyLarge.copy(
-                                    color = MaterialTheme.colorScheme.primary
+                                "发现新版本 $versionLatest",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
                                 )
                             )
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 updateMessage,
                                 style = MaterialTheme.typography.bodyLarge
                             )
-                            LazyColumn {
-                                item {
-                                    MarkdownText(
-                                        markdown = updateMarkdown
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.surfaceVariant,
+                                        RoundedCornerShape(8.dp)
                                     )
+                                    .padding(12.dp)
+                            ) {
+                                LazyColumn {
+                                    item {
+                                        MarkdownText(
+                                            markdown = updateMarkdown
+                                        )
+                                    }
                                 }
                             }
                         } else {
                             Text(
-                                "最新版本：${versionLatest}！",
-                                style = MaterialTheme.typography.bodyMedium
+                                "当前版本: $versionName",
+                                style = MaterialTheme.typography.titleLarge
                             )
-                            Text(
-                                updateMessage,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
+                            if (versionLatest.isNotEmpty()) {
+                                Text(
+                                    "最新版本: $versionLatest",
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "您已经使用最新版本!",
+                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(updateMessage)
                         }
                     }
                 }
@@ -449,3 +540,54 @@ fun CheckForUpdateSettingItemCard() {
         )
     }
 }
+
+@Composable
+fun SwitchSettingItem(
+    title: String,
+    subtitle: String = "",
+    icon: Int? = null,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit = {}
+) {
+    SettingItemBase {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                icon?.let {
+                    Icon(
+                        painter = painterResource(id = it),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(16.dp))
+                }
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    if (subtitle.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange
+            )
+        }
+    }
+}
+
+
+
+

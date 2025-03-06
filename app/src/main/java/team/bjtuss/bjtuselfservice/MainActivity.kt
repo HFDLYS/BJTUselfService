@@ -88,6 +88,7 @@ import team.bjtuss.bjtuselfservice.viewmodel.LoginViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModelFactory
 import team.bjtuss.bjtuselfservice.viewmodel.ScreenStatus
+import team.bjtuss.bjtuselfservice.viewmodel.SettingViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.StatusViewModel
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService
 import java.time.Instant
@@ -128,7 +129,8 @@ class MainActivity : ComponentActivity() {
 @SuppressLint("CoroutineCreationDuringComposition")
 @Composable
 fun CheckForUpdate() {
-    val versionName = appContext.packageManager.getPackageInfo(appContext.packageName, 0).versionName
+    val versionName =
+        appContext.packageManager.getPackageInfo(appContext.packageName, 0).versionName
     var versionLatest by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     var showDialog by remember { mutableStateOf(false) }
@@ -144,7 +146,14 @@ fun CheckForUpdate() {
         updateMessage = release?.let {
             val instant = Instant.parse(it.publishedAt)
             val localDateTime = instant.atZone(ZoneId.systemDefault())
-            "发布时间: ${localDateTime.format(DateTimeFormatter.ofPattern("yyyy年M月d日 HH:mm", Locale.getDefault()))}"
+            "发布时间: ${
+                localDateTime.format(
+                    DateTimeFormatter.ofPattern(
+                        "yyyy年M月d日 HH:mm",
+                        Locale.getDefault()
+                    )
+                )
+            }"
         } ?: "检查失败，请稍后再试"
         updateMarkdown = release?.body ?: ""
         versionLatest = release?.tagName ?: ""
@@ -211,6 +220,7 @@ fun App(loginViewModel: LoginViewModel) {
     val examScheduleViewModel: ExamScheduleViewModel = viewModel()
     val homeworkViewModel: HomeworkViewModel = viewModel()
     val statusViewModel: StatusViewModel = viewModel()
+    val settingViewModel: SettingViewModel = viewModel()
     val mainViewModel: MainViewModel = viewModel(
         factory = MainViewModelFactory(
             gradeViewModel,
@@ -218,9 +228,14 @@ fun App(loginViewModel: LoginViewModel) {
             examScheduleViewModel,
             classroomViewModel,
             homeworkViewModel,
-            statusViewModel
+            statusViewModel,
+            settingViewModel
         )
     )
+
+
+
+
 
     NavHost(navController = navController,
         startDestination = RouteManager.Navigation,
