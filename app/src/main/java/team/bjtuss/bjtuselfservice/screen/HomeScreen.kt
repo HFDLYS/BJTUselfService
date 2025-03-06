@@ -137,115 +137,110 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
             newMailCount = formatNewMailCount(status?.NewMailCount),
             navController = navController
         )
-        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
 
-            CalendarComponent(mainViewModel)
-        }
-        Card(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp)
+
+        CalendarComponent(mainViewModel)
+
+
+        Text(
+            text = "ATTENTION!!!",
+            style = MaterialTheme.typography.headlineMedium.copy(
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+            ),
+            modifier = Modifier.padding(start = 16.dp, top = 8.dp)
+        )
+
+
+
+        SwipeRefresh(
+            state = refreshState,
+            onRefresh = handleRefresh,
+            modifier = Modifier.fillMaxSize()
         ) {
-            Text(
-                text = "ATTENTION!!!",
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                ),
-                modifier = Modifier.padding(start = 16.dp, top = 8.dp)
-            )
-
-
-
-            SwipeRefresh(
-                state = refreshState,
-                onRefresh = handleRefresh,
-                modifier = Modifier.fillMaxSize()
+            LazyColumn(
+                modifier = Modifier
+                    .padding(8.dp)
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                LazyColumn(
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    item {
-                        HomeworkNoticeCard(homeworkList, navController)
-                    }
+                item {
+                    HomeworkNoticeCard(homeworkList, navController)
+                }
 
-                    // Grade Changes Section
-                    if (gradeChangeList.isNotEmpty()) {
-                        if (autoSyncGradeEnable) {
-                            mainViewModel.gradeViewModel.syncDataAndClearChange()
-                        } else {
-                            item {
-                                ChangeSection(
-                                    title = "成绩单变动",
-                                    changes = gradeChangeList,
-                                    onItemClick = { change ->
-                                        selectedGradeChange = change
-                                        showGradeDialog = true
-                                    }
-                                )
-                            }
+                // Grade Changes Section
+                if (gradeChangeList.isNotEmpty()) {
+                    if (autoSyncGradeEnable) {
+                        mainViewModel.gradeViewModel.syncDataAndClearChange()
+                    } else {
+                        item {
+                            ChangeSection(
+                                title = "成绩单变动",
+                                changes = gradeChangeList,
+                                onItemClick = { change ->
+                                    selectedGradeChange = change
+                                    showGradeDialog = true
+                                }
+                            )
+                        }
+                    }
+                }
+
+                // Course Changes Section
+                if (courseChangeList.isNotEmpty()) {
+                    if (autoSyncScheduleEnable) {
+                        mainViewModel.courseScheduleViewModel.syncDataAndClearChange()
+                    } else {
+                        item {
+                            ChangeSection(
+                                title = "课程表变动",
+                                changes = courseChangeList,
+                                onItemClick = { _ ->
+                                    navController.navigate(RouteManager.CourseSchedule)
+                                }
+                            )
+                        }
+                    }
+                }
+
+                // Exam Changes Section
+                if (examChangeList.isNotEmpty()) {
+                    if (autoSyncExamEnable) {
+                        mainViewModel.examScheduleViewModel.syncDataAndClearChange()
+                    } else {
+                        item {
+                            ChangeSection(
+                                title = "考试安排变动",
+                                changes = examChangeList,
+                                onItemClick = { change ->
+                                    selectedExamChange = change
+                                    showExamDialog = true
+                                }
+                            )
                         }
                     }
 
-                    // Course Changes Section
-                    if (courseChangeList.isNotEmpty()) {
-                        if (autoSyncScheduleEnable) {
-                            mainViewModel.courseScheduleViewModel.syncDataAndClearChange()
-                        } else {
-                            item {
-                                ChangeSection(
-                                    title = "课程表变动",
-                                    changes = courseChangeList,
-                                    onItemClick = { _ ->
-                                        navController.navigate(RouteManager.CourseSchedule)
-                                    }
-                                )
-                            }
-                        }
-                    }
+                }
 
-                    // Exam Changes Section
-                    if (examChangeList.isNotEmpty()) {
-                        if (autoSyncExamEnable) {
-                            mainViewModel.examScheduleViewModel.syncDataAndClearChange()
-                        } else {
-                            item {
-                                ChangeSection(
-                                    title = "考试安排变动",
-                                    changes = examChangeList,
-                                    onItemClick = { change ->
-                                        selectedExamChange = change
-                                        showExamDialog = true
-                                    }
-                                )
-                            }
-                        }
-
-                    }
-
-                    // Homework Changes Section
-                    if (homeworkChangeList.isNotEmpty()) {
-                        if (autoSyncHomeworkEnable) {
-                            mainViewModel.homeworkViewModel.syncDataAndClearChange()
-                        } else {
-                            item {
-                                ChangeSection(
-                                    title = "作业变动",
-                                    changes = homeworkChangeList,
-                                    onItemClick = { change ->
-                                        selectedHomeworkChange = change
-                                        showHomeworkDialog = true
-                                    }
-                                )
-                            }
+                // Homework Changes Section
+                if (homeworkChangeList.isNotEmpty()) {
+                    if (autoSyncHomeworkEnable) {
+                        mainViewModel.homeworkViewModel.syncDataAndClearChange()
+                    } else {
+                        item {
+                            ChangeSection(
+                                title = "作业变动",
+                                changes = homeworkChangeList,
+                                onItemClick = { change ->
+                                    selectedHomeworkChange = change
+                                    showHomeworkDialog = true
+                                }
+                            )
                         }
                     }
                 }
             }
+
         }
     }
 
@@ -341,27 +336,24 @@ fun StatusInfo(
     newMailCount: String,
     navController: NavController
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+
+    Column(
+        modifier = Modifier.padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                MailButton({
-                    Text(newMailCount, fontSize = 18.sp)
-                }, navController)
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                EcardButton({ Text(ecardBalance, fontSize = 18.sp) })
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                NetButton({ Text(netBalance, fontSize = 18.sp) })
-            }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            MailButton({
+                Text(newMailCount, fontSize = 18.sp)
+            }, navController)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            EcardButton({ Text(ecardBalance, fontSize = 18.sp) })
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            NetButton({ Text(netBalance, fontSize = 18.sp) })
         }
     }
+
 }
 
 @Composable
@@ -485,6 +477,7 @@ fun shareToWeChat(context: Context) {
         Toast.makeText(context, "未找到“微信”app？？？？", Toast.LENGTH_LONG).show()
     }
 }
+
 @Composable
 fun NetButton(content: @Composable () -> Unit) {
     val context = LocalContext.current
