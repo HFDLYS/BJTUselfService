@@ -691,7 +691,7 @@ fun FunctionCard(
                     }
                 )
             },
-
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )

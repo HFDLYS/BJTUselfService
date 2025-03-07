@@ -13,11 +13,11 @@ class MainViewModel(
     val settingViewModel: SettingViewModel,
 ) : ViewModel() {
     fun loadDataAndDetectChanges() {
+        statusViewModel.loadData()
         gradeViewModel.loadDataAndDetectChanges()
         courseScheduleViewModel.loadDataAndDetectChanges()
         examScheduleViewModel.loadDataAndDetectChanges()
         homeworkViewModel.loadDataAndDetectChanges()
-        statusViewModel.loadData()
     }
 
     fun clearChange() {
