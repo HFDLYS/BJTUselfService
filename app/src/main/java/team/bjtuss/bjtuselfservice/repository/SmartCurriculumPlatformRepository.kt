@@ -42,7 +42,6 @@ object SmartCurriculumPlatformRepository {
         CoroutineScope(Dispatchers.IO).launch {
             client.newCall(request1).execute()
             client.newCall(request2).execute()
-            OtherFunctionNetworkRepository.downloadSchoolCalendar()
         }
 
     }

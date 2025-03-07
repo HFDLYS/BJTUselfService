@@ -11,8 +11,9 @@ object DownloadUtil {
     private val downloadManager =
         MainApplication.appContext.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
 
-    fun downloadFile(url: String, Cookie: String? = null) {
+    fun downloadFile(url: String, title: String? = null, Cookie: String? = null) {
         val request = DownloadManager.Request(Uri.parse(url)).apply {
+            setTitle(title ?: "下载文件")
             setDescription("正在下载文件")
             setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             setAllowedOverMetered(true)
