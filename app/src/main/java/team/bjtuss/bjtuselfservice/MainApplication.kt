@@ -1,6 +1,7 @@
 package team.bjtuss.bjtuselfservice
 
 import android.app.Application
+import android.app.DownloadManager
 import android.content.Context
 import dagger.hilt.android.HiltAndroidApp
 
@@ -14,5 +15,6 @@ class MainApplication : Application() {
     companion object {
         lateinit var appContext: Context
             private set
+
     }
 }
