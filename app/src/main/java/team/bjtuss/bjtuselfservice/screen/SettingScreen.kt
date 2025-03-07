@@ -245,7 +245,6 @@ fun ClearLocalCacheItem(mainViewModel: MainViewModel) {
 
     SettingItem(
         title = "清除本地数据",
-        icon = R.drawable.ic_github, // Replace with trash/delete icon
         onClick = { showConfirmationDialog = true }
     )
 }
@@ -359,11 +358,7 @@ fun LinkSettingItem(
                     }
                 }
             }
-            Icon(
-                painter = painterResource(id = R.drawable.ic_github), // Replace with arrow icon
-                contentDescription = "Open Link",
-                tint = MaterialTheme.colorScheme.primary
-            )
+
         }
     }
 }

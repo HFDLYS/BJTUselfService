@@ -14,16 +14,14 @@ import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
 import team.bjtuss.bjtuselfservice.jsonclass.CourseJsonType
 import team.bjtuss.bjtuselfservice.jsonclass.HomeworkJsonType
 import team.bjtuss.bjtuselfservice.jsonclass.SemesterJsonType
+import team.bjtuss.bjtuselfservice.utils.KotlinUtils
 import java.io.IOException
 
 
 object SmartCurriculumPlatformRepository {
-    private val client = StudentAccountManager.getInstance().client
-    private val userAgent =
-        "User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0',"
-    private val moshi = Moshi.Builder()
-        .add(KotlinJsonAdapterFactory())
-        .build()
+    val client = StudentAccountManager.getInstance().client
+    private val userAgent = StudentAccountManager.getInstance().userAgent
+    val moshi = KotlinUtils.moshi
 
     init {
         initClient()
@@ -44,7 +42,9 @@ object SmartCurriculumPlatformRepository {
         CoroutineScope(Dispatchers.IO).launch {
             client.newCall(request1).execute()
             client.newCall(request2).execute()
+            OtherFunctionNetworkRepository.downloadSchoolCalendar()
         }
+
     }
 
 

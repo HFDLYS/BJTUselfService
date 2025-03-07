@@ -65,6 +65,7 @@ import dev.jeziellago.compose.markdowntext.MarkdownText
 import kotlinx.coroutines.launch
 import team.bjtuss.bjtuselfservice.MainApplication.Companion.appContext
 import team.bjtuss.bjtuselfservice.RouteManager.ClassroomDetection
+import team.bjtuss.bjtuselfservice.repository.OtherFunctionNetworkRepository
 import team.bjtuss.bjtuselfservice.repository.fetchLatestRelease
 import team.bjtuss.bjtuselfservice.screen.BuildingScreen
 import team.bjtuss.bjtuselfservice.screen.ClassroomScreen
@@ -75,6 +76,7 @@ import team.bjtuss.bjtuselfservice.screen.GradeScreen
 import team.bjtuss.bjtuselfservice.screen.HomeScreen
 import team.bjtuss.bjtuselfservice.screen.HomeworkScreen
 import team.bjtuss.bjtuselfservice.screen.LoginScreen
+import team.bjtuss.bjtuselfservice.screen.OtherFunctionScreen
 import team.bjtuss.bjtuselfservice.screen.RotatingImageLoader
 import team.bjtuss.bjtuselfservice.screen.SettingScreen
 import team.bjtuss.bjtuselfservice.screen.SpaceScreen
@@ -271,6 +273,9 @@ fun App(loginViewModel: LoginViewModel) {
         composable(RouteManager.HomeWork) {
             HomeworkScreen(mainViewModel)
         }
+        composable(RouteManager.OtherFunction){
+            OtherFunctionScreen()
+        }
 
     }
 
@@ -290,11 +295,11 @@ object RouteManager {
     const val ExamSchedule: String = "Exam"
     const val Building: String = "Building"
     const val ClassroomDetection: String = "ClassroomDetection/{buildingName}"
-    const val BJTUMiaoMiaoHouse: String = "BJTUMiaoMiaoHouse"
     const val Grade: String = "Grade"
     const val CourseSchedule: String = "CourseSchedule"
     const val Email: String = "Email"
     const val HomeWork: String = "HomeWork"
+    const val OtherFunction: String = "OtherFunction"
 }
 
 @Composable

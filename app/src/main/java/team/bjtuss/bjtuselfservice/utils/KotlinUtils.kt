@@ -1,5 +1,8 @@
 package team.bjtuss.bjtuselfservice.utils
 
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+
 /**
  * 比较两个对象的所有属性，返回值不相同的属性及其值
  * @param obj1 第一个对象
@@ -7,6 +10,10 @@ package team.bjtuss.bjtuselfservice.utils
  * @return 包含不同属性的Map，key为属性名，value为包含两个对象该属性值的Pair
  */
 object KotlinUtils {
+    val moshi = Moshi.Builder()
+        .add(KotlinJsonAdapterFactory())
+        .build()
+
     @JvmStatic
     fun getDifferentFields(obj1: Any?, obj2: Any?): Map<String, Pair<Any?, Any?>> {
         // 参数校验

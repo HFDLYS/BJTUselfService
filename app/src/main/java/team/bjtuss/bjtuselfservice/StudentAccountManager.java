@@ -33,6 +33,9 @@ public class StudentAccountManager {
 
     private boolean isXsmisLogin = false;
 
+    public final String userAgent =
+            "User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0',";
+
     private StudentAccountManager() {
         gradeMap = new java.util.HashMap<>();
         courseListMap = new java.util.HashMap<>();
@@ -125,9 +128,9 @@ public class StudentAccountManager {
                         ? attemptAaLogin()
                         : attemptInitAndLogin()
                         .thenCompose(
-                        isLoginMis -> isLoginMis
-                                ? attemptAaLogin()
-                                : CompletableFuture.completedFuture(false)
+                                isLoginMis -> isLoginMis
+                                        ? attemptAaLogin()
+                                        : CompletableFuture.completedFuture(false)
                         )
                 )
                 .exceptionally(ex -> {
@@ -262,6 +265,7 @@ public class StudentAccountManager {
     }
 
     public List<ExamScheduleEntity> examScheduleList;
+
     public CompletableFuture<List<ExamScheduleEntity>> getExamSchedule() {
         CompletableFuture<List<ExamScheduleEntity>> Future = new CompletableFuture<>();
         if (isAaLogin) {
@@ -311,6 +315,7 @@ public class StudentAccountManager {
     }
 
     public Map<Boolean, List<List<CourseEntity>>> courseListMap;
+
     public CompletableFuture<List<List<CourseEntity>>> getCourseList(boolean isCurrentTerm) {
         CompletableFuture<List<List<CourseEntity>>> Future = new CompletableFuture<>();
         checkIsLogin().thenAccept(isLogin -> {
