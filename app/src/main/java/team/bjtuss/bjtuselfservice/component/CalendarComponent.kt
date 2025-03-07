@@ -48,8 +48,6 @@ import com.kizitonwose.calendar.compose.WeekCalendar
 import com.kizitonwose.calendar.compose.weekcalendar.rememberWeekCalendarState
 import com.kizitonwose.calendar.core.Week
 import com.kizitonwose.calendar.core.daysOfWeek
-import com.kizitonwose.calendar.core.yearMonth
-import team.bjtuss.bjtuselfservice.background
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
 import team.bjtuss.bjtuselfservice.onSurface
@@ -77,11 +75,14 @@ import java.util.Locale
 @Composable
 fun CalendarComponent(mainViewModel: MainViewModel) {
     val currentDate = LocalDate.now()
+    val currentWeek by mainViewModel.statusViewModel.currentWeek.collectAsState()
     val state = rememberWeekCalendarState(
-        startDate = currentDate.minusDays(100),
-        endDate = currentDate.plusDays(100),
-        firstVisibleWeekDate = currentDate
+        startDate = currentDate.minusWeeks(currentWeek.toLong() - 1),
+        endDate = currentDate.plusWeeks(53),
+        firstVisibleWeekDate = currentDate,
+        firstDayOfWeek = DayOfWeek.MONDAY
     )
+    val daysOfWeek = remember { daysOfWeek(firstDayOfWeek = DayOfWeek.MONDAY) }
 
     val homeworkList = mainViewModel.homeworkViewModel.homeworkList.collectAsState()
     val examList = mainViewModel.examScheduleViewModel.examScheduleList.collectAsState()
@@ -93,14 +94,13 @@ fun CalendarComponent(mainViewModel: MainViewModel) {
             .border(1.dp, color = secondary, shape = RoundedCornerShape(16.dp))
             .background(surface.copy(alpha = 0.9f))
     ) {
-        val daysOfWeek = remember { daysOfWeek() }
         WeekCalendar(
             state = state,
             dayContent = { weekDay ->
                 Day(weekDay.date, homeworkList.value, examList.value)
             },
             weekHeader = { week ->
-                WeekHeader(week = week, daysOfWeek = daysOfWeek, mainViewModel = mainViewModel)
+                WeekHeader(week = week, daysOfWeek = daysOfWeek, currentWeek)
             }
         )
     }
@@ -116,7 +116,7 @@ fun getWeekNumberSinceStart(
     startOfWeek: DayOfWeek = DayOfWeek.MONDAY
 ): Int {
     val currentWeekStart = currentDate.with(TemporalAdjusters.previousOrSame(startOfWeek))
-    val targetWeekStart = targetDate.with(TemporalAdjusters.previousOrSame(startOfWeek))
+    val targetWeekStart = targetDate
     val weeksBetween = ChronoUnit.WEEKS.between(currentWeekStart, targetWeekStart).toInt()
     return currentWeek + weeksBetween
 }
@@ -125,16 +125,15 @@ fun getWeekNumberSinceStart(
  * Header component displaying week information and days of week
  */
 @Composable
-private fun WeekHeader(week: Week, daysOfWeek: List<DayOfWeek>, mainViewModel: MainViewModel) {
+private fun WeekHeader(week: Week, daysOfWeek: List<DayOfWeek>, currentWeek: Int) {
     Column(
         modifier = Modifier
             .background(surfaceContainer)
             .padding(vertical = 8.dp)
     ) {
-        val firstDayOfWeek = week.days.first().date
-        val currentWeek = mainViewModel.statusViewModel.currentWeek.collectAsState()
+        val firstDayOfWeek = week.days[0].date
         val weekNumber = getWeekNumberSinceStart(
-            currentWeek.value,
+            currentWeek,
             LocalDate.now(),
             firstDayOfWeek,
         )
