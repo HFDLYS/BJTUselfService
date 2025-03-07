@@ -12,4 +12,4 @@
 
 ## 鸣谢
 
-感谢https://github.com/10086mea/nimisora-homowork-notify/项目提供的邮箱订阅功能
+感谢[**[nimisora-homowork-notify](https://github.com/10086mea/nimisora-homowork-notify)**](https://github.com/10086mea/nimisora-homowork-notify/)项目提供的邮箱订阅功能
