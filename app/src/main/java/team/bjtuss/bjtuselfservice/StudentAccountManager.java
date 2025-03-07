@@ -4,10 +4,16 @@ package team.bjtuss.bjtuselfservice;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.MutableLiveData;
 
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 import okhttp3.OkHttpClient;
 import team.bjtuss.bjtuselfservice.entity.CourseEntity;
@@ -22,9 +28,26 @@ public class StudentAccountManager {
     private final MutableLiveData<Boolean> isAaLoginLiveData = new MutableLiveData<>(false);
     private final MutableLiveData<Boolean> isMisLoginLiveData = new MutableLiveData<>(false);
     // 永续cookie的客户端
-    public OkHttpClient client = new OkHttpClient.Builder()
-            .cookieJar(new Network.InMemoryCookieJar())
-            .build();
+    private final TrustManager[] trustAllCerts = new TrustManager[]{
+            new X509TrustManager() {
+                @Override
+                public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) {
+                }
+
+                @Override
+                public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType) {
+                }
+
+                @Override
+                public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                    return new java.security.cert.X509Certificate[]{};
+                }
+            }
+    };
+
+    //    private final javax.net.ssl.SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
+    public OkHttpClient client;
+    private OkHttpClient.Builder builder;
     private StudentInfo stuInfo;
     private String stuId = null;
     private String password = null;
@@ -40,6 +63,42 @@ public class StudentAccountManager {
         gradeMap = new java.util.HashMap<>();
         courseListMap = new java.util.HashMap<>();
         examScheduleList = new ArrayList<>();
+
+        TrustManager[] trustAllCerts = new TrustManager[]{
+                new X509TrustManager() {
+                    @Override
+                    public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) {
+                    }
+
+                    @Override
+                    public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType) {
+                    }
+
+                    @Override
+                    public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                        return new java.security.cert.X509Certificate[]{};
+                    }
+                }
+        };
+        SSLContext sslContext = null;
+        try {
+            sslContext = SSLContext.getInstance("SSL");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+        try {
+            sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
+        } catch (KeyManagementException e) {
+            throw new RuntimeException(e);
+        }
+
+        builder = new OkHttpClient.Builder()
+                .sslSocketFactory(sslContext.getSocketFactory(), (X509TrustManager) trustAllCerts[0])
+                .hostnameVerifier((hostname, session) -> true)
+                .cookieJar(new Network.InMemoryCookieJar());
+
+        client = builder.build();
+
     }
 
     // 单例模式
@@ -110,9 +169,7 @@ public class StudentAccountManager {
     }
 
     public void clearCookie() {
-        client = new OkHttpClient.Builder()
-                .cookieJar(new Network.InMemoryCookieJar()) // 使用新的空的cookieJar
-                .build();
+        client = builder.build();
     }
 
     private void setStudentInfoFromCode(String code, String stuId) {
