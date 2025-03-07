@@ -129,7 +129,7 @@ fun OtherFunctionScreen() {
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "英文版",
+                                text = if (isEnglishGrade) "英文版" else "中文版",
                                 fontSize = 14.sp
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -216,7 +216,7 @@ fun OtherFunctionScreen() {
                             imageVector = Icons.Filled.CloudDownload,
                             contentDescription = null,
 
-                        )
+                            )
                         Spacer(modifier = Modifier.width(16.dp))
                         Text(
                             text = "$downloadType 下载成功！",
@@ -282,13 +282,13 @@ fun FunctionCard(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
 
-                    )
+                        )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = description,
                         fontSize = 14.sp,
 
-                    )
+                        )
                 }
             }
 
