@@ -440,7 +440,12 @@ public class MisDataManager {
                                             .replace("\n", "");
 
                                     // 解析课程教师
-                                    String courseTeacher = child.select("div[style^=max-width] i").first().text();
+                                    String courseTeacher;
+                                    try {
+                                        courseTeacher = child.select("div[style^=max-width] i").first().text();
+                                    } catch (Exception e) {
+                                        courseTeacher = getTeacherByCourseId(client, courseId);
+                                    }
 
                                     // 解析课程地点
                                     String coursePlace = child.select("span.text-muted").first().text()
@@ -655,4 +660,31 @@ public class MisDataManager {
         });
     }
 
+    private static String getTeacherByCourseId(OkHttpClient client, String courseId) throws IOException {
+        String id = courseId.split(" ")[0];
+        String kxh = courseId.split(" ")[1];
+        String url = String.format("https://aa.bjtu.edu.cn/course_selection/courseselect/list_arrange/?kch=%s&perpage=500&page=1", id);
+        Request request = new Request.Builder()
+                .url(url)
+                .header("Host", "aa.bjtu.edu.cn")
+                .build();
+        Response response = client.newCall(request).execute();
+        Document doc = Jsoup.parse(response.body().string());
+        Element table = doc.selectFirst("table");
+        if (table == null) {
+            return "";
+        }
+        Elements rows = table.select("tr");
+        rows.remove(0);
+        for (Element row : rows) {
+            Elements cols = row.select("td");
+            String idAndName = cols.get(2).text();
+            if (!idAndName.endsWith(kxh)) {
+                continue;
+            }
+            Element teacher = cols.get(5);
+            return teacher.select("td").text();
+        }
+        return "?";
+    }
 }
