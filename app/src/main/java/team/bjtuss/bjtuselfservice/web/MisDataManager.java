@@ -420,58 +420,68 @@ public class MisDataManager {
                             } else {
                                 List<CourseEntity> courses = new ArrayList<>();
                                 for (Element child : col.children()) {
-
-                                    String rawIdAndName;
-                                    if (!isChecked) {
-                                        rawIdAndName = child.html();
-                                    } else {
-                                        rawIdAndName = child.select("span").first().html();
-                                    }
-                                    String[] idAndNameParts = rawIdAndName.split("<br>", 2);
-                                    String courseId = Jsoup.parse(idAndNameParts[0]).text().trim();
-
-                                    String courseName;
-                                    if (!isChecked) {
-                                        courseName = Jsoup.parse(idAndNameParts[1]).select("span").first().text().trim();
-                                    } else {
-                                        courseName = Jsoup.parse(idAndNameParts[1]).text().trim();
-                                    }
-
-                                    // 解析课程时间
-                                    String courseTime = child.select("div[style^=max-width]").first().text().split("周")[0] + "周";
-                                    courseTime = courseTime.replace(" ", "")
-                                            .replace("\n", "");
-
-                                    // 解析课程教师
-                                    String courseTeacher;
                                     try {
-                                        courseTeacher = child.select("div[style^=max-width] i").first().text();
+                                        String rawIdAndName;
+                                        if (!isChecked) {
+                                            rawIdAndName = child.html();
+                                        } else {
+                                            rawIdAndName = child.select("span").first().html();
+                                        }
+                                        String[] idAndNameParts = rawIdAndName.split("<br>", 2);
+                                        String courseId = Jsoup.parse(idAndNameParts[0]).text().trim();
+
+                                        String courseName;
+                                        if (!isChecked) {
+                                            courseName = Jsoup.parse(idAndNameParts[1]).select("span").first().text().trim();
+                                        } else {
+                                            courseName = Jsoup.parse(idAndNameParts[1]).text().trim();
+                                        }
+
+                                        // 解析课程时间
+                                        String courseTime;
+                                        try {
+                                            courseTime = child.select("div[style^=max-width]").first().text().split("周")[0] + "周";
+                                            courseTime = courseTime.replace(" ", "")
+                                                    .replace("\n", "");
+                                        } catch (Exception e) {
+                                            courseTime = "未知";
+                                        }
+
+                                        // 解析课程教师
+                                        String courseTeacher;
+                                        try {
+                                            courseTeacher = child.select("div[style^=max-width] i").first().text();
+                                        } catch (Exception e) {
+                                            String courseNameWithKxh = courseName.split(" ")[0] + " " + courseId.split(" ")[1].substring(1, 3);
+                                            courseTeacher = courseId2Teacher.get(courseNameWithKxh);
+                                            courseTeacher = courseTeacher == null ? "?" : courseTeacher;
+                                        }
+
+                                        // 解析课程地点
+                                        String coursePlace;
+                                        try {
+                                            coursePlace = child.select("span.text-muted").first().text()
+                                                    .replace(" ", "")
+                                                    .replace("\n", "");
+                                        } catch (Exception e) {
+                                            coursePlace = "未知";
+                                        }
+
+
+                                        //
+                                        courses.add(new CourseEntity(
+                                                courseId,
+                                                courseName,
+                                                courseTeacher,
+                                                (rowNumber - 1) * 8 + columnNumber,
+                                                courseTime,
+                                                coursePlace,
+                                                isCurrentTerm));
                                     } catch (Exception e) {
-                                        String courseNameWithKxh = courseName.split(" ")[0] + " " + courseId.split(" ")[1].substring(1,3);
-                                        courseTeacher = courseId2Teacher.get(courseNameWithKxh);
-                                        courseTeacher = courseTeacher == null ? "?" : courseTeacher;
+                                        continue;
                                     }
-
-                                    // 解析课程地点
-                                    String coursePlace = child.select("span.text-muted").first().text()
-                                            .replace(" ", "")
-                                            .replace("\n", "");
-
-
-//
-                                    courses.add(new CourseEntity(
-                                            courseId,
-                                            courseName,
-                                            courseTeacher,
-                                            (rowNumber - 1) * 8 + columnNumber,
-                                            courseTime,
-                                            coursePlace,
-                                            isCurrentTerm));
                                 }
-
                                 courseList.add(courses);
-
-
                             }
                         }
                     }
