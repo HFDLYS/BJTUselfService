@@ -394,6 +394,9 @@ public class MisDataManager {
                 try {
                     boolean isCurrentTerm = isChecked;
 
+                    Map<String, String> courseId2Teacher;
+                    courseId2Teacher = getTeachers(client);
+
                     Document doc = Jsoup.parse(response.body().string());
                     Element table = doc.selectFirst("table");
                     if (table == null) {
@@ -440,7 +443,14 @@ public class MisDataManager {
                                             .replace("\n", "");
 
                                     // 解析课程教师
-                                    String courseTeacher = child.select("div[style^=max-width] i").first().text();
+                                    String courseTeacher;
+                                    try {
+                                        courseTeacher = child.select("div[style^=max-width] i").first().text();
+                                    } catch (Exception e) {
+                                        String courseNameWithKxh = courseName.split(" ")[0] + " " + courseId.split(" ")[1].substring(1,3);
+                                        courseTeacher = courseId2Teacher.get(courseNameWithKxh);
+                                        courseTeacher = courseTeacher == null ? "?" : courseTeacher;
+                                    }
 
                                     // 解析课程地点
                                     String coursePlace = child.select("span.text-muted").first().text()
@@ -655,4 +665,31 @@ public class MisDataManager {
         });
     }
 
+    private static Map<String, String> getTeachers(OkHttpClient client) throws IOException {
+        String url = "https://aa.bjtu.edu.cn/course_selection/courseselectabsent/absent_list/";
+        Request request = new Request.Builder()
+                .url(url)
+                .header("Host", "aa.bjtu.edu.cn")
+                .build();
+        Response response = client.newCall(request).execute();
+        Document doc = Jsoup.parse(response.body().string());
+        Element table = doc.selectFirst("table");
+        if (table == null) {
+            return new HashMap<>();
+        }
+        Elements rows = table.select("tr");
+        rows.remove(0);
+        rows.remove(0);
+        Map<String, String> courseName2Teacher = new HashMap<>();
+        for (Element row : rows) {
+            Elements cols = row.select("td");
+            String courseName = cols.get(0).text();
+            if (courseName.split(" ").length == 3){
+                courseName = courseName.split(" ")[0] + " " + courseName.split(" ")[1];
+            }
+            String teacher = cols.get(1).text();
+            courseName2Teacher.put(courseName, teacher);
+        }
+        return courseName2Teacher;
+    }
 }
