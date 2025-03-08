@@ -204,6 +204,23 @@ fun OtherFunctionScreen() {
                         icon = Icons.Filled.Email,
                         onClick = {
                             showEmailDialog = true
+                        },
+                        extraContent = {
+                            Text(
+                                text = "该订阅服务来自其他同学的第三方在线平台",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Text(
+                                text = "本app不为订阅服务稳定性做保证",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Text(
+                                text = "個人情報がアップロードされる可能性がある!!!",
+                                fontSize = 16.sp,
+                                color = MaterialTheme.colorScheme.onError
+                            )
                         }
                     )
                 }
