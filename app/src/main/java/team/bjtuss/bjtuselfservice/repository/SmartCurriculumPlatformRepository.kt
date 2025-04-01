@@ -9,6 +9,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.Request
+import okhttp3.ResponseBody.Companion.toResponseBody
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
 import team.bjtuss.bjtuselfservice.jsonclass.CourseJsonType
@@ -81,7 +82,8 @@ object SmartCurriculumPlatformRepository {
         val courseUrl = baseUrl + xqCode
 
         val courseRequest = Request.Builder()
-            .url(courseUrl).header(
+            .url(courseUrl)
+            .header(
                 "User-Agent", userAgent
             )
             .build()
@@ -113,15 +115,29 @@ object SmartCurriculumPlatformRepository {
             .build()
 
         val adapter = moshi.adapter(HomeworkJsonType::class.java)
-
         return withContext(Dispatchers.IO) {
-            val response = client.newCall(homeworkRequest).execute()
-            response.body?.source()?.let { source ->
-                try {
-                    adapter.fromJson(source)
-                } catch (e: Exception) {
-                    println("Failed to parse JSON: ${e.message}")
-                    null
+            client.newCall(homeworkRequest).execute().use { originalResponse ->
+                // 1. 缓存响应体字节（自动关闭原始流）
+                val cachedBytes = originalResponse.body?.bytes() ?: throw IOException("Empty body")
+
+                // 2. 构建可重复读取的副本
+                val copiedBody = cachedBytes.toResponseBody(originalResponse.body?.contentType())
+
+                // 3. 使用缓存数据解析
+                copiedBody.source().use { source ->
+                    try {
+                        // 调试：打印原始JSON
+                        val rawJson = source.buffer.clone().readUtf8()
+//                        println("Raw JSON: $rawJson")
+
+                        adapter.fromJson(source)
+                    } catch (e: Exception) {
+                        // 异常时仍可安全读取缓存
+//                        val errorJson = String(cachedBytes, Charsets.UTF_8)
+//                        println("Parsing failed. Original JSON: $errorJson")
+//                        println("Error: ${e.message}")
+                        null
+                    }
                 }
             } ?: throw IOException("Response body is null")
         }
@@ -178,6 +194,7 @@ object SmartCurriculumPlatformRepository {
                 )
             listFromJson.add(homeworkFromJson)
         }
+
 
         val processedList = mutableListOf<HomeworkEntity>()
 
