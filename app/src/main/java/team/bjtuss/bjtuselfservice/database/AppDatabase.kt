@@ -22,6 +22,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun courseEntityDao(): CourseEntityDao
     abstract fun examScheduleEntityDao(): ExamScheduleEntityDao
     abstract fun homeworkEntityDao(): HomeworkEntityDao
+
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null

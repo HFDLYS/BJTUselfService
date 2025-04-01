@@ -31,6 +31,7 @@ class StatusViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             val week = SmartCurriculumPlatformRepository.getCurrentWeek()
             _currentWeek.value = week
+
         }
 
 

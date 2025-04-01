@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 data class HomeworkEntity(
     @PrimaryKey(autoGenerate = true)
     override var id: Int,
+    val upId: Int,
     val courseId: Int,
     val courseName: String,
     val title: String,
@@ -32,9 +33,11 @@ data class HomeworkEntity(
         submitCount: Int,
         allCount: Int,
         subStatus: String,
+        upId: Int,
         homeworkType: Int
     ) : this(
         id = 0,
+        upId = upId,
         courseId = courseId,
         courseName = courseName,
         title = title,

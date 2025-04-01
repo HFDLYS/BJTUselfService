@@ -12,7 +12,7 @@ data class CourseNote(
     val create_date: String = "default value",
     val end_time: String = "default value",
     val excellentCount: Int? = 32363237,
-    val id: Int? = 32363237,
+    val id: Int = 32363237,
     val isOpen: Int? = 32363237,
     val is_excellent: String? = "default value",
     val is_fz: Int? = 32363237,
