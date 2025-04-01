@@ -329,10 +329,10 @@ fun TaskDetailsDialog(
         confirmButton = {
             Button(
                 onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = primary,
-                    contentColor = Color.White
-                ),
+//                colors = ButtonDefaults.buttonColors(
+//                    containerColor = primary,
+//                    contentColor = Color.White
+//                ),
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text(
