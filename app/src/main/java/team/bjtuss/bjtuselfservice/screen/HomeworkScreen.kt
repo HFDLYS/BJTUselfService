@@ -317,6 +317,13 @@ fun HomeworkSummaryCard(homeworkList: List<HomeworkEntity>) {
 fun HomeworkItemCard(homework: HomeworkEntity) {
     var showHtmlDialog by remember { mutableStateOf(false) }
     var showUploadHomeworkDialog by remember { mutableStateOf(false) }
+    var isRefreshing by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        NetworkRepository.getQueueStatus().observeForever { queueStatus ->
+            isRefreshing = queueStatus
+        }
+    }
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -418,7 +425,7 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
                             // Handle error
                         }
                     }
-                }) { Text("上传作业") }
+                }, enabled = !isRefreshing) { Text("上传作业") }
 
 //                Button(onClick = {
 //                    CoroutineScope(Dispatchers.IO).launch {
@@ -427,7 +434,7 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
 //                }) {
 //                    Text("下载作业")
 //                }
-                HomeworkDownloadButton(homework)
+                HomeworkDownloadButton(homework, isRefreshing)
             }
             Column(
                 horizontalAlignment = Alignment.End,
@@ -991,6 +998,7 @@ suspend fun downloadHomeworkFile(
 @Composable
 fun HomeworkDownloadButton(
     homework: HomeworkEntity,
+    isRefreshing: Boolean,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -1037,7 +1045,7 @@ fun HomeworkDownloadButton(
                     }
                 }
             },
-            enabled = !isDownloading,
+            enabled = !isDownloading && !isRefreshing,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
