@@ -33,7 +33,7 @@ data class CourseNote(
 //    val review_method: ReviewMethod? = null,   返回不同意，影响解析因此删去
     val score: String? = "default value",
     val scoreId: Any? = null,
-    val snId: Any? = null,
+    val snId: Int? = null,
     val status: Int = 32363237,
     val stu_score: String? = "default value",
     val subStatus: String = "default value",

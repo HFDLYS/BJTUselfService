@@ -1,19 +1,11 @@
 package team.bjtuss.bjtuselfservice.repository
 
-import android.app.DownloadManager
-import android.content.Context
-import android.net.Uri
-import android.os.Environment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import org.jsoup.Jsoup
-import team.bjtuss.bjtuselfservice.MainApplication
 import team.bjtuss.bjtuselfservice.StudentAccountManager
-import team.bjtuss.bjtuselfservice.download.DownloadUtil
-import team.bjtuss.bjtuselfservice.jsonclass.SchoolCalendarUrl
-import team.bjtuss.bjtuselfservice.jsonclass.SemesterJsonType
-import team.bjtuss.bjtuselfservice.utils.KotlinUtils.moshi
+import team.bjtuss.bjtuselfservice.utils.DownloadUtil
 
 object OtherFunctionNetworkRepository {
     private val client = StudentAccountManager.getInstance().client

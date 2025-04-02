@@ -2,6 +2,11 @@ package team.bjtuss.bjtuselfservice.utils
 
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import okhttp3.Cookie
+import okhttp3.HttpUrl
+import okhttp3.Request
+
+import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
 import java.util.Base64
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
@@ -70,5 +75,38 @@ object KotlinUtils {
         val ctBase64 = Base64.getUrlEncoder().encodeToString(encryptedBytes)
 
         return "$ivBase64:$ctBase64"
+    }
+
+    fun getCookieOfClient(): String {
+        var cookies = ""
+        SmartCurriculumPlatformRepository.client.cookieJar.loadForRequest(
+            Request.Builder().url("https://aa.bjtu.edu.cn").build().url
+        )
+            .forEach {
+                cookies += "${it.name}=${it.value};"
+            }
+        return cookies
+    }
+
+    fun getCookieByUrl(url: String): String {
+        var cookies = ""
+        SmartCurriculumPlatformRepository.client.cookieJar.loadForRequest(
+            Request.Builder().url(url).build().url
+        )
+            .forEach {
+                cookies += "${it.name}=${it.value};"
+            }
+        return cookies
+    }
+
+    fun getJSESSIONIDOfHomeworkToDownload(): String {
+        var cookies = ""
+
+        SmartCurriculumPlatformRepository.client.cookieJar.loadForRequest(
+            Request.Builder().url("http://123.121.147.7:88/ve//downloadZyFj.shtml").build().url
+        ).forEach {
+            cookies += "${it.name}=${it.value};"
+        }
+        return cookies
     }
 }

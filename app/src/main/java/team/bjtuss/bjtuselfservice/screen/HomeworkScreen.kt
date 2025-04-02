@@ -1,16 +1,16 @@
 package team.bjtuss.bjtuselfservice.screen
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.util.Log
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,13 +25,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddTask
 import androidx.compose.material.icons.filled.ArrowDownward
@@ -51,20 +49,19 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -75,6 +72,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
@@ -91,22 +89,28 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Request
+import okhttp3.Response
+import org.jsoup.Jsoup
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
-import team.bjtuss.bjtuselfservice.error
-import team.bjtuss.bjtuselfservice.onSurface
-import team.bjtuss.bjtuselfservice.primary
 import team.bjtuss.bjtuselfservice.repository.HomeworkUploader
 import team.bjtuss.bjtuselfservice.repository.NetworkRepository
-import team.bjtuss.bjtuselfservice.secondary
-import team.bjtuss.bjtuselfservice.utils.FilePickerManager
+import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
+import team.bjtuss.bjtuselfservice.utils.DownloadUtil
+import team.bjtuss.bjtuselfservice.utils.DownloadUtil.downloadFile2
+import team.bjtuss.bjtuselfservice.utils.DownloadUtil.downloadFileWithOkHttp
+import team.bjtuss.bjtuselfservice.utils.KotlinUtils
 import team.bjtuss.bjtuselfservice.viewmodel.DataChange
 import team.bjtuss.bjtuselfservice.viewmodel.HomeworkViewModel
+import java.io.IOException
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.TimeUnit
 
 @Composable
 fun HomeworkScreen(mainViewModel: MainViewModel) {
@@ -415,6 +419,15 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
                         }
                     }
                 }) { Text("上传作业") }
+
+//                Button(onClick = {
+//                    CoroutineScope(Dispatchers.IO).launch {
+//                        downloadHomeworkFile(homework = homework)
+//                    }
+//                }) {
+//                    Text("下载作业")
+//                }
+                HomeworkDownloadButton(homework)
             }
             Column(
                 horizontalAlignment = Alignment.End,
@@ -819,25 +832,250 @@ fun BetterTextField(
     )
 }
 
-//fun downloadHomework(homework: HomeworkEntity){
-//    val httpUrl = HttpUrl.Builder()
-//        .scheme("http")
-//        .host("123.121.147.7")
-//        .port(88)
-//        .addPathSegments("ve/back/course/courseWorkInfo.shtml")
-//        .addQueryParameter("method", "piGaiDiv")
-//        .addQueryParameter("upId", homework["id"].toString())
-//        .addQueryParameter("id", homework["snId"].toString())
-//        .addQueryParameter("score", homework["score"].toString())
-//        .addQueryParameter("uLevel", "1")
-//        .addQueryParameter("type", "1")
-//        .addQueryParameter("username", "null")
-//        .addQueryParameter("userId", homework["user_id"].toString())
-//        .build()
-//
-//    val request = Request.Builder()
-//        .url("http://123.121.147.7:88/ve/back/course/courseWorkInfo.shtml")
-//        .addHeader("User-Agent", "Mozilla/5.0")
-//        .addHeader("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6")
-//        .build()
-//}
+suspend fun downloadHomeworkFile(
+    homework: HomeworkEntity,
+    onProgress: (Float) -> Unit = {},
+    onSuccess: (String) -> Unit = {},
+    onError: (Exception) -> Unit = {}
+) = withContext(Dispatchers.IO) {
+    try {
+        // Show initial progress
+        withContext(Dispatchers.Main) {
+            onProgress(0.1f)
+        }
+
+        // Create OkHttp client with timeout settings
+        val client = SmartCurriculumPlatformRepository.client.newBuilder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+
+        // Build URL for getting homework content
+        val courseWorkUrl = "http://123.121.147.7:88/ve/back/course/courseWorkInfo.shtml"
+            .toHttpUrlOrNull()
+            ?.newBuilder()
+            ?.addQueryParameter("method", "piGaiDiv")
+            ?.addQueryParameter("upId", homework.upId.toString())
+            ?.addQueryParameter("id", homework.idSnId.toString())
+            ?.addQueryParameter("score", homework.score)
+            ?.addQueryParameter("uLevel", "1")
+            ?.addQueryParameter("type", "1")
+            ?.addQueryParameter("username", "null")
+            ?.addQueryParameter("userId", homework.userId.toString())
+            ?.build() ?: throw IllegalStateException("Failed to build URL")
+
+        // Update progress
+        withContext(Dispatchers.Main) {
+            onProgress(0.2f)
+        }
+
+        // Create request for homework page with retry mechanism
+        val courseWorkRequest = Request.Builder()
+            .url(courseWorkUrl)
+            .header("User-Agent", "Mozilla/5.0")
+            .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6")
+            .build()
+
+        // Execute the request with retry
+        var retries = 0
+        var response: Response? = null
+        var exception: Exception? = null
+
+        while (retries < 3 && response == null) {
+            try {
+                response = client.newCall(courseWorkRequest).execute()
+                if (!response.isSuccessful) {
+                    throw IOException("Failed to fetch homework info: ${response.code}")
+                }
+            } catch (e: Exception) {
+                exception = e
+                retries++
+                delay(1000L * retries) // Exponential backoff
+            }
+        }
+
+        if (response == null) {
+            throw exception ?: IOException("Failed to fetch homework after retries")
+        }
+
+        // Update progress
+        withContext(Dispatchers.Main) {
+            onProgress(0.4f)
+        }
+
+        val responseBody = response.body?.string() ?: ""
+
+        // Check for server error
+        if (responseBody.contains("系统发生了未处理的异常")) {
+            throw Exception("服务器返回错误，请检查参数和登录状态")
+        }
+
+        // Parse HTML
+        val document = Jsoup.parse(responseBody)
+        val homeworkContents = document.select("div.homeworkContent")
+
+        if (homeworkContents.isEmpty()) {
+            throw Exception("未找到作业内容")
+        }
+
+        // Update progress
+        withContext(Dispatchers.Main) {
+            onProgress(0.6f)
+        }
+
+        // Find file download info
+        var fileDownloaded = false
+
+        for (item in homeworkContents) {
+            val onClickAttribute = item.attr("onclick")
+            if (onClickAttribute.isNotEmpty()) {
+                // Parse the onclick attribute with improved regex
+                val regex = """\('([^']*)',\s*'([^']*)',\s*'([^']*)'\)""".toRegex()
+                val matchResult = regex.find(onClickAttribute)
+
+                if (matchResult != null) {
+                    val (path, filename, id) = matchResult.destructured
+
+                    // Build URL for file download
+                    val downloadUrl = "http://123.121.147.7:88/ve//downloadZyFj.shtml"
+                        .toHttpUrlOrNull()
+                        ?.newBuilder()
+                        ?.addQueryParameter("path", path)
+                        ?.addQueryParameter("filename", filename)
+                        ?.addQueryParameter("id", id)
+                        ?.build()
+                        ?.toString() ?: throw IllegalStateException("Failed to build download URL")
+
+                    // Get file extension
+                    val fileExtension = filename.substringAfterLast('.', "pdf")
+
+                    // Update progress
+                    withContext(Dispatchers.Main) {
+                        onProgress(0.8f)
+                    }
+
+                    // Download the file
+                    DownloadUtil.downloadFile(
+                        downloadUrl,
+                        filename,
+                        KotlinUtils.getCookieByUrl(downloadUrl),
+                        fileExtension
+                    )
+
+                    fileDownloaded = true
+
+                    // Notify success
+                    withContext(Dispatchers.Main) {
+                        onProgress(1.0f)
+                        onSuccess("作业 '$filename' 下载成功")
+                    }
+                }
+            }
+        }
+
+        if (!fileDownloaded) {
+            throw Exception("未找到可下载的作业文件")
+        }
+
+    } catch (e: Exception) {
+        Log.e("HomeworkDownloader", "Download failed", e)
+        withContext(Dispatchers.Main) {
+            onError(e)
+        }
+        throw e
+    }
+}
+
+
+@Composable
+fun HomeworkDownloadButton(
+    homework: HomeworkEntity,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+    // State for download progress and status
+    var isDownloading by remember { mutableStateOf(false) }
+    var downloadProgress by remember { mutableStateOf(0f) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    Column(modifier = modifier) {
+        Button(
+            onClick = {
+                if (!isDownloading) {
+                    isDownloading = true
+                    downloadProgress = 0f
+                    errorMessage = null
+
+                    coroutineScope.launch {
+                        try {
+                            downloadHomeworkFile(
+                                homework = homework,
+                                onProgress = { progress ->
+                                    downloadProgress = progress
+                                },
+                                onSuccess = { message ->
+                                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                    isDownloading = false
+                                },
+                                onError = { error ->
+                                    errorMessage = error.message ?: "下载失败"
+                                    isDownloading = false
+                                    Toast.makeText(
+                                        context,
+                                        "下载失败: ${error.message}",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            )
+                        } catch (e: Exception) {
+                            // Exception is already handled in the download function
+                            isDownloading = false
+                        }
+                    }
+                }
+            },
+            enabled = !isDownloading,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+            )
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                if (isDownloading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text(if (isDownloading) "正在下载..." else "下载作业")
+            }
+        }
+
+        // Show progress bar when downloading
+        if (isDownloading) {
+            Spacer(modifier = Modifier.height(8.dp))
+            LinearProgressIndicator(
+                progress = { downloadProgress },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        // Show error message if any
+        errorMessage?.let {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}

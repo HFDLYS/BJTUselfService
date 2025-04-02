@@ -15,7 +15,7 @@ import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
 
 @Database(
     entities = [GradeEntity::class, CourseEntity::class, ExamScheduleEntity::class, HomeworkEntity::class],
-    version = 1
+    version = 2
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun gradeEntityDao(): GradeEntityDao

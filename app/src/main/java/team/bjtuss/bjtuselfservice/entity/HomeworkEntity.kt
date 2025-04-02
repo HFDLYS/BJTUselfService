@@ -8,6 +8,9 @@ data class HomeworkEntity(
     @PrimaryKey(autoGenerate = true)
     override var id: Int,
     val upId: Int,
+    val idSnId: Int?,
+    val score: String,
+    val userId: Int,
     val courseId: Int,
     val courseName: String,
     val title: String,
@@ -23,6 +26,9 @@ data class HomeworkEntity(
 ) : BaseEntity() {
     constructor(
         courseId: Int,
+        idSnId: Int?,
+        score: String,
+        userId: Int,
         courseName: String,
         title: String,
         content: String,
@@ -38,6 +44,9 @@ data class HomeworkEntity(
     ) : this(
         id = 0,
         upId = upId,
+        idSnId = idSnId,
+        score = score,
+        userId = userId,
         courseId = courseId,
         courseName = courseName,
         title = title,
