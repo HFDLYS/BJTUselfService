@@ -55,6 +55,7 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -85,6 +86,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -101,6 +103,7 @@ import team.bjtuss.bjtuselfservice.repository.NetworkRepository
 import team.bjtuss.bjtuselfservice.secondary
 import team.bjtuss.bjtuselfservice.utils.FilePickerManager
 import team.bjtuss.bjtuselfservice.viewmodel.DataChange
+import team.bjtuss.bjtuselfservice.viewmodel.HomeworkViewModel
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -459,6 +462,9 @@ fun UploadHomeDialog(homeworkEntity: HomeworkEntity, onDismiss: () -> Unit) {
     ) { uri: Uri? ->
         uri?.let { selectedFiles.add(uri) }
     }
+
+    val homeworkViewModel: HomeworkViewModel = viewModel()
+
     var content by remember { mutableStateOf<String>("") }
     var isUploading by remember { mutableStateOf(false) }
     var uploadResult by remember { mutableStateOf<String?>(null) }
@@ -630,7 +636,7 @@ fun UploadHomeDialog(homeworkEntity: HomeworkEntity, onDismiss: () -> Unit) {
                                 }
                             }
                             if (selectedFiles.indexOf(uri) < selectedFiles.size - 1) {
-                                Divider(
+                                HorizontalDivider(
                                     modifier = Modifier.padding(vertical = 4.dp),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
                                 )
@@ -712,6 +718,7 @@ fun UploadHomeDialog(homeworkEntity: HomeworkEntity, onDismiss: () -> Unit) {
 
                                     // Optionally close dialog on success
                                     if (responseBody.contains("success")) {
+                                        homeworkViewModel.loadDataAndDetectChanges()
                                         // Add delay before dismissing
 //                                        delay(1000)
 //                                        onDismiss()
