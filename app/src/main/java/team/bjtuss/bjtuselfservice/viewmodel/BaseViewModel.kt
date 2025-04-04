@@ -20,18 +20,20 @@ sealed class DataChange<T> {
 }
 
 interface DataSyncManager<T> {
-    suspend fun detectChanges(networkData: List<T>, localData: List<T>): List<DataChange<T>>
+    fun detectChanges(networkData: List<T>, localData: List<T>): List<DataChange<T>>
     suspend fun applyChanges(changes: List<DataChange<T>>)
 }
 
 class DefaultDataSyncManager<T : BaseEntity>(
     private val dao: BaseDao<T>,
-    private val identitySelector: (T) -> Any
+    private val inEqualitySelector: (T, T) -> Boolean = { networkData, localData ->
+        networkData != localData
+    },
+    private val identitySelector: (T) -> Any,
 ) : DataSyncManager<T> {
 
-    override suspend fun detectChanges(
-        networkData: List<T>,
-        localData: List<T>
+    override fun detectChanges(
+        networkData: List<T>, localData: List<T>
     ): List<DataChange<T>> {
         val changes = mutableListOf<DataChange<T>>()
 
@@ -51,7 +53,7 @@ class DefaultDataSyncManager<T : BaseEntity>(
             } else {
                 return@filter false
             }
-            item != localMap[key]
+            inEqualitySelector(item, localItem)
         }.map {
             it to localMap[identitySelector(it)]!!
         }
@@ -124,7 +126,6 @@ abstract class BaseSyncViewModel<T : BaseEntity>(
                 _changeList.value = emptyList()
             }
         }
-
     }
 
     // 清理变更

@@ -10,7 +10,12 @@ import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
 
 class HomeworkViewModel :
     BaseSyncViewModel<HomeworkEntity>(dataSyncManager = DefaultDataSyncManager<HomeworkEntity>(
-        AppDatabase.getInstance().homeworkEntityDao()
+        dao = AppDatabase.getInstance().homeworkEntityDao(),
+        inEqualitySelector = { networkData, localData ->
+            localData.idSnId = networkData.idSnId
+            networkData != localData
+
+        },
     ) { Pair(it.courseName, it.title) }) {
     val homeworkList: StateFlow<List<HomeworkEntity>> = DatabaseRepository.homeworkList
 

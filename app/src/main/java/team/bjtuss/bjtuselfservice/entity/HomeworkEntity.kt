@@ -8,7 +8,7 @@ data class HomeworkEntity(
     @PrimaryKey(autoGenerate = true)
     override var id: Int,
     val upId: Int,
-    val idSnId: Int?,
+    var idSnId: Int?,
     val score: String,
     val userId: Int,
     val courseId: Int,
@@ -60,4 +60,6 @@ data class HomeworkEntity(
         subStatus = subStatus,
         homeworkType = homeworkType
     )
+
+
 }

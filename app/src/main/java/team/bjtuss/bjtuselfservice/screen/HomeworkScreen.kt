@@ -738,7 +738,13 @@ fun UploadHomeDialog(homeworkEntity: HomeworkEntity, onDismiss: () -> Unit) {
 
                                     // Optionally close dialog on success
                                     if (responseBody.contains("success")) {
+                                        // 由于有ViewModel中有mutex的存在，下面的是按顺序执行的
+                                        // 如果没有mutex，会同时执行
+                                        // viewmode刚创建的时候就会执行loadDataAndDetectChanges，因此同时执行的结果是
+                                        // syncData同步的数据是刚创建时候的init中获取的数据，也就是同步的数据是提交作业前的数据，
+                                        // 而不是同步下面这句代码执行后（提交后）的数据
                                         homeworkViewModel.loadDataAndDetectChanges()
+                                        homeworkViewModel.syncDataAndClearChange()
                                         // Add delay before dismissing
 //                                        delay(1000)
 //                                        onDismiss()
