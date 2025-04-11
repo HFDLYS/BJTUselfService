@@ -221,7 +221,7 @@ object SmartCurriculumPlatformRepository {
                 val homeworkEntity = HomeworkEntity(
                     upId = homework.id,
                     idSnId = homework.snId,
-                    score = homework.score ?: "",
+                    score = homework.stu_score ?: "",
                     userId = 0,
                     courseId = homework.course_id,
                     courseName = homework.course_name,

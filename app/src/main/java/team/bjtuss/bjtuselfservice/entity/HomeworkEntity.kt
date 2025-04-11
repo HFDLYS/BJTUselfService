@@ -60,6 +60,4 @@ data class HomeworkEntity(
         subStatus = subStatus,
         homeworkType = homeworkType
     )
-
-
 }

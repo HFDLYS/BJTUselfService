@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +28,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -40,8 +42,15 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Score
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.CloudUpload
+import androidx.compose.material.icons.rounded.DoNotDisturb
+import androidx.compose.material.icons.rounded.People
+import androidx.compose.material.icons.rounded.Stars
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.AlertDialog
 
 import androidx.compose.material3.Button
@@ -49,6 +58,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
@@ -75,7 +85,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -97,6 +109,8 @@ import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.Jsoup
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
+import team.bjtuss.bjtuselfservice.error
+import team.bjtuss.bjtuselfservice.primary
 import team.bjtuss.bjtuselfservice.repository.HomeworkUploader
 import team.bjtuss.bjtuselfservice.repository.NetworkRepository
 import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
@@ -313,6 +327,7 @@ fun HomeworkSummaryCard(homeworkList: List<HomeworkEntity>) {
     }
 }
 
+
 @Composable
 fun HomeworkItemCard(homework: HomeworkEntity) {
     var showHtmlDialog by remember { mutableStateOf(false) }
@@ -324,152 +339,269 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
             isRefreshing = queueStatus
         }
     }
+
+    // 计算截止时间是否临近
+    val isDDLSoon = remember(homework.endTime) {
+        try {
+            ChronoUnit.HOURS.between(
+                LocalDateTime.now(),
+                LocalDateTime.parse(
+                    homework.endTime,
+                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+                )
+            ) in 0..48
+        } catch (_: Exception) {
+            false
+        }
+    }
+    val submitColor = primary
+    val unSubmitColor = error
+
+    // 作业状态图标和颜色
+    val (statusIcon, statusColor) = remember(homework.subStatus) {
+
+        if (homework.subStatus == "已提交") {
+            Icons.Rounded.CheckCircle to submitColor
+        } else {
+            Icons.Rounded.DoNotDisturb to unSubmitColor
+        }
+    }
+
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .clickable {
+            .padding(vertical = 10.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(
+                indication = rememberRipple(
+                    bounded = true,
+                    color = MaterialTheme.colorScheme.primary
+                ),
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
                 showHtmlDialog = true
             },
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.elevatedCardElevation(
+            defaultElevation = 3.dp,
+            pressedElevation = 6.dp
+        )
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(16.dp)
         ) {
-            Column(
-                modifier = Modifier.weight(0.7f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            // 顶部状态标签
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = homework.title,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    ),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
                 Text(
                     text = homework.courseName,
                     style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary
                     ),
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+
+                Box(
+                    modifier = Modifier
+                        .background(
+                            color = if (homework.subStatus == "已提交")
+                                MaterialTheme.colorScheme.primaryContainer
+                            else
+                                MaterialTheme.colorScheme.errorContainer,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Schedule,
-                        contentDescription = "Create Date",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        var isDDLSoon = false
-                        try {
-                            isDDLSoon = ChronoUnit.HOURS.between(
-                                LocalDateTime.now(),
-                                LocalDateTime.parse(
-                                    homework.endTime,
-                                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
-                                )
-                            ) in 0..48
-                        } catch (_: Exception) {
-                        }
-                        Text(
-                            text = "开放时间: ${homework.openDate}",
-                            style = MaterialTheme.typography.bodyMedium
+                        Icon(
+                            imageVector = statusIcon,
+                            contentDescription = null,
+                            tint = statusColor,
+                            modifier = Modifier.size(16.dp)
                         )
                         Text(
-                            text = "截止时间: ${homework.endTime}",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = if (isDDLSoon) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-                            )
+                            text = homework.subStatus,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (homework.subStatus == "已提交")
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.error
                         )
-
                     }
+                }
+            }
 
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 作业标题
+            Text(
+                text = homework.title,
+                style = MaterialTheme.typography.headlineSmall.copy(
+                    fontWeight = FontWeight.Bold
+                ),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 信息部分
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // 左侧信息栏
+                Column(
+                    modifier = Modifier.weight(0.7f),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.AddTask,
-                        contentDescription = "subStatus",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp),
+                    // 时间信息
+                    InfoItem(
+                        icon = Icons.Filled.Schedule,
+                        primaryText = "开放时间: ${homework.openDate}",
+                        secondaryText = "截止时间: ${homework.endTime}",
+                        isWarning = isDDLSoon
                     )
-                    Text(
-                        text = "提交人数: ${homework.submitCount}/${homework.allCount}",
-                        style = MaterialTheme.typography.bodyMedium
+
+                    // 提交状态
+                    InfoItem(
+                        icon = Icons.Rounded.People,
+                        primaryText = "提交人数: ${homework.submitCount}/${homework.allCount}",
+                        showDivider = true
+                    )
+
+                    // 分数
+                    InfoItem(
+                        icon = Icons.Rounded.Stars,
+                        primaryText = "分数: ${homework.score}",
+                        showDivider = true
                     )
                 }
-                Button(onClick = {
-                    CoroutineScope(Dispatchers.IO).launch {
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // 按钮行
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Button(
+                    onClick = {
+//                        CoroutineScope(Dispatchers.IO).launch {
                         try {
                             showUploadHomeworkDialog = true
                         } catch (e: Exception) {
                             // Handle error
                         }
+//                        }
+                    },
+                    enabled = !isRefreshing,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.CloudUpload,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text("上传作业")
                     }
-                }, enabled = !isRefreshing) { Text("上传作业") }
-
-//                Button(onClick = {
-//                    CoroutineScope(Dispatchers.IO).launch {
-//                        downloadHomeworkFile(homework = homework)
-//                    }
-//                }) {
-//                    Text("下载作业")
-//                }
-                HomeworkDownloadButton(homework, isRefreshing)
-            }
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.Center
-            ) {
-
-                val icon = if (homework.subStatus == "已提交") {
-                    Icons.Default.Check to Color.Green
-                } else {
-                    Icons.Default.Close to Color.Red
                 }
 
-                Icon(
-                    imageVector = icon.first,
-                    contentDescription = null,
-                    tint = icon.second,
-                    modifier = Modifier
-                        .size(36.dp)
-                        .align(Alignment.CenterHorizontally)
-                )
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Text(
-                    text = "${homework.subStatus}",
-                    style = MaterialTheme.typography.bodyLarge
+                HomeworkDownloadButton(
+                    homework = homework,
+                    isRefreshing = isRefreshing,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
     }
+
     if (showHtmlDialog) {
         ShowHtmlDialog({ showHtmlDialog = false }, homework.content)
     }
     if (showUploadHomeworkDialog) {
         UploadHomeDialog(homework) { showUploadHomeworkDialog = false }
+    }
+}
+
+@Composable
+private fun InfoItem(
+    icon: ImageVector,
+    primaryText: String,
+    secondaryText: String? = null,
+    isWarning: Boolean = false,
+    showDivider: Boolean = false
+) {
+    Column {
+        if (showDivider) {
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 6.dp),
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+        }
+
+        Row(
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            Column {
+                Text(
+                    text = primaryText,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                if (secondaryText != null) {
+                    Text(
+                        text = secondaryText,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = if (isWarning)
+                                MaterialTheme.colorScheme.error
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -1051,6 +1183,8 @@ fun HomeworkDownloadButton(
                     }
                 }
             },
+            shape = RoundedCornerShape(8.dp),
+//            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
             enabled = !isDownloading && !isRefreshing,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
