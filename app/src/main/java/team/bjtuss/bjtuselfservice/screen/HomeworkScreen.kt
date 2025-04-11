@@ -108,10 +108,10 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Request
 import okhttp3.Response
 import org.jsoup.Jsoup
+import team.bjtuss.bjtuselfservice.component.HomeworkUploader
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
 import team.bjtuss.bjtuselfservice.error
 import team.bjtuss.bjtuselfservice.primary
-import team.bjtuss.bjtuselfservice.repository.HomeworkUploader
 import team.bjtuss.bjtuselfservice.repository.NetworkRepository
 import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
 import team.bjtuss.bjtuselfservice.utils.DownloadUtil

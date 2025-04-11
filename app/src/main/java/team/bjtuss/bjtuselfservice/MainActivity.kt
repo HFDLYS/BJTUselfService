@@ -64,6 +64,7 @@ import team.bjtuss.bjtuselfservice.repository.fetchLatestRelease
 import team.bjtuss.bjtuselfservice.screen.BuildingScreen
 import team.bjtuss.bjtuselfservice.screen.ClassroomScreen
 import team.bjtuss.bjtuselfservice.screen.CourseScheduleScreen
+import team.bjtuss.bjtuselfservice.screen.CoursewareScreen
 import team.bjtuss.bjtuselfservice.screen.EmailScreen
 import team.bjtuss.bjtuselfservice.screen.ExamScheduleScreen
 import team.bjtuss.bjtuselfservice.screen.GradeScreen
@@ -77,6 +78,7 @@ import team.bjtuss.bjtuselfservice.ui.theme.BJTUselfServicecomposeTheme
 import team.bjtuss.bjtuselfservice.utils.FilePickerManager
 import team.bjtuss.bjtuselfservice.viewmodel.ClassroomViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.CourseScheduleViewModel
+import team.bjtuss.bjtuselfservice.viewmodel.CoursewareViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.ExamScheduleViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.GradeViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.HomeworkViewModel
@@ -114,7 +116,6 @@ class MainActivity : ComponentActivity() {
 //                    }
 //                )
 //                FilePickerManager.init(filePickerLauncher)
-
 
 
                 Surface {
@@ -230,6 +231,7 @@ fun App(loginViewModel: LoginViewModel) {
     val homeworkViewModel: HomeworkViewModel = viewModel()
     val statusViewModel: StatusViewModel = viewModel()
     val settingViewModel: SettingViewModel = viewModel()
+    val coursewareViewModel: CoursewareViewModel = viewModel()
     val mainViewModel: MainViewModel = viewModel(
         factory = MainViewModelFactory(
             gradeViewModel,
@@ -238,7 +240,8 @@ fun App(loginViewModel: LoginViewModel) {
             classroomViewModel,
             homeworkViewModel,
             statusViewModel,
-            settingViewModel
+            settingViewModel,
+            coursewareViewModel
         )
     )
 
@@ -280,9 +283,13 @@ fun App(loginViewModel: LoginViewModel) {
         composable(RouteManager.HomeWork) {
             HomeworkScreen(mainViewModel)
         }
-        composable(RouteManager.OtherFunction){
+        composable(RouteManager.OtherFunction) {
             OtherFunctionScreen()
         }
+        composable(RouteManager.Courseware) {
+            CoursewareScreen(mainViewModel)
+        }
+
 
     }
 
@@ -307,6 +314,9 @@ object RouteManager {
     const val Email: String = "Email"
     const val HomeWork: String = "HomeWork"
     const val OtherFunction: String = "OtherFunction"
+
+    //    const val CoursePlatform: String = "CoursePlatform"
+    const val Courseware: String = "Courseware"
 }
 
 @Composable
@@ -378,13 +388,6 @@ fun AppNavigation(
     })
 
 
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!", modifier = modifier
-    )
 }
 
 

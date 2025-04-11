@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.0.0"
     id("kotlin-kapt")
     id("com.google.dagger.hilt.android")
 }
@@ -95,6 +96,8 @@ dependencies {
     implementation("com.squareup.moshi:moshi-kotlin:1.13.0")
     implementation("com.kizitonwose.calendar:compose:2.6.0")
     implementation ("com.google.accompanist:accompanist-swiperefresh:0.30.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.2") // 核心库
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2") // JSON 支持
 }
 kapt {
     correctErrorTypes = true

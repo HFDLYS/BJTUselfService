@@ -1,38 +1,39 @@
 package team.bjtuss.bjtuselfservice.repository
 
 
-import android.content.Context
-import android.net.Uri
 import android.util.Log
+import com.squareup.moshi.FromJson
+import com.squareup.moshi.JsonAdapter
+import com.squareup.moshi.JsonDataException
+import com.squareup.moshi.JsonReader
+import com.squareup.moshi.JsonWriter
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.ToJson
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.FormBody
-import okhttp3.MediaType
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
-import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.ResponseBody.Companion.toResponseBody
-import org.json.JSONArray
-import org.json.JSONObject
-import team.bjtuss.bjtuselfservice.MainApplication
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
+import team.bjtuss.bjtuselfservice.jsonclass.Course
 import team.bjtuss.bjtuselfservice.jsonclass.CourseJsonType
+import team.bjtuss.bjtuselfservice.jsonclass.CoursewareCatalog
+import team.bjtuss.bjtuselfservice.jsonclass.CoursewareNode
 import team.bjtuss.bjtuselfservice.jsonclass.HomeworkJsonType
+import team.bjtuss.bjtuselfservice.jsonclass.Node
+
 import team.bjtuss.bjtuselfservice.jsonclass.SemesterJsonType
+import team.bjtuss.bjtuselfservice.jsonclass.CourseResourceResponse
+import team.bjtuss.bjtuselfservice.jsonclass.Res
 import team.bjtuss.bjtuselfservice.utils.KotlinUtils
-import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
-import java.net.URLEncoder
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
 
 
 object SmartCurriculumPlatformRepository {
@@ -40,6 +41,12 @@ object SmartCurriculumPlatformRepository {
     private val userAgent = StudentAccountManager.getInstance().userAgent
     val moshi = KotlinUtils.moshi
 
+
+    private val initializationDeferred = CompletableDeferred<Unit>()
+
+
+    private var courseFromJson: CourseJsonType? = null
+    private var coursewareCatalogFromJson: CoursewareCatalog? = null
 
     init {
         initClient()
@@ -60,14 +67,18 @@ object SmartCurriculumPlatformRepository {
         CoroutineScope(Dispatchers.IO).launch {
             client.newCall(request1).execute()
             client.newCall(request2).execute()
-        }
 
+
+            val semesterFromJson = getSemesterTypeList()
+            courseFromJson =
+                semesterFromJson.result?.get(0)?.xqCode?.let { getCourseTypeList(xqCode = it) }
+
+
+            initializationDeferred.complete(Unit)
+        }
     }
 
-
     private suspend fun getSemesterTypeList(): SemesterJsonType {
-
-
         // 2. Visit the course list
         val semesterUrl =
             "http://123.121.147.7:88/ve/back/rp/common/teachCalendar.shtml?method=queryCurrentXq"
@@ -198,11 +209,149 @@ object SmartCurriculumPlatformRepository {
         }
     }
 
+    suspend fun getCourseList(): List<Course> {
+        initializationDeferred.await()
+        return courseFromJson?.courseList ?: emptyList()
+    }
+
+    suspend fun getCoursewareCatalog(course: Course): List<Node> {
+        initializationDeferred.await()
+        val url = "http://123.121.147.7:88/ve/back/coursePlatform/courseResource.shtml?" +
+                "method=stuQueryCourseResourceBag" +
+                "&courseId=${course.course_num}" +
+                "&cId=${course.course_num}" +
+                "&xkhId=${course.fz_id}" +
+                "&xqCode=${course.xq_code}" +
+                "&docType=1"
+
+        val request = Request.Builder()
+            .url(url)
+            .header("User-Agent", userAgent)
+            .build()
+        val adapter = moshi.adapter(CoursewareCatalog::class.java)
+
+
+        return withContext(Dispatchers.IO) {
+            val response = client.newCall(request).execute()
+            try {
+                response.body?.string()?.let {
+                    val coursewareCatalog = adapter.fromJson(it)
+                    coursewareCatalog?.nodes ?: emptyList()
+//                    coursewareCatalog?.nodes?.drop(1) ?: emptyList()
+                }
+            } catch (e: Exception) {
+                Log.e("getCoursewareCatalog", "Error parsing JSON: ${e.message}")
+                emptyList()
+            } ?: throw IOException("Response body is null")
+        }
+    }
+
+    suspend fun getCourseResourceResponse(course: Course, upId: Int = 0): CourseResourceResponse {
+        initializationDeferred.await()
+        val url =
+            "http://123.121.147.7:88/ve/back/coursePlatform/courseResource.shtml?" +
+                    "method=stuQueryUploadResourceForCourseList" +
+                    "&courseId=${course.course_num}" +
+                    "&cId=${course.course_num}" +
+                    "&xkhId=${course.fz_id}" +
+                    "&xqCode=${course.xq_code}" +
+                    "&docType=1" +
+                    "&up_id=${upId}" +
+                    "&searchName="
+
+        val request = Request.Builder()
+            .url(url)
+            .header("User-Agent", userAgent)
+            .build()
+        val adapter = moshi.adapter(CourseResourceResponse::class.java)
+
+        return withContext(Dispatchers.IO) {
+            val response = client.newCall(request).execute()
+            response.body?.source()?.let { source ->
+                try {
+                    adapter.fromJson(source)
+                } catch (e: Exception) {
+                    println("Failed to parse JSON: ${e.message}")
+                    null
+                }
+            } ?: throw IOException("Response body is null")
+        }
+    }
+
+    suspend fun generateCoursewareTree(course: Course): CoursewareNode {
+        initializationDeferred.await()
+        val coursewareRootNode: CoursewareNode = CoursewareNode(id = 0, course = course)
+        coursewareRootNode.children = generateChildrenNodeList(parentNode = coursewareRootNode)
+        return coursewareRootNode
+    }
+
+    private suspend fun generateChildrenNodeList(parentNode: CoursewareNode): List<CoursewareNode> {
+        return withContext(Dispatchers.IO) {
+            val course = parentNode.course
+            val url =
+                "http://123.121.147.7:88/ve/back/coursePlatform/courseResource.shtml?" +
+                        "method=stuQueryUploadResourceForCourseList" +
+                        "&courseId=${course.course_num}" +
+                        "&cId=${course.course_num}" +
+                        "&xkhId=${course.fz_id}" +
+                        "&xqCode=${course.xq_code}" +
+                        "&docType=1" +
+                        "&up_id=${parentNode.id}" +
+                        "&searchName="
+            if (parentNode.course.name == "数字信号处理") {
+                println("Hello")
+            }
+            val request = Request.Builder()
+                .url(url)
+                .header("User-Agent", userAgent)
+                .build()
+            val adapter = moshi.adapter(CourseResourceResponse::class.java)
+            val response = client.newCall(request).execute()
+            val responseContent = response.body?.string()
+            responseContent?.let { str ->
+                try {
+
+//                    val a = str
+//                    println(a)
+                    val jsonString = str
+                        .replace("\"resList\"\\s*:\\s*\"\"".toRegex(), "\"resList\": []")
+                        .replace("\"bagList\"\\s*:\\s*\"\"".toRegex(), "\"bagList\": []")
+                    val courseResourceResponse = adapter.fromJson(jsonString)
+
+                    // 处理 bagList
+                    val bagNodes = courseResourceResponse?.bagList?.map { bag ->
+                        CoursewareNode(
+                            id = bag.id,
+                            bag = bag,
+                            course = parentNode.course
+                        ).apply {
+                            children = generateChildrenNodeList(this) // 递归生成子节点
+                        }
+                    } ?: emptyList()
+
+                    // 处理 resList
+                    val resNodes = courseResourceResponse?.resList?.map { res ->
+                        CoursewareNode(
+                            id = res.resId, // 假设 Res 类有 resId 字段
+                            res = res,
+                            course = parentNode.course
+                        ) // 资源节点通常没有子节点
+                    } ?: emptyList()
+
+                    bagNodes + resNodes // 合并两类节点
+
+                } catch (e: Exception) {
+                    println("Failed to parse JSON: ${e.message}")
+                    emptyList()
+                }
+            } ?: throw IOException("Response body is null")
+        }
+    }
+
 
     private suspend fun getHomeWorkListByHomeworkType(homeworkType: Int): List<HomeworkEntity> {
-        val semesterFromJson = getSemesterTypeList()
-        val courseFromJson =
-            semesterFromJson.result?.get(0)?.xqCode?.let { getCourseTypeList(xqCode = it) }
+        initializationDeferred.await()
+
         val listFromJson = mutableListOf<HomeworkJsonType>()
         courseFromJson?.courseList?.forEach {
             val homeworkFromJson =
@@ -243,125 +392,23 @@ object SmartCurriculumPlatformRepository {
     }
 }
 
-
-class HomeworkUploader(val homeworkEntity: HomeworkEntity) {
-    private val client = SmartCurriculumPlatformRepository.client
-    val context = MainApplication.appContext
-
-    // Convert content Uri to temporary file
-    private suspend fun uriToTempFile(uri: Uri, fileName: String): File =
-        withContext(Dispatchers.IO) {
-            val tempFile = File(context.cacheDir, fileName)
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                FileOutputStream(tempFile).use { outputStream ->
-                    inputStream.copyTo(outputStream)
-                }
-            }
-            return@withContext tempFile
+class StringOrListAdapter<T>(private val listAdapter: JsonAdapter<List<T>>) :
+    JsonAdapter<List<T>>() {
+    @FromJson
+    override fun fromJson(reader: JsonReader): List<T>? {
+        if (reader.peek() == JsonReader.Token.STRING) {
+            reader.nextString() // 消费空字符串
+            return emptyList() // 返回空列表
         }
-
-    // Upload a single file and return the response as JSON
-    private suspend fun uploadFile(file: File): JSONObject = withContext(Dispatchers.IO) {
-
-        val requestBody = MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart(
-                "file",
-                file.name,
-                file.asRequestBody("application/octet-stream".toMediaType())
-            )
-            .build()
-
-        val request = Request.Builder()
-            .url("http://123.121.147.7:88/ve/back/rp/common/rpUpload.shtml")
-//            .header("Cookie", "JSESSIONID=$jsessionId")
-            .post(requestBody)
-            .build()
-
-        client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                throw IOException("上传失败，状态码：${response.code}")
-            }
-            val responseBody = response.body?.string() ?: ""
-            Log.d("HomeworkUploader", "上传响应: $responseBody")
-            return@withContext JSONObject(responseBody)
-        }
+        return listAdapter.fromJson(reader) // 正常解析数组
     }
 
-    // Main function to upload homework files
-    suspend fun uploadHomework(uris: List<Uri>, content: String = "Android上传"): String =
-        withContext(Dispatchers.IO) {
-            // Step 1: Upload files
-            val fileInfoList = mutableListOf<JSONObject>()
-
-            for (uri in uris) {
-                val fileName = getFileName(context, uri) ?: "file_${System.currentTimeMillis()}"
-                val tempFile = uriToTempFile(uri, fileName)
-
-                try {
-                    val uploadResponse = uploadFile(tempFile)
-                    Log.d("HomeworkUploader", "文件上传成功: ${uploadResponse.toString()}")
-
-                    val fileInfo = JSONObject().apply {
-                        put("fileNameNoExt", uploadResponse.getString("fileNameNoExt"))
-                        put("fileExtName", uploadResponse.getString("fileExtName"))
-                        put("fileSize", uploadResponse.getString("fileSize"))
-                        put("visitName", uploadResponse.getString("visitName"))
-                        put("pid", "")
-                        put("ftype", "insert")
-                    }
-
-                    fileInfoList.add(fileInfo)
-                } catch (e: Exception) {
-                    Log.e("HomeworkUploader", "文件上传失败", e)
-                    throw e
-                } finally {
-                    // Clean up temp file
-                    tempFile.delete()
-                }
-            }
-
-            // Step 2: Submit homework with file list
-            val fileListJson = JSONArray(fileInfoList).toString()
-
-            val formBodyBuilder = FormBody.Builder()
-                .add("content", URLEncoder.encode(content, "UTF-8"))
-                .add("groupName", "")
-                .add("groupId", "")
-                .add("courseId", homeworkEntity.courseId.toString())
-                .add("contentType", homeworkEntity.homeworkType.toString())
-                .add("fz", "0")
-                .add("jxrl_id", "")
-                .add("fileList", fileListJson)
-                .add("upId", homeworkEntity.upId.toString())
-                .add("return_num", "")
-                .add("isTeacher", "0")
-
-            val submitRequest = Request.Builder()
-                .url("http://123.121.147.7:88/ve/back/course/courseWorkInfo.shtml?method=sendStuHomeWorks")
-//                .header("Cookie", "JSESSIONID=$jsessionId")
-                .post(formBodyBuilder.build())
-                .build()
-
-            client.newCall(submitRequest).execute().use { response ->
-                val responseBody = response.body?.string() ?: ""
-                Log.d("HomeworkUploader", "提交响应状态码: ${response.code}")
-                Log.d("HomeworkUploader", "提交响应内容: $responseBody")
-                return@withContext responseBody
-            }
+    @ToJson
+    override fun toJson(writer: JsonWriter, value: List<T>?) {
+        if (value == null || value.isEmpty()) {
+            writer.value("") // 写入空字符串
+        } else {
+            listAdapter.toJson(writer, value) // 正常写入数组
         }
-
-    // Utility function to get filename from URI
-    private fun getFileName(context: Context, uri: Uri): String? {
-        val cursor = context.contentResolver.query(uri, null, null, null, null)
-        cursor?.use {
-            if (it.moveToFirst()) {
-                val displayNameIndex = it.getColumnIndex("_display_name")
-                if (displayNameIndex != -1) {
-                    return it.getString(displayNameIndex)
-                }
-            }
-        }
-        return uri.lastPathSegment
     }
 }
