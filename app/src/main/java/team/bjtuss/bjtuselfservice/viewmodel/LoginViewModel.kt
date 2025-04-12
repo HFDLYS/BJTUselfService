@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
 import team.bjtuss.bjtuselfservice.StudentAccountManager
-import team.bjtuss.bjtuselfservice.repository.SettingRepository
+import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 
 // Login View Model to handle login logic
 // 定义密封类表示登录状态
@@ -86,7 +86,7 @@ class LoginViewModel : ViewModel() {
             try {
                 val result = authenticator.login(username, password)
                 if (result.isSuccess) {
-                    SettingRepository.setCredentials(username, password)  // 将凭据存储到本地
+                    DataStoreRepository.setCredentials(username, password)  // 将凭据存储到本地
                     _screenStatus.value = ScreenStatus.AppScreen
                 } else {
                     _loginState.value =
@@ -102,7 +102,7 @@ class LoginViewModel : ViewModel() {
         viewModelScope.launch {
 
             try {
-                val (username, password) = SettingRepository.getStoredCredentialsBlocking()
+                val (username, password) = DataStoreRepository.getStoredCredentialsBlocking()
                 if (username == "" || password == "") {
                     _loginState.value = LoginState.Idle
                     return@launch
@@ -130,7 +130,7 @@ class LoginViewModel : ViewModel() {
 
     fun logout() {
         viewModelScope.launch {
-            SettingRepository.clearCredentials()
+            DataStoreRepository.clearCredentials()
             StudentAccountManager.getInstance().clearCookie()
             _loginState.value = LoginState.Idle
             _screenStatus.value = ScreenStatus.LoginScreen

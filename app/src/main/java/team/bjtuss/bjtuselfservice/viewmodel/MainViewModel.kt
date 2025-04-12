@@ -1,5 +1,6 @@
 package team.bjtuss.bjtuselfservice.viewmodel
 
+import android.util.Printer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 
@@ -11,7 +12,7 @@ class MainViewModel(
     val homeworkViewModel: HomeworkViewModel,
     val statusViewModel: StatusViewModel,
     val settingViewModel: SettingViewModel,
-    val coursewareViewModel: CoursewareViewModel
+    val coursewareViewModel: CoursewareViewModel,
 ) : ViewModel() {
     fun loadDataAndDetectChanges() {
         statusViewModel.loadData()
@@ -38,7 +39,8 @@ class MainViewModelFactory(
     private val homeworkViewModel: HomeworkViewModel,
     private val statusViewModel: StatusViewModel,
     private val settingViewModel: SettingViewModel,
-    private val coursewareViewModel: CoursewareViewModel
+    private val coursewareViewModel: CoursewareViewModel,
+
 ) : ViewModelProvider.Factory {
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -52,7 +54,7 @@ class MainViewModelFactory(
                 homeworkViewModel,
                 statusViewModel,
                 settingViewModel,
-                coursewareViewModel
+                coursewareViewModel,
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

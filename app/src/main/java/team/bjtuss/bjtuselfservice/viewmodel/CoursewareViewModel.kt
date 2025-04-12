@@ -2,45 +2,53 @@ package team.bjtuss.bjtuselfservice.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import team.bjtuss.bjtuselfservice.jsonclass.Course
+import team.bjtuss.bjtuselfservice.entity.CoursewareCourseEntity
 import team.bjtuss.bjtuselfservice.jsonclass.CoursewareNode
-import team.bjtuss.bjtuselfservice.jsonclass.Node
-import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository.generateCoursewareTree
+import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
+import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository.generateCoursewareRootNode
 import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository.getCourseList
-import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository.getCoursewareCatalog
 
 
 class CoursewareViewModel() : ViewModel() {
-    //    private var coursewareList: List<CoursewareJsonType> = emptyList()
-    private var _courseList: MutableStateFlow<List<Course>> =
-        MutableStateFlow(emptyList())
-    val courseList = _courseList.asStateFlow()
-
-    private var _coursewareCatalogMap: MutableStateFlow<MutableMap<String, List<Node>>> =
-        MutableStateFlow(mutableMapOf())
-    val coursewareCatalogMap = _coursewareCatalogMap.asStateFlow()
-
-    private var _coursewareTree: MutableStateFlow<MutableList<CoursewareNode>> =
+    private var _coursewareRootNodeList: MutableStateFlow<MutableList<CoursewareNode>> =
         MutableStateFlow(mutableListOf())
-
-    val coursewareTree = _coursewareTree.asStateFlow()
+    val coursewareRootNodeList = _coursewareRootNodeList.asStateFlow()
 
 
     init {
         viewModelScope.launch {
-            _courseList.value = getCourseList()
-            _courseList.value.forEach { course ->
-                val coursewareCatalog = getCoursewareCatalog(course)
-                _coursewareCatalogMap.value.put(course.name, coursewareCatalog)
-                _coursewareTree.value.add(generateCoursewareTree(course))
-                if (course.name == "数字信号处理") {
+            val gson = Gson()
+//            _courseList.value = getCourseList()
+            val json2 = DataStoreRepository.getCoursewareJson().first()
+            val type = object : TypeToken<MutableList<CoursewareNode>>() {}.type
+            _coursewareRootNodeList.value = gson.fromJson(json2, type) ?: mutableListOf()
 
-                    println(_coursewareTree.value)
-                }
+
+            val list = mutableListOf<CoursewareNode>()
+            getCourseList().forEach { course ->
+                list.add(
+                    generateCoursewareRootNode(
+                        CoursewareCourseEntity(
+                            fz_id = course.fz_id,
+                            course_num = course.course_num,
+                            xq_code = course.xq_code,
+                            name = course.name
+                        )
+                    )
+                )
             }
+            _coursewareRootNodeList.value = list
+            val json = gson.toJson(coursewareRootNodeList.value)
+            DataStoreRepository.setCoursewareJson(
+                json
+            )
+
         }
     }
 }

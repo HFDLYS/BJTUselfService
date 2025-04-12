@@ -52,7 +52,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import team.bjtuss.bjtuselfservice.R
-import team.bjtuss.bjtuselfservice.repository.SettingRepository
+import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 import team.bjtuss.bjtuselfservice.viewmodel.LoginState
 import team.bjtuss.bjtuselfservice.viewmodel.LoginViewModel
 
@@ -72,8 +72,8 @@ fun LoginScreen(
         } else {
             loginViewModel.autoLogin()
         }
-        username = SettingRepository.getStoredCredentialsBlocking().first
-        password = SettingRepository.getStoredCredentialsBlocking().second
+        username = DataStoreRepository.getStoredCredentialsBlocking().first
+        password = DataStoreRepository.getStoredCredentialsBlocking().second
     }
 
     Column(

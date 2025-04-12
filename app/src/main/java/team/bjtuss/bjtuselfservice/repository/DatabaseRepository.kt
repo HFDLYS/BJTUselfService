@@ -1,5 +1,7 @@
 package team.bjtuss.bjtuselfservice.repository
 
+import android.media.CamcorderProfile.getAll
+import androidx.compose.runtime.snapshots.Snapshot.Companion.observe
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,9 +12,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import team.bjtuss.bjtuselfservice.database.AppDatabase
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
+import team.bjtuss.bjtuselfservice.entity.CoursewareNodeEntity
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
+import team.bjtuss.bjtuselfservice.jsonclass.CoursewareNode
 
 object DatabaseRepository {
     private val gradeEntityDao =
@@ -23,6 +27,9 @@ object DatabaseRepository {
         AppDatabase.getInstance().examScheduleEntityDao()
     private val homeworkEntityDao =
         AppDatabase.getInstance().homeworkEntityDao()
+    private val coursewareDao =
+        AppDatabase.getInstance().coursewareDao()
+
 
     private var _gradeList =
         MutableStateFlow<List<GradeEntity>>(mutableListOf())
@@ -52,12 +59,17 @@ object DatabaseRepository {
         MutableStateFlow<List<HomeworkEntity>>(mutableListOf())
     val homeworkList: StateFlow<List<HomeworkEntity>> = _homeworkList.asStateFlow()
 
+    private var _coursewareEntityList =
+        MutableStateFlow<List<CoursewareNodeEntity>>(mutableListOf())
+    val coursewareEntityList = _coursewareEntityList.asStateFlow()
+
     init {
         observeGradeList()
         observeCourseList(true)  // 本学期课程
         observeCourseList(false) // 下学期课程
         observeExamScheduleList()
         observeHomeworkList()
+        observeCoursewareList()
     }
 
 
@@ -109,11 +121,6 @@ object DatabaseRepository {
     }
 
 
-    fun observeClassroomMap() {
-
-    }
-
-
     suspend fun getCourseList(): List<CourseEntity> {
         return withContext(Dispatchers.IO) {
             courseEntityDao.getAll().first()
@@ -136,6 +143,14 @@ object DatabaseRepository {
     suspend fun getHomeworkList(): List<HomeworkEntity> {
         return withContext(Dispatchers.IO) {
             homeworkEntityDao.getAll().first()
+        }
+    }
+
+    private fun observeCoursewareList() {
+        CoroutineScope(Dispatchers.IO).launch {
+            coursewareDao.getAll().collect {
+                _coursewareEntityList.value = it
+            }
         }
     }
 

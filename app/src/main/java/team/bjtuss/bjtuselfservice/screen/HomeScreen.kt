@@ -626,15 +626,16 @@ private fun HomeworkNoticeCard(
                 )
             }
         }
-        if (showDetail) {
-            DetailedDialog(
-                title = "作业截止提醒",
-                items = DDLList,
-                onDismiss = { showDetail = false },
-                cardItem = { HomeworkItemCard(it) },
-                onClick = { navController.navigate(RouteManager.HomeWork) }
-            )
-        }
+
+    }
+    if (showDetail) {
+        DetailedDialog(
+            title = "作业截止提醒",
+            items = DDLList,
+            onDismiss = { showDetail = false },
+            cardItem = { HomeworkItemCard(it) },
+            onClick = { navController.navigate(RouteManager.HomeWork) }
+        )
     }
 }
 

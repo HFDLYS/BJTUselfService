@@ -98,6 +98,7 @@ dependencies {
     implementation ("com.google.accompanist:accompanist-swiperefresh:0.30.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.6.2") // 核心库
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2") // JSON 支持
+    implementation ("com.airbnb.android:lottie-compose:4.0.0")
 }
 kapt {
     correctErrorTypes = true

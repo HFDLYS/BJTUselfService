@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import team.bjtuss.bjtuselfservice.MainApplication.Companion.appContext
 
-object SettingRepository {
+object DataStoreRepository {
     private val Context.dataStore by preferencesDataStore("settings")
     private val USERNAME_KEY = stringPreferencesKey("username")
     private val PASSWORD_KEY = stringPreferencesKey("password")
@@ -22,6 +22,8 @@ object SettingRepository {
     private val SYNC_SCHEDULE_KEY = booleanPreferencesKey("auto_sync_schedule")
     private val SYNC_EXAMS_KEY = booleanPreferencesKey("auto_sync_exams")
 
+
+    private val COURSEWARE_JSON = stringPreferencesKey("courseware_json")
 
     suspend fun setCredentials(username: String, password: String) {
         appContext.dataStore.edit { preferences ->
@@ -109,6 +111,17 @@ object SettingRepository {
     fun getExamAutoSyncOption(): Flow<Boolean> {
         return appContext.dataStore.data.map { preferences ->
             preferences[SYNC_EXAMS_KEY] ?: false
+        }
+    }
+
+    fun getCoursewareJson(): Flow<String> {
+        return appContext.dataStore.data.map { preferences ->
+            preferences[COURSEWARE_JSON] ?: ""
+        }
+    }
+    suspend fun setCoursewareJson(json: String) {
+        appContext.dataStore.edit { preferences ->
+            preferences[COURSEWARE_JSON] = json
         }
     }
 

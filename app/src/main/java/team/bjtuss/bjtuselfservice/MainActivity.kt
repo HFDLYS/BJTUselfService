@@ -233,6 +233,7 @@ fun App(loginViewModel: LoginViewModel) {
     val settingViewModel: SettingViewModel = viewModel()
     val coursewareViewModel: CoursewareViewModel = viewModel()
     val mainViewModel: MainViewModel = viewModel(
+
         factory = MainViewModelFactory(
             gradeViewModel,
             courseScheduleViewModel,
@@ -241,7 +242,7 @@ fun App(loginViewModel: LoginViewModel) {
             homeworkViewModel,
             statusViewModel,
             settingViewModel,
-            coursewareViewModel
+            coursewareViewModel,
         )
     )
 
