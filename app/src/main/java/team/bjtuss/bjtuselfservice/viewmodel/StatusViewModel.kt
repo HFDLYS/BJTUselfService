@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.StudentAccountManager.Status
-import team.bjtuss.bjtuselfservice.repository.NetworkRequestQueue
 import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
 
 class StatusViewModel : ViewModel() {

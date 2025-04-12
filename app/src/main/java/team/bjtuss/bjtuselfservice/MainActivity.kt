@@ -5,10 +5,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -75,7 +73,6 @@ import team.bjtuss.bjtuselfservice.screen.OtherFunctionScreen
 import team.bjtuss.bjtuselfservice.screen.SettingScreen
 import team.bjtuss.bjtuselfservice.screen.SpaceScreen
 import team.bjtuss.bjtuselfservice.ui.theme.BJTUselfServicecomposeTheme
-import team.bjtuss.bjtuselfservice.utils.FilePickerManager
 import team.bjtuss.bjtuselfservice.viewmodel.ClassroomViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.CourseScheduleViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.CoursewareViewModel

@@ -1,10 +1,7 @@
 package team.bjtuss.bjtuselfservice.utils
 
-import android.app.Activity
 import android.net.Uri
 import androidx.activity.result.ActivityResultLauncher
-import team.bjtuss.bjtuselfservice.MainApplication
-import java.lang.ref.WeakReference
 
 class FilePickerManager {
     private var launcher: ActivityResultLauncher<String>? = null

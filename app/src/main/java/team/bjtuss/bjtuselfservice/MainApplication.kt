@@ -1,7 +1,6 @@
 package team.bjtuss.bjtuselfservice
 
 import android.app.Application
-import android.app.DownloadManager
 import android.content.Context
 import dagger.hilt.android.HiltAndroidApp
 

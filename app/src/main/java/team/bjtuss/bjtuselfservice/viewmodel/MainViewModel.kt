@@ -1,6 +1,5 @@
 package team.bjtuss.bjtuselfservice.viewmodel
 
-import android.util.Printer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 

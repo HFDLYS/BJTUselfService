@@ -1,6 +1,5 @@
 package team.bjtuss.bjtuselfservice.dao
 
-import androidx.room.Dao
 import kotlinx.coroutines.flow.Flow
 import team.bjtuss.bjtuselfservice.entity.BaseEntity
 

@@ -1,10 +1,8 @@
 package team.bjtuss.bjtuselfservice.viewmodel
 
-import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.StateFlow
 import team.bjtuss.bjtuselfservice.database.AppDatabase
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
-import team.bjtuss.bjtuselfservice.jsonclass.HomeworkJsonType
 import team.bjtuss.bjtuselfservice.repository.DatabaseRepository
 import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
 

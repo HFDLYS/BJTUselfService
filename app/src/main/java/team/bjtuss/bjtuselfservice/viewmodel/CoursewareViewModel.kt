@@ -8,7 +8,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import team.bjtuss.bjtuselfservice.entity.CoursewareCourseEntity
+import team.bjtuss.bjtuselfservice.jsonclass.Course
+
 import team.bjtuss.bjtuselfservice.jsonclass.CoursewareNode
 import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository.generateCoursewareRootNode
@@ -36,7 +37,7 @@ class CoursewareViewModel() : ViewModel() {
             getCourseList().forEach { course ->
                 list.add(
                     generateCoursewareRootNode(
-                        CoursewareCourseEntity(
+                        Course(
                             fz_id = course.fz_id,
                             course_num = course.course_num,
                             xq_code = course.xq_code,

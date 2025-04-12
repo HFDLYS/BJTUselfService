@@ -2,11 +2,6 @@ package team.bjtuss.bjtuselfservice.repository
 
 
 import android.util.Log
-import com.squareup.moshi.FromJson
-import com.squareup.moshi.JsonAdapter
-import com.squareup.moshi.JsonReader
-import com.squareup.moshi.JsonWriter
-import com.squareup.moshi.ToJson
 import com.squareup.moshi.Types
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -16,31 +11,22 @@ import kotlinx.coroutines.withContext
 import okhttp3.Request
 import okhttp3.ResponseBody.Companion.toResponseBody
 import team.bjtuss.bjtuselfservice.StudentAccountManager
-import team.bjtuss.bjtuselfservice.dao.CoursewareDao
 import team.bjtuss.bjtuselfservice.database.AppDatabase
-import team.bjtuss.bjtuselfservice.entity.BagEntity
-import team.bjtuss.bjtuselfservice.entity.CoursewareCourseEntity
-import team.bjtuss.bjtuselfservice.entity.CoursewareNodeEntity
-import team.bjtuss.bjtuselfservice.entity.CoursewareNodeWithChildren
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
-import team.bjtuss.bjtuselfservice.entity.ResEntity
-import team.bjtuss.bjtuselfservice.jsonclass.Bag
 import team.bjtuss.bjtuselfservice.jsonclass.Course
 import team.bjtuss.bjtuselfservice.jsonclass.CourseJsonType
+import team.bjtuss.bjtuselfservice.jsonclass.CourseResourceResponse
 import team.bjtuss.bjtuselfservice.jsonclass.CoursewareCatalog
 import team.bjtuss.bjtuselfservice.jsonclass.CoursewareNode
 import team.bjtuss.bjtuselfservice.jsonclass.HomeworkJsonType
 import team.bjtuss.bjtuselfservice.jsonclass.Node
-
 import team.bjtuss.bjtuselfservice.jsonclass.SemesterJsonType
-import team.bjtuss.bjtuselfservice.jsonclass.CourseResourceResponse
-import team.bjtuss.bjtuselfservice.jsonclass.Res
 import team.bjtuss.bjtuselfservice.utils.KotlinUtils
 import java.io.IOException
 
 
 object SmartCurriculumPlatformRepository {
-    private val coursewareDao = AppDatabase.getInstance().coursewareDao()
+
     val client = StudentAccountManager.getInstance().client
     private val userAgent = StudentAccountManager.getInstance().userAgent
     val moshi = KotlinUtils.moshi
@@ -280,10 +266,10 @@ object SmartCurriculumPlatformRepository {
         }
     }
 
-    suspend fun generateCoursewareRootNode(coursewareCourseEntity: CoursewareCourseEntity): CoursewareNode {
+    suspend fun generateCoursewareRootNode(course: Course): CoursewareNode {
         initializationDeferred.await()
         val coursewareRootNode: CoursewareNode =
-            CoursewareNode(id = 0, course = coursewareCourseEntity)
+            CoursewareNode(id = 0, course = course)
         coursewareRootNode.children = generateChildrenNodeList(parentNode = coursewareRootNode)
         return coursewareRootNode
     }
@@ -389,304 +375,6 @@ object SmartCurriculumPlatformRepository {
             }
         }
         return processedList
+
     }
-
-    suspend fun saveCoursewareNode(
-        node: CoursewareNode,
-        courseEntity: CoursewareCourseEntity? = null
-    ): Int {
-        // 1. 保存课程信息
-        val course = courseEntity ?: CoursewareCourseEntity(
-            fz_id = node.course.fz_id,
-            course_num = node.course.course_num,
-            xq_code = node.course.xq_code,
-            name = node.course.name
-        )
-
-        val courseId = if (course.id == 0) {
-            coursewareDao.insertCourse(course).toInt()
-        } else {
-            course.id
-        }
-
-        // 2. 将节点转换为实体并保存
-        val nodeEntities = convertNodeToEntities(node, courseId)
-        coursewareDao.insertNodes(nodeEntities)
-
-        return courseId
-    }
-
-
-    suspend fun getCoursewareNodesByCourseId(courseId: Int): CoursewareNode {
-        val courseEntity = coursewareDao.getCourseById(courseId) ?: return CoursewareNode()
-
-        // 获取所有节点
-        val allNodes = coursewareDao.getAllNodesByCourseId(courseId)
-
-        // 构建树结构
-        val rootNodes = buildNodeTree(allNodes, courseEntity)
-
-        // 创建一个虚拟的根节点，包含所有根节点作为子节点
-        return CoursewareNode(
-            id = 0, // 虚拟ID
-            course = courseEntity,
-            children = rootNodes
-        )
-    }
-
-    suspend fun generateCoursewareRootNodeList(
-        coursewareNodeEntityList: List<CoursewareNodeEntity>
-    ): List<CoursewareNode> {
-        // 从节点实体列表中提取所有唯一课程ID，然后为每个课程ID构建一个树
-        return coursewareNodeEntityList
-            .map { it.courseId }
-            .toSet()  // 去重，确保每个课程只处理一次
-            .map { courseId ->
-                getCoursewareNodesByCourseId(courseId)
-            }
-    }
-
-    suspend fun deleteCourse(courseId: Int) {
-        val courseEntity = coursewareDao.getCourseById(courseId) ?: return
-        coursewareDao.deleteCourse(courseEntity)
-    }
-
-    fun convertNodeToEntities(
-        node: CoursewareNode,
-        courseId: Int,
-        parentId: Int? = null
-    ): List<CoursewareNodeEntity> {
-        // 创建当前节点的实体
-        val nodeEntity = CoursewareNodeEntity(
-            id = if (node.id == 0) 0 else node.id, // 如果id为0，让数据库自动生成
-            courseId = courseId,
-            parentId = parentId,
-            res = node.res?.let {
-                ResEntity(
-                    rpId = it.rpId,
-                    resId = it.resId,
-                    rpName = it.rpName
-                )
-            },
-            bag = node.bag?.let { BagEntity(it.id) }
-        )
-
-        // 递归处理子节点
-        val childEntities = if (node.children.isNotEmpty()) {
-            // 需要先插入当前节点以获取其ID，然后才能处理子节点
-            // 这里假设nodeEntity已经被插入数据库并获得了ID
-            node.children.flatMap { childNode ->
-                convertNodeToEntities(childNode, courseId, nodeEntity.id)
-            }
-        } else {
-            emptyList()
-        }
-
-        // 返回当前节点和所有子节点的平铺列表
-        return listOf(nodeEntity) + childEntities
-    }
-
-    private fun buildNodeTree(
-        allNodes: List<CoursewareNodeEntity>,
-        coursewareCourseEntity: CoursewareCourseEntity
-    ): List<CoursewareNode> {
-        // 按父节点ID分组
-        val nodesByParent = allNodes.groupBy { it.parentId }
-
-        // 获取根节点（parentId为null的节点）
-        val rootNodes = nodesByParent[null] ?: return emptyList()
-
-        // 递归构建树形结构
-        return rootNodes.map { rootEntity ->
-            buildNode(rootEntity, nodesByParent, coursewareCourseEntity)
-        }
-    }
-
-    // 递归构建节点及其子节点
-    private fun buildNode(
-        entity: CoursewareNodeEntity,
-        nodesByParent: Map<Int?, List<CoursewareNodeEntity>>,
-        coursewareCourseEntity: CoursewareCourseEntity
-    ): CoursewareNode {
-        val childEntities = nodesByParent[entity.id] ?: emptyList()
-
-        return CoursewareNode(
-            id = entity.id,
-            course = coursewareCourseEntity,
-            res = entity.res?.let {
-                Res(
-                    rpId = it.rpId,
-                    resId = it.resId,
-                    rpName = it.rpName
-                    // 其他属性保持默认值
-                )
-            },
-            bag = entity.bag?.let {
-                Bag(id = it.badId)  // 这里的badId应该与BagEntity中的属性名一致
-            },
-            children = childEntities.map { childEntity ->
-                buildNode(childEntity, nodesByParent, coursewareCourseEntity)
-            }
-        )
-    }
-
 }
-
-//class CoursewareRepository(private val coursewareDao: CoursewareDao) {
-//
-//    suspend fun saveCoursewareNode(
-//        node: CoursewareNode,
-//        courseEntity: CoursewareCourseEntity? = null
-//    ): Int {
-//        // 1. 保存课程信息
-//        val course = courseEntity ?: CoursewareCourseEntity(
-//            fz_id = node.course.fz_id,
-//            course_num = node.course.course_num,
-//            xq_code = node.course.xq_code,
-//            name = node.course.name
-//        )
-//
-//        val courseId = if (course.id == 0) {
-//            coursewareDao.insertCourse(course).toInt()
-//        } else {
-//            course.id
-//        }
-//
-//        // 2. 将节点转换为实体并保存
-//        val nodeEntities = convertNodeToEntities(node, courseId)
-//        coursewareDao.insertNodes(nodeEntities)
-//
-//        return courseId
-//    }
-//
-//    suspend fun getCoursewareNodesByCourseId(courseId: Int): CoursewareNode {
-//        val courseEntity = coursewareDao.getCourseById(courseId) ?: return CoursewareNode()
-//
-//        val course = CoursewareCourseEntity(
-//            id = courseEntity.id,
-//            fz_id = courseEntity.fz_id ?: "",
-//            course_num = courseEntity.course_num ?: "",
-//            xq_code = courseEntity.xq_code ?: "",
-//            name = courseEntity.name
-//        )
-//
-//        // 获取所有节点
-//        val allNodes = coursewareDao.getAllNodesByCourseId(courseId)
-//
-//        // 构建树结构
-//        val rootNodes = buildNodeTree(allNodes, course)
-//
-//        // 创建一个虚拟的根节点，包含所有根节点作为子节点
-//        return CoursewareNode(
-//            id = 0, // 虚拟ID
-//            course = course,
-//            children = rootNodes
-//        )
-//    }
-//
-//    suspend fun getCoursewareNodeById(nodeId: Int): CoursewareNode? {
-//        val nodeEntity = coursewareDao.getNodeById(nodeId) ?: return null
-//        val courseEntity = coursewareDao.getCourseById(nodeEntity.courseId) ?: return null
-//
-//        val course = Course(
-//            id = courseEntity.id,
-//            fz_id = courseEntity.fz_id ?: "",
-//            course_num = courseEntity.course_num ?: "",
-//            xq_code = courseEntity.xq_code ?: "",
-//            name = courseEntity.name
-//        )
-//
-//        // 获取所有相关节点
-//        val allNodes = coursewareDao.getAllNodesByCourseId(nodeEntity.courseId)
-//
-//        // 构建以请求的节点为根的子树
-//        return buildNodeSubtree(nodeEntity, allNodes, course)
-//    }
-//
-//    suspend fun deleteCourse(courseId: Int) {
-//        val courseEntity = coursewareDao.getCourseById(courseId) ?: return
-//        coursewareDao.deleteCourse(courseEntity)
-//    }
-//
-//    fun convertNodeToEntities(
-//        node: CoursewareNode,
-//        courseId: Int,
-//        parentId: Int? = null
-//    ): List<CoursewareNodeEntity> {
-//        // 创建当前节点的实体
-//        val nodeEntity = CoursewareNodeEntity(
-//            id = if (node.id == 0) 0 else node.id, // 如果id为0，让数据库自动生成
-//            courseId = courseId,
-//            parentId = parentId,
-//            res = node.res?.let {
-//                ResEntity(
-//                    rpId = it.rpId,
-//                    resId = it.resId,
-//                    rpName = it.rpName
-//                )
-//            },
-//            bag = node.bag?.let { BagEntity(it.id) }
-//        )
-//
-//        val result = mutableListOf(nodeEntity)
-//
-//        // 递归处理子节点
-//        if (node.children.isNotEmpty()) {
-//            node.children.forEach { childNode ->
-//                result.addAll(convertNodeToEntities(childNode, courseId, node.id))
-//            }
-//        }
-//
-//        return result
-//    }
-//
-//    // 将平铺的节点列表转换为树形结构
-//    private fun buildNodeTree(
-//        allNodes: List<CoursewareNodeEntity>,
-//        course: CoursewareCourseEntity
-//    ): List<CoursewareNode> {
-//        // 按父节点ID分组
-//        val nodesByParent = allNodes.groupBy { it.parentId }
-//
-//        // 获取根节点（parentId为null的节点）
-//        val rootNodes = nodesByParent[null] ?: return emptyList()
-//
-//        // 递归构建树形结构
-//        return rootNodes.map { rootEntity ->
-//            buildNode(rootEntity, nodesByParent, course)
-//        }
-//    }
-//
-//    // 根据节点ID构建子树
-//    private fun buildNodeSubtree(
-//        nodeEntity: CoursewareNodeEntity,
-//        allNodes: List<CoursewareNodeEntity>,
-//        course: Course
-//    ): CoursewareNode {
-//        val nodesByParent = allNodes.groupBy { it.parentId }
-//        return buildNode(nodeEntity, nodesByParent, course)
-//    }
-//
-//    // 递归构建节点及其子节点
-//    private fun buildNode(
-//        entity: CoursewareNodeEntity,
-//        nodesByParent: Map<Int?, List<CoursewareNodeEntity>>,
-//        course: Course
-//    ): CoursewareNode {
-//        val childEntities = nodesByParent[entity.id] ?: emptyList()
-//
-//        return CoursewareNode(
-//            id = entity.id,
-//            course = course,
-//            res = entity.res?.let {
-//                Res(rpId = it.rpId, resId = it.resId, rpName = it.rpName)
-//            },
-//            bag = entity.bag?.let {
-//                Bag(id = it.badId)
-//            },
-//            children = childEntities.map { childEntity ->
-//                buildNode(childEntity, nodesByParent, course)
-//            }
-//        )
-//    }
-//}

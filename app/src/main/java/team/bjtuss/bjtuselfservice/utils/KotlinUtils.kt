@@ -2,10 +2,7 @@ package team.bjtuss.bjtuselfservice.utils
 
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import okhttp3.Cookie
-import okhttp3.HttpUrl
 import okhttp3.Request
-
 import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
 import java.util.Base64
 import javax.crypto.Cipher

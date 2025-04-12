@@ -59,8 +59,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
 import team.bjtuss.bjtuselfservice.utils.Utils
-import team.bjtuss.bjtuselfservice.viewmodel.ClassroomViewModel
-import team.bjtuss.bjtuselfservice.viewmodel.CourseScheduleViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.DataChange
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 
