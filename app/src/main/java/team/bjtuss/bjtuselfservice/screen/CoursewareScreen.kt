@@ -15,6 +15,9 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.rememberScrollableState
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,7 +33,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Description
@@ -119,8 +124,8 @@ fun CoursewareScreen(mainViewModel: MainViewModel) {
             } else {
                 Box(modifier = Modifier.fillMaxSize()) {
                     CoursewareTreeView(
-                        coursewareTree = coursewareRootNodeList,
-                        scrollState = scrollState
+                        coursewareRootNodeList = coursewareRootNodeList,
+//                        scrollState = scrollState
                     )
 
                     // 快速滚动到顶部的按钮
@@ -186,25 +191,39 @@ private fun LoadingScreen() {
 
 @Composable
 fun CoursewareTreeView(
-    coursewareTree: List<CoursewareNode>,
-    scrollState: LazyListState = rememberLazyListState()
+    coursewareRootNodeList: List<CoursewareNode>,
+//    scrollState: LazyListState = rememberLazyListState()
 ) {
-    LazyColumn(
-        state = scrollState,
+    val scrollState = rememberScrollState()
+//    LazyColumn(
+//        state = scrollState,
+//        modifier = Modifier
+//            .fillMaxSize()
+//            .padding(horizontal = 16.dp, vertical = 12.dp),
+//        verticalArrangement = Arrangement.spacedBy(12.dp)
+//    ) {
+//        items(coursewareRootNodeList) { rootNode ->
+//            CoursewareTreeNode(node = rootNode)
+//        }
+//
+//        // 底部添加间距
+//        item {
+//            Spacer(modifier = Modifier.height(72.dp))
+//        }
+//    }
+    Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(scrollState)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(coursewareTree) { rootNode ->
-            CoursewareTreeNode(node = rootNode)
+        coursewareRootNodeList.forEach {
+            CoursewareTreeNode(node = it)
         }
-
-        // 底部添加间距
-        item {
-            Spacer(modifier = Modifier.height(72.dp))
-        }
+        Spacer(modifier = Modifier.height(72.dp))
     }
+
 }
 
 @Composable
