@@ -497,17 +497,16 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
             // 按钮行
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
                     onClick = {
-//                        CoroutineScope(Dispatchers.IO).launch {
                         try {
                             showUploadHomeworkDialog = true
                         } catch (e: Exception) {
                             // Handle error
                         }
-//                        }
+
                     },
                     enabled = !isRefreshing,
                     modifier = Modifier.weight(1f),
@@ -517,17 +516,9 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
                         disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                     )
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.CloudUpload,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
+
                         Text("上传作业")
-                    }
+
                 }
 
                 HomeworkDownloadButton(
