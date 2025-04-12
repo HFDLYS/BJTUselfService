@@ -24,11 +24,13 @@ class CoursewareViewModel() : ViewModel() {
     init {
         viewModelScope.launch {
             val gson = Gson()
-//            _courseList.value = getCourseList()
-            val json2 = DataStoreRepository.getCoursewareJson().first()
+            val json = DataStoreRepository.getCoursewareJson().first()
             val type = object : TypeToken<MutableList<CoursewareNode>>() {}.type
-            _coursewareRootNodeList.value = gson.fromJson(json2, type) ?: mutableListOf()
 
+            if (json != "" && json != "[]") {
+                _coursewareRootNodeList.value = gson.fromJson(json, type) ?: mutableListOf()
+
+            }
 
             val list = mutableListOf<CoursewareNode>()
             getCourseList().forEach { course ->
@@ -44,9 +46,9 @@ class CoursewareViewModel() : ViewModel() {
                 )
             }
             _coursewareRootNodeList.value = list
-            val json = gson.toJson(coursewareRootNodeList.value)
+
             DataStoreRepository.setCoursewareJson(
-                json
+                gson.toJson(coursewareRootNodeList.value)
             )
 
         }
