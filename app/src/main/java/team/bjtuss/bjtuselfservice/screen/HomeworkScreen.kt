@@ -159,14 +159,6 @@ fun HomeworkList(homeworkList: List<HomeworkEntity>) {
     }
 
 
-    var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
-    val filePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let { selectedFileUri = it }
-    }
-
-
     Scaffold(
         modifier = Modifier.fillMaxSize()
     ) { paddingValues ->
@@ -507,7 +499,7 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
                     )
                 ) {
 
-                        Text("上传作业")
+                    Text("上传作业")
 
                 }
 

@@ -11,7 +11,6 @@ import kotlinx.coroutines.withContext
 import okhttp3.Request
 import okhttp3.ResponseBody.Companion.toResponseBody
 import team.bjtuss.bjtuselfservice.StudentAccountManager
-import team.bjtuss.bjtuselfservice.database.AppDatabase
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
 import team.bjtuss.bjtuselfservice.jsonclass.Course
 import team.bjtuss.bjtuselfservice.jsonclass.CourseJsonType
@@ -34,7 +33,6 @@ object SmartCurriculumPlatformRepository {
 
 
     private var courseFromJson: CourseJsonType? = null
-    private var coursewareCatalogFromJson: CoursewareCatalog? = null
 
     init {
         initClient()
