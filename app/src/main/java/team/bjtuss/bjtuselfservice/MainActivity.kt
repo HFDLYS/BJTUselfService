@@ -8,25 +8,49 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BorderAll
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -44,8 +68,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
@@ -143,6 +172,8 @@ class MainActivity : ComponentActivity() {
                     )
 
 
+
+
                     if (appState == AppState.Logout || appState == AppState.Error) {
 
                         LoginDialog(credentials, onLoginSuccess = {
@@ -151,7 +182,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     App(mainViewModel)
-
+                    FloatingLoggingIndicator(appState)
 
 //                    when (screenStatus) {
 //                        is ScreenStatus.LoginScreen -> {
@@ -164,6 +195,41 @@ class MainActivity : ComponentActivity() {
 //                    }
 
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun ToastStyleLoggingIndicator(appState: AppState) {
+    AnimatedVisibility(
+        visible = appState == AppState.Logging,
+        enter = slideInVertically { it } + fadeIn(),
+        exit = slideOutVertically { it } + fadeOut(),
+        modifier = Modifier.padding(bottom = 16.dp)
+    ) {
+        Surface(
+            modifier = Modifier
+                .wrapContentSize()
+                .padding(horizontal = 16.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+            shadowElevation = 2.dp
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp
+                )
+                Text(
+                    "正在登录...",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -244,15 +310,45 @@ fun CheckForUpdate() {
 }
 
 @Composable
+fun AuthStateIndicator(appState: AppState) {
+    AnimatedVisibility(
+        visible = appState == AppState.Logging,
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                    shape = RoundedCornerShape(4.dp)
+                )
+                .padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp
+                )
+                Text(
+                    "正在登录中...",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun App(mainViewModel: MainViewModel) {
 
     val navController = rememberNavController()
-
-
-
-
-
-
     NavHost(navController = navController,
         startDestination = RouteManager.Navigation,
         enterTransition = { activityEnterTransition() },
@@ -293,13 +389,80 @@ fun App(mainViewModel: MainViewModel) {
         composable(RouteManager.Courseware) {
             CoursewareScreen(mainViewModel)
         }
-
-
     }
 
 
 }
 
+@Composable
+fun FloatingLoggingIndicator(appState: AppState) {
+    AnimatedVisibility(
+        visible = appState == AppState.Logging,
+        enter = fadeIn(animationSpec = tween(300)) +
+                slideInVertically(
+                    animationSpec = tween(300),
+                    initialOffsetY = { it / 2 }
+                ),
+        exit = fadeOut(animationSpec = tween(300)) +
+                slideOutVertically(
+                    animationSpec = tween(300),
+                    targetOffsetY = { -it / 2 }
+                )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
+            // 加载指示器背景卡片
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 64.dp) // 距离顶部的距离
+                    .wrapContentSize()
+                    .shadow(
+                        elevation = 4.dp,
+                        shape = RoundedCornerShape(24.dp)
+                    ),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // 旋转动画的圆形进度指示器
+                    val infiniteTransition = rememberInfiniteTransition(label = "loading_indicator")
+                    val rotation by infiniteTransition.animateFloat(
+                        initialValue = 0f,
+                        targetValue = 360f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1000, easing = LinearEasing),
+                            repeatMode = RepeatMode.Restart
+                        ),
+                        label = "rotation"
+                    )
+
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Loading",
+                        modifier = Modifier
+                            .size(18.dp)
+                            .graphicsLayer { rotationZ = rotation },
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+
+                    Text(
+                        "正在登录...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+    }
+}
 
 data class PageItem(
     val route: String, val title: String, val icon: ImageVector
@@ -334,6 +497,8 @@ fun AppNavigation(
     )
 
     val pagerState = rememberPagerState(pageCount = { pages.size })
+    val appState by AppStateManager.appState.collectAsState()
+
 
     val clickSequence = remember { mutableStateListOf<Int>() }
     val answer = listOf(1, 2, 2, 0, 1, 1)
@@ -363,33 +528,36 @@ fun AppNavigation(
             }
         }
 
-    }, content = { paddingValues ->
+    },
 
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(paddingValues),
-            userScrollEnabled = false
-        ) { page ->
-            when (page) {
-                0 -> {
-                    HomeScreen(
-                        navController = navController, mainViewModel = mainViewModel
-                    )
-                }
 
-                1 -> {
-                    SpaceScreen(navController = navController)
-                }
+        content = { paddingValues ->
 
-                2 -> {
-                    SettingScreen(mainViewModel = mainViewModel)
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(paddingValues),
+                userScrollEnabled = false
+            ) { page ->
+                when (page) {
+                    0 -> {
+                        HomeScreen(
+                            navController = navController, mainViewModel = mainViewModel
+                        )
+                    }
+
+                    1 -> {
+                        SpaceScreen(navController = navController)
+                    }
+
+                    2 -> {
+                        SettingScreen(mainViewModel = mainViewModel)
+                    }
                 }
             }
-        }
 
-    })
+        })
 
 
 }

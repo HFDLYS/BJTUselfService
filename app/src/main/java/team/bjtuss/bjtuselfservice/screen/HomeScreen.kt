@@ -73,6 +73,204 @@ import java.time.temporal.ChronoUnit
 import kotlin.collections.component1
 import kotlin.collections.component2
 
+//@OptIn(ExperimentalMaterial3Api::class)
+//@Composable
+//fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
+//
+//    // 使用 mutableStateOf 来追踪刷新状态
+//    var isRefreshing by remember { mutableStateOf(false) }
+//    val refreshState = rememberSwipeRefreshState(isRefreshing = isRefreshing)
+//
+//    // 使用 LaunchedEffect 来监听网络请求队列状态
+//    LaunchedEffect(Unit) {
+//        NetworkRepository.getQueueStatus().observeForever { queueStatus ->
+//            isRefreshing = queueStatus
+//        }
+//    }
+//
+//    // 清理网络状态观察者
+//    DisposableEffect(Unit) {
+//        onDispose {
+//            NetworkRepository.getQueueStatus().removeObserver { }
+//        }
+//    }
+//
+//    val gradeChangeList: List<DataChange<GradeEntity>> by mainViewModel.gradeViewModel.changeList.collectAsState()
+//    val courseChangeList: List<DataChange<CourseEntity>> by mainViewModel.courseScheduleViewModel.changeList.collectAsState()
+//    val examChangeList: List<DataChange<ExamScheduleEntity>> by mainViewModel.examScheduleViewModel.changeList.collectAsState()
+//    val homeworkChangeList: List<DataChange<HomeworkEntity>> by mainViewModel.homeworkViewModel.changeList.collectAsState()
+//    val homeworkList: List<HomeworkEntity> by mainViewModel.homeworkViewModel.homeworkList.collectAsState()
+//    val status by mainViewModel.statusViewModel.status.collectAsState()
+//
+//    var selectedGradeChange by remember { mutableStateOf<DataChange<GradeEntity>?>(null) }
+//    var selectedHomeworkChange by remember { mutableStateOf<DataChange<HomeworkEntity>?>(null) }
+//    var selectedExamChange by remember { mutableStateOf<DataChange<ExamScheduleEntity>?>(null) }
+//    var showGradeDialog by remember { mutableStateOf(false) }
+//    var showHomeworkDialog by remember { mutableStateOf(false) }
+//    var showExamDialog by remember { mutableStateOf(false) }
+//
+//
+//    val autoSyncGradeEnable by mainViewModel.settingViewModel.autoSyncGradeEnable.collectAsState()
+//    val autoSyncHomeworkEnable by mainViewModel.settingViewModel.autoSyncHomeworkEnable.collectAsState()
+//    val autoSyncScheduleEnable by mainViewModel.settingViewModel.autoSyncScheduleEnable.collectAsState()
+//    val autoSyncExamEnable by mainViewModel.settingViewModel.autoSyncExamEnable.collectAsState()
+//    // 刷新处理函数
+//    val handleRefresh = {
+//        if (!isRefreshing) {
+//            mainViewModel.loadDataAndDetectChanges()
+//        }
+//    }
+//
+//    Column(
+//        modifier = Modifier
+//            .fillMaxSize()
+//            .background(MaterialTheme.colorScheme.background)
+//            .padding(8.dp),
+//        verticalArrangement = Arrangement.spacedBy(8.dp)
+//    ) {
+//        // Status Info Section
+//        StatusInfo(
+//            ecardBalance = formatEcardBalance(status?.EcardBalance),
+//            netBalance = formatNetBalance(status?.NetBalance),
+//            newMailCount = formatNewMailCount(status?.NewMailCount),
+//            navController = navController
+//        )
+//
+//
+//        CalendarComponent(mainViewModel)
+//
+//
+//        Text(
+//            text = "ATTENTION!!!",
+//            style = MaterialTheme.typography.headlineMedium.copy(
+//                color = MaterialTheme.colorScheme.primary,
+//                fontWeight = FontWeight.Bold,
+//            ),
+//            modifier = Modifier.padding(start = 16.dp, top = 8.dp)
+//        )
+//
+//
+//
+//        SwipeRefresh(
+//            state = refreshState,
+//            onRefresh = handleRefresh,
+//            modifier = Modifier.fillMaxSize()
+//        ) {
+//            LazyColumn(
+//                modifier = Modifier
+//                    .padding(8.dp)
+//                    .fillMaxSize(),
+//                verticalArrangement = Arrangement.spacedBy(4.dp)
+//            ) {
+//                item {
+//                    HomeworkNoticeCard(homeworkList, navController)
+//                }
+//
+//                // Grade Changes Section
+//                if (gradeChangeList.isNotEmpty()) {
+//                    if (autoSyncGradeEnable) {
+//                        mainViewModel.gradeViewModel.syncDataAndClearChange()
+//                    } else {
+//                        item {
+//                            ChangeSection(
+//                                title = "成绩单变动",
+//                                changes = gradeChangeList,
+//                                onItemClick = { change ->
+//                                    selectedGradeChange = change
+//                                    showGradeDialog = true
+//                                }
+//                            )
+//                        }
+//                    }
+//                }
+//
+//                // Course Changes Section
+//                if (courseChangeList.isNotEmpty()) {
+//                    if (autoSyncScheduleEnable) {
+//                        mainViewModel.courseScheduleViewModel.syncDataAndClearChange()
+//                    } else {
+//                        item {
+//                            ChangeSection(
+//                                title = "课程表变动",
+//                                changes = courseChangeList,
+//                                onItemClick = { _ ->
+//                                    navController.navigate(RouteManager.CourseSchedule)
+//                                }
+//                            )
+//                        }
+//                    }
+//                }
+//
+//                // Exam Changes Section
+//                if (examChangeList.isNotEmpty()) {
+//                    if (autoSyncExamEnable) {
+//                        mainViewModel.examScheduleViewModel.syncDataAndClearChange()
+//                    } else {
+//                        item {
+//                            ChangeSection(
+//                                title = "考试安排变动",
+//                                changes = examChangeList,
+//                                onItemClick = { change ->
+//                                    selectedExamChange = change
+//                                    showExamDialog = true
+//                                }
+//                            )
+//                        }
+//                    }
+//
+//                }
+//
+//                // Homework Changes Section
+//                if (homeworkChangeList.isNotEmpty()) {
+//                    if (autoSyncHomeworkEnable) {
+//                        mainViewModel.homeworkViewModel.syncDataAndClearChange()
+//                    } else {
+//                        item {
+//                            ChangeSection(
+//                                title = "作业变动",
+//                                changes = homeworkChangeList,
+//                                onItemClick = { change ->
+//                                    selectedHomeworkChange = change
+//                                    showHomeworkDialog = true
+//                                }
+//                            )
+//                        }
+//                    }
+//                }
+//            }
+//
+//        }
+//    }
+//
+//    // Dialogs
+//    if (showGradeDialog && selectedGradeChange != null) {
+//        DetailedChangeDialog(
+//            change = selectedGradeChange!!,
+//            onDismiss = { showGradeDialog = false },
+//            cardItem = { GradeItemCard(it) },
+//            onClick = { navController.navigate(RouteManager.Grade) }
+//        )
+//    }
+//
+//    if (showHomeworkDialog && selectedHomeworkChange != null) {
+//        DetailedChangeDialog(
+//            change = selectedHomeworkChange!!,
+//            onDismiss = { showHomeworkDialog = false },
+//            cardItem = { HomeworkItemCard(it) },
+//            onClick = { navController.navigate(RouteManager.HomeWork) }
+//        )
+//    }
+//
+//    if (showExamDialog && selectedExamChange != null) {
+//        DetailedChangeDialog(
+//            change = selectedExamChange!!,
+//            onDismiss = { showExamDialog = false },
+//            cardItem = { ExamItemCard(it) },
+//            onClick = { navController.navigate(RouteManager.ExamSchedule) }
+//        )
+//    }
+//}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
@@ -270,7 +468,6 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
         )
     }
 }
-
 
 @Composable
 private fun <T> ChangeSection(
