@@ -323,31 +323,31 @@ fun LoginForm(
             modifier = Modifier.fillMaxWidth()
         ) {
             // 应用图标
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .background(
-                        color = surfaceContainerLowest,
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-//                Icon(
-//                    imageVector = Icons.Default.LocationOn,
-//                    contentDescription = "应用图标",
-//                    tint = Color.White,
-//                    modifier = Modifier.size(48.dp)
+//            Box(
+//                modifier = Modifier
+//                    .size(80.dp)
+//                    .background(
+//                        color = surfaceContainerLowest,
+//                        shape = CircleShape
+//                    ),
+//                contentAlignment = Alignment.Center
+//            ) {
+////                Icon(
+////                    imageVector = Icons.Default.LocationOn,
+////                    contentDescription = "应用图标",
+////                    tint = Color.White,
+////                    modifier = Modifier.size(48.dp)
+////                )
+//                Image(
+//                    painter = painterResource(R.drawable.loading_icon),
+//                    contentDescription = "Loading",
+//                    modifier = Modifier
+//                        .size(80.dp)  // 可调整大小
 //                )
-                Image(
-                    painter = painterResource(R.drawable.loading_icon),
-                    contentDescription = "Loading",
-                    modifier = Modifier
-                        .size(80.dp)  // 可调整大小
-                )
-
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
+//
+//            }
+//
+//            Spacer(modifier = Modifier.height(16.dp))
 
             // 标题
             Text(
