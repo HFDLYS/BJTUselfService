@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import kotlinx.coroutines.future.await
 import team.bjtuss.bjtuselfservice.StudentAccountManager
+import team.bjtuss.bjtuselfservice.controller.NetworkRequestQueue
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
@@ -15,7 +16,7 @@ object NetworkRepository {
 
 
     suspend fun getClassroomMap(): Map<String, MutableList<Int>>? {
-        val result = requestQueue.enqueue("getClassroomMap") {
+        val result = requestQueue.enqueue {
 
             val classroomMap = try {
                 studentAccountManager.getClassroom().await()
@@ -33,7 +34,7 @@ object NetworkRepository {
     }
 
     suspend fun getExamScheduleList(): List<ExamScheduleEntity> {
-        val result = requestQueue.enqueue("getExamSchedule") {
+        val result = requestQueue.enqueue {
             try {
                 val result = studentAccountManager.getExamSchedule().await()
                 result
@@ -46,7 +47,7 @@ object NetworkRepository {
     }
 
     suspend fun getCourseList(): List<CourseEntity> {
-        val result = requestQueue.enqueue("getCourseList") {
+        val result = requestQueue.enqueue {
             val courseListOfOneDim: MutableList<CourseEntity> = mutableListOf()
             val preCourseList = DatabaseRepository.getCourseList();
             // 当前学期课程
@@ -101,7 +102,7 @@ object NetworkRepository {
     }
 
     suspend fun getGradeList(): List<GradeEntity> {
-        val result = requestQueue.enqueue("getGradeList") {
+        val result = requestQueue.enqueue {
             val lnGrades = try {
                 studentAccountManager.getGrade("ln").await()
             } catch (e: Exception) {

@@ -11,16 +11,16 @@ import kotlinx.coroutines.withContext
 import okhttp3.Request
 import okhttp3.ResponseBody.Companion.toResponseBody
 import team.bjtuss.bjtuselfservice.StudentAccountManager
+import team.bjtuss.bjtuselfservice.controller.NetworkRequestQueue
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
 import team.bjtuss.bjtuselfservice.jsonclass.Course
 import team.bjtuss.bjtuselfservice.jsonclass.CourseJsonType
 import team.bjtuss.bjtuselfservice.jsonclass.CourseResourceResponse
-import team.bjtuss.bjtuselfservice.jsonclass.CoursewareCatalog
 import team.bjtuss.bjtuselfservice.jsonclass.CoursewareNode
 import team.bjtuss.bjtuselfservice.jsonclass.HomeworkJsonType
-import team.bjtuss.bjtuselfservice.jsonclass.Node
 import team.bjtuss.bjtuselfservice.jsonclass.SemesterJsonType
 import team.bjtuss.bjtuselfservice.utils.KotlinUtils
+import team.bjtuss.bjtuselfservice.utils.NetworkUtils
 import java.io.IOException
 
 
@@ -51,8 +51,25 @@ object SmartCurriculumPlatformRepository {
             .header("User-Agent", userAgent)
             .build()
         CoroutineScope(Dispatchers.IO).launch {
-            client.newCall(request1).execute()
-            client.newCall(request2).execute()
+//            client.newCall(request1).execute()
+//            client.newCall(request2).execute()
+            NetworkRequestQueue.enqueue {
+                client.newCall(request1).execute()
+            }.onFailure {
+                Log.e(
+                    "SmartCurriculumPlatformRepository",
+                    "Failed to initialize client: ${it.message}"
+                )
+            }
+
+            NetworkRequestQueue.enqueue {
+                client.newCall(request2).execute()
+            }.onFailure {
+                Log.e(
+                    "SmartCurriculumPlatformRepository",
+                    "Failed to initialize client: ${it.message}"
+                )
+            }
 
 
             val semesterFromJson = getSemesterTypeList()
@@ -159,39 +176,38 @@ object SmartCurriculumPlatformRepository {
 
     suspend fun getHomework(): List<HomeworkEntity> {
 
-        return NetworkRequestQueue.enqueue("getHomework") {
+        return NetworkRequestQueue.enqueue {
             getHomeWorkListByHomeworkType(0)
         }.getOrElse { emptyList() }
     }
 
     suspend fun getCourseDesign(): List<HomeworkEntity> {
-        return NetworkRequestQueue.enqueue("getCourseDesign") {
+        return NetworkRequestQueue.enqueue {
             getHomeWorkListByHomeworkType(1)
         }.getOrElse { emptyList() }
     }
 
     suspend fun getExperimentReport(): List<HomeworkEntity> {
-        return NetworkRequestQueue.enqueue("getExperimentReport") {
+        return NetworkRequestQueue.enqueue {
             getHomeWorkListByHomeworkType(2)
         }.getOrElse { emptyList() }
     }
 
     suspend fun getCurrentWeek(): Int {
         val url = "http://123.121.147.7:88/ve/back/coursePlatform/course.shtml?method=getTimeList"
-        var request = Request.Builder()
-            .url(url)
-            .header("User-Agent", userAgent)
-            .build()
-
         val type = Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
         val adapter = moshi.adapter<Map<String, Any>>(type)
-
         return withContext(Dispatchers.IO) {
-            val response = client.newCall(request).execute()
-            response.body?.string()?.let {
-                val jsonMap = adapter.fromJson(it)
-                (jsonMap?.get("weekCode") as String).toIntOrNull()
-            } ?: throw IOException("Response body is null")
+
+            NetworkUtils.get(client, url).let { str ->
+                try {
+                    val jsonMap = adapter.fromJson(str)
+                    (jsonMap?.get("weekCode") as String).toIntOrNull() ?: 0
+                } catch (e: Exception) {
+                    println("Failed to parse JSON: ${e.message}")
+                    0
+                }
+            }
         }
     }
 
@@ -200,69 +216,6 @@ object SmartCurriculumPlatformRepository {
         return courseFromJson?.courseList ?: emptyList()
     }
 
-    suspend fun getCoursewareCatalog(course: Course): List<Node> {
-        initializationDeferred.await()
-        val url = "http://123.121.147.7:88/ve/back/coursePlatform/courseResource.shtml?" +
-                "method=stuQueryCourseResourceBag" +
-                "&courseId=${course.course_num}" +
-                "&cId=${course.course_num}" +
-                "&xkhId=${course.fz_id}" +
-                "&xqCode=${course.xq_code}" +
-                "&docType=1"
-
-        val request = Request.Builder()
-            .url(url)
-            .header("User-Agent", userAgent)
-            .build()
-        val adapter = moshi.adapter(CoursewareCatalog::class.java)
-
-
-        return withContext(Dispatchers.IO) {
-            val response = client.newCall(request).execute()
-            try {
-                response.body?.string()?.let {
-                    val coursewareCatalog = adapter.fromJson(it)
-                    coursewareCatalog?.nodes ?: emptyList()
-//                    coursewareCatalog?.nodes?.drop(1) ?: emptyList()
-                }
-            } catch (e: Exception) {
-                Log.e("getCoursewareCatalog", "Error parsing JSON: ${e.message}")
-                emptyList()
-            } ?: throw IOException("Response body is null")
-        }
-    }
-
-    suspend fun getCourseResourceResponse(course: Course, upId: Int = 0): CourseResourceResponse {
-        initializationDeferred.await()
-        val url =
-            "http://123.121.147.7:88/ve/back/coursePlatform/courseResource.shtml?" +
-                    "method=stuQueryUploadResourceForCourseList" +
-                    "&courseId=${course.course_num}" +
-                    "&cId=${course.course_num}" +
-                    "&xkhId=${course.fz_id}" +
-                    "&xqCode=${course.xq_code}" +
-                    "&docType=1" +
-                    "&up_id=${upId}" +
-                    "&searchName="
-
-        val request = Request.Builder()
-            .url(url)
-            .header("User-Agent", userAgent)
-            .build()
-        val adapter = moshi.adapter(CourseResourceResponse::class.java)
-
-        return withContext(Dispatchers.IO) {
-            val response = client.newCall(request).execute()
-            response.body?.source()?.let { source ->
-                try {
-                    adapter.fromJson(source)
-                } catch (e: Exception) {
-                    println("Failed to parse JSON: ${e.message}")
-                    null
-                }
-            } ?: throw IOException("Response body is null")
-        }
-    }
 
     suspend fun generateCoursewareRootNode(course: Course): CoursewareNode {
         initializationDeferred.await()

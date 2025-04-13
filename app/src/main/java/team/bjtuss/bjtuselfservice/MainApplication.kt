@@ -9,6 +9,7 @@ class MainApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         appContext = applicationContext
+
     }
 
     companion object {

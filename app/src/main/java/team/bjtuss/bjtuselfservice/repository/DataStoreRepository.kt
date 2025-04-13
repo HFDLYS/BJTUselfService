@@ -1,5 +1,6 @@
 package team.bjtuss.bjtuselfservice.repository
 
+import android.R.attr.password
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -10,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import team.bjtuss.bjtuselfservice.MainApplication.Companion.appContext
+import team.bjtuss.bjtuselfservice.viewmodel.Credentials
 
 object DataStoreRepository {
     private val Context.dataStore by preferencesDataStore("settings")
@@ -25,28 +27,28 @@ object DataStoreRepository {
 
     private val COURSEWARE_JSON = stringPreferencesKey("courseware_json")
 
-    suspend fun setCredentials(username: String, password: String) {
+    suspend fun setCredentials(credentials: Credentials) {
         appContext.dataStore.edit { preferences ->
-            preferences[USERNAME_KEY] = username
-            preferences[PASSWORD_KEY] = password
+            preferences[USERNAME_KEY] = credentials.username
+            preferences[PASSWORD_KEY] = credentials.password
         }
     }
 
     // 获取凭据（Flow 方式）
-    fun getStoredCredentials(): Flow<Pair<String?, String?>> {
+    fun getStoredCredentials(): Flow<Credentials> {
         return appContext.dataStore.data.map { preferences ->
             val username = preferences[USERNAME_KEY]
             val password = preferences[PASSWORD_KEY]
-            username to password
+            Credentials(username ?: "", password ?: "")
         }
     }
 
     // 获取凭据（阻塞式同步获取）
-    suspend fun getStoredCredentialsBlocking(): Pair<String, String> {
+    suspend fun getStoredCredentialsBlocking(): Credentials {
         return appContext.dataStore.data.first().let { preferences ->
             val username = preferences[USERNAME_KEY] ?: ""
             val password = preferences[PASSWORD_KEY] ?: ""
-            username to password
+            Credentials(username, password)
         }
     }
 
@@ -119,6 +121,7 @@ object DataStoreRepository {
             preferences[COURSEWARE_JSON] ?: ""
         }
     }
+
     suspend fun setCoursewareJson(json: String) {
         appContext.dataStore.edit { preferences ->
             preferences[COURSEWARE_JSON] = json

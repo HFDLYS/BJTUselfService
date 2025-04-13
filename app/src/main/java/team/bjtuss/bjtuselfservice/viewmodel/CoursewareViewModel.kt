@@ -51,7 +51,6 @@ class CoursewareViewModel() : ViewModel() {
             DataStoreRepository.setCoursewareJson(
                 gson.toJson(coursewareRootNodeList.value)
             )
-
         }
     }
 }

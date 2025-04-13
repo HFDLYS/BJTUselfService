@@ -51,7 +51,7 @@ import team.bjtuss.bjtuselfservice.R
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.database.AppDatabase
 import team.bjtuss.bjtuselfservice.repository.fetchLatestRelease
-import team.bjtuss.bjtuselfservice.viewmodel.LoginViewModel
+import team.bjtuss.bjtuselfservice.viewmodel.AppStateManager
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import java.time.Instant
 import java.time.ZoneId
@@ -60,7 +60,7 @@ import java.util.Locale
 
 
 @Composable
-fun SettingScreen(loginViewModel: LoginViewModel, mainViewModel: MainViewModel) {
+fun SettingScreen(mainViewModel: MainViewModel) {
     val studentInfo = StudentAccountManager.getInstance().studentInfo
     val settingViewModel = mainViewModel.settingViewModel
 
@@ -158,7 +158,7 @@ fun SettingScreen(loginViewModel: LoginViewModel, mainViewModel: MainViewModel) 
         item {
             Spacer(modifier = Modifier.height(8.dp))
             Button(
-                onClick = { loginViewModel.logout() },
+                onClick = { AppStateManager.logout(mainViewModel) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -390,7 +390,7 @@ fun CheckForUpdateSettingItem() {
                             )
                         }"
                         updateMarkdown = it.body ?: ""
-                        versionLatest = it.tagName ?: ""
+                        versionLatest = it.tagName
                         downloadUrl = it.htmlUrl
                     } ?: run {
                         updateMessage = "检查失败，请稍后再试"

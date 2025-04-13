@@ -68,21 +68,21 @@ import team.bjtuss.bjtuselfservice.screen.ExamScheduleScreen
 import team.bjtuss.bjtuselfservice.screen.GradeScreen
 import team.bjtuss.bjtuselfservice.screen.HomeScreen
 import team.bjtuss.bjtuselfservice.screen.HomeworkScreen
-import team.bjtuss.bjtuselfservice.screen.LoginScreen
 import team.bjtuss.bjtuselfservice.screen.OtherFunctionScreen
 import team.bjtuss.bjtuselfservice.screen.SettingScreen
 import team.bjtuss.bjtuselfservice.screen.SpaceScreen
 import team.bjtuss.bjtuselfservice.ui.theme.BJTUselfServicecomposeTheme
+import team.bjtuss.bjtuselfservice.viewmodel.AppState
+import team.bjtuss.bjtuselfservice.viewmodel.AppStateManager
 import team.bjtuss.bjtuselfservice.viewmodel.ClassroomViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.CourseScheduleViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.CoursewareViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.ExamScheduleViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.GradeViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.HomeworkViewModel
-import team.bjtuss.bjtuselfservice.viewmodel.LoginViewModel
+import team.bjtuss.bjtuselfservice.viewmodel.LoginDialog
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModelFactory
-import team.bjtuss.bjtuselfservice.viewmodel.ScreenStatus
 import team.bjtuss.bjtuselfservice.viewmodel.SettingViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.StatusViewModel
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService
@@ -97,11 +97,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         CaptchaModel.init(this)
-
-
+//        AppStateManager.autoLogin()
 
 
         setContent {
+
             BJTUselfServicecomposeTheme(dynamicColor = true) {
                 CheckForUpdate()
 //                val filePickerLauncher = rememberLauncherForActivityResult(
@@ -116,17 +116,53 @@ class MainActivity : ComponentActivity() {
 
 
                 Surface {
-                    val loginViewModel: LoginViewModel = viewModel()
-                    val screenStatus by loginViewModel.screenStatus.collectAsState()
-                    when (screenStatus) {
-                        is ScreenStatus.LoginScreen -> {
-                            LoginScreen(loginViewModel)
-                        }
 
-                        is ScreenStatus.AppScreen -> {
-                            App(loginViewModel)
-                        }
+                    val appState by AppStateManager.appState.collectAsState()
+                    val credentials by AppStateManager.credentials.collectAsState()
+
+                    val classroomViewModel: ClassroomViewModel = viewModel()
+                    val gradeViewModel: GradeViewModel = viewModel()
+                    val courseScheduleViewModel: CourseScheduleViewModel = viewModel()
+                    val examScheduleViewModel: ExamScheduleViewModel = viewModel()
+                    val homeworkViewModel: HomeworkViewModel = viewModel()
+                    val statusViewModel: StatusViewModel = viewModel()
+                    val settingViewModel: SettingViewModel = viewModel()
+                    val coursewareViewModel: CoursewareViewModel = viewModel()
+                    val mainViewModel: MainViewModel = viewModel(
+
+                        factory = MainViewModelFactory(
+                            gradeViewModel,
+                            courseScheduleViewModel,
+                            examScheduleViewModel,
+                            classroomViewModel,
+                            homeworkViewModel,
+                            statusViewModel,
+                            settingViewModel,
+                            coursewareViewModel,
+                        )
+                    )
+
+
+                    if (appState == AppState.Logout || appState == AppState.Error) {
+
+                        LoginDialog(credentials, onLoginSuccess = {
+                            mainViewModel.loadDataAndDetectChanges()
+                        })
                     }
+
+                    App(mainViewModel)
+
+
+//                    when (screenStatus) {
+//                        is ScreenStatus.LoginScreen -> {
+//                            LoginScreen(loginViewModel)
+//                        }
+//
+//                        is ScreenStatus.AppScreen -> {
+//                            App(loginViewModel)
+//                        }
+//                    }
+
                 }
             }
         }
@@ -156,8 +192,7 @@ fun CheckForUpdate() {
             "发布时间: ${
                 localDateTime.format(
                     DateTimeFormatter.ofPattern(
-                        "yyyy年M月d日 HH:mm",
-                        Locale.getDefault()
+                        "yyyy年M月d日 HH:mm", Locale.getDefault()
                     )
                 )
             }"
@@ -165,83 +200,54 @@ fun CheckForUpdate() {
         updateMarkdown = release?.body ?: ""
         versionLatest = release?.tagName ?: ""
         downloadUrl = release?.htmlUrl
-        if (versionLatest.isNotEmpty() && (versionName < versionLatest))
-            showDialog = true
+        if (versionLatest.isNotEmpty() && (versionName < versionLatest)) showDialog = true
     }
 
     if (showDialog) {
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            confirmButton = {
-                downloadUrl?.let { url ->
-                    Button(
-                        onClick = {
-                            showDialog = false
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            appContext.startActivity(intent)
-                        }
-                    ) {
-                        Text("前往下载")
+        AlertDialog(onDismissRequest = { showDialog = false }, confirmButton = {
+            downloadUrl?.let { url ->
+                Button(onClick = {
+                    showDialog = false
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
+                    appContext.startActivity(intent)
+                }) {
+                    Text("前往下载")
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDialog = false }) {
-                    Text("人习于枸且非一日")
-                }
-            },
-            text = {
-                Column {
-                    Text(
-                        "发现新版本${versionLatest}！",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            color = MaterialTheme.colorScheme.primary
+            }
+        }, dismissButton = {
+            TextButton(onClick = { showDialog = false }) {
+                Text("人习于枸且非一日")
+            }
+        }, text = {
+            Column {
+                Text(
+                    "发现新版本${versionLatest}！",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                )
+                Text(
+                    updateMessage, style = MaterialTheme.typography.bodyLarge
+                )
+                LazyColumn {
+                    item {
+                        MarkdownText(
+                            markdown = updateMarkdown
                         )
-                    )
-                    Text(
-                        updateMessage,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    LazyColumn {
-                        item {
-                            MarkdownText(
-                                markdown = updateMarkdown
-                            )
-                        }
                     }
                 }
-            },
-            title = { Text("检查更新") }
-        )
+            }
+        }, title = { Text("检查更新") })
     }
 }
 
 @Composable
-fun App(loginViewModel: LoginViewModel) {
-    val navController = rememberNavController()
-    val classroomViewModel: ClassroomViewModel = viewModel()
-    val gradeViewModel: GradeViewModel = viewModel()
-    val courseScheduleViewModel: CourseScheduleViewModel = viewModel()
-    val examScheduleViewModel: ExamScheduleViewModel = viewModel()
-    val homeworkViewModel: HomeworkViewModel = viewModel()
-    val statusViewModel: StatusViewModel = viewModel()
-    val settingViewModel: SettingViewModel = viewModel()
-    val coursewareViewModel: CoursewareViewModel = viewModel()
-    val mainViewModel: MainViewModel = viewModel(
+fun App(mainViewModel: MainViewModel) {
 
-        factory = MainViewModelFactory(
-            gradeViewModel,
-            courseScheduleViewModel,
-            examScheduleViewModel,
-            classroomViewModel,
-            homeworkViewModel,
-            statusViewModel,
-            settingViewModel,
-            coursewareViewModel,
-        )
-    )
+    val navController = rememberNavController()
+
 
 
 
@@ -254,7 +260,7 @@ fun App(loginViewModel: LoginViewModel) {
         popEnterTransition = { activityPopEnterTransition() },
         popExitTransition = { activityPopExitTransition() }) {
         composable(RouteManager.Navigation) {
-            AppNavigation(navController, loginViewModel, mainViewModel)
+            AppNavigation(navController, mainViewModel)
         }
         composable(RouteManager.CourseSchedule) {
             CourseScheduleScreen(mainViewModel)
@@ -319,7 +325,7 @@ object RouteManager {
 
 @Composable
 fun AppNavigation(
-    navController: NavController, loginViewModel: LoginViewModel, mainViewModel: MainViewModel
+    navController: NavController, mainViewModel: MainViewModel
 ) {
     val pages = listOf(
         PageItem(RouteManager.Home, "首页", Icons.Default.Home),
@@ -378,7 +384,7 @@ fun AppNavigation(
                 }
 
                 2 -> {
-                    SettingScreen(loginViewModel = loginViewModel, mainViewModel = mainViewModel)
+                    SettingScreen(mainViewModel = mainViewModel)
                 }
             }
         }

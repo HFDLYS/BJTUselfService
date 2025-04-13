@@ -1,6 +1,8 @@
 package team.bjtuss.bjtuselfservice;
 
 
+import android.util.Log;
+
 import androidx.annotation.Nullable;
 import androidx.lifecycle.MutableLiveData;
 
@@ -47,7 +49,7 @@ public class StudentAccountManager {
 
     //    private final javax.net.ssl.SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
     public OkHttpClient client;
-    private OkHttpClient.Builder builder;
+    //    private OkHttpClient.Builder builder;
     private StudentInfo stuInfo;
     private String stuId = null;
     private String password = null;
@@ -80,6 +82,10 @@ public class StudentAccountManager {
                     }
                 }
         };
+        client = generateNewClient();
+    }
+
+    public OkHttpClient generateNewClient() {
         SSLContext sslContext = null;
         try {
             sslContext = SSLContext.getInstance("SSL");
@@ -92,14 +98,13 @@ public class StudentAccountManager {
             throw new RuntimeException(e);
         }
 
-        builder = new OkHttpClient.Builder()
+
+        return new OkHttpClient.Builder()
                 .sslSocketFactory(sslContext.getSocketFactory(), (X509TrustManager) trustAllCerts[0])
                 .hostnameVerifier((hostname, session) -> true)
-                .cookieJar(new Network.InMemoryCookieJar());
-
-        client = builder.build();
-
+                .cookieJar(new Network.InMemoryCookieJar()).build();
     }
+
 
     // 单例模式
     public static StudentAccountManager getInstance() {
@@ -169,7 +174,8 @@ public class StudentAccountManager {
     }
 
     public void clearCookie() {
-        client = builder.build();
+        client = generateNewClient();
+
     }
 
     private void setStudentInfoFromCode(String code, String stuId) {
