@@ -63,6 +63,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import team.bjtuss.bjtuselfservice.R
+import team.bjtuss.bjtuselfservice.component.RotatingImageLoader
 import team.bjtuss.bjtuselfservice.constant.ApiConstant.CLASSROOM_VIEW_URL
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService

@@ -12,6 +12,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import team.bjtuss.bjtuselfservice.dao.BaseDao
 import team.bjtuss.bjtuselfservice.entity.BaseEntity
+import team.bjtuss.bjtuselfservice.statemanager.AppStateManager
 
 sealed class DataChange<T> {
     data class Added<T>(val items: List<T>) : DataChange<T>()

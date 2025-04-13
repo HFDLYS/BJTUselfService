@@ -11,7 +11,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import team.bjtuss.bjtuselfservice.viewmodel.AppStateManager
+import team.bjtuss.bjtuselfservice.statemanager.AppStateManager
 import java.util.concurrent.atomic.AtomicInteger
 
 

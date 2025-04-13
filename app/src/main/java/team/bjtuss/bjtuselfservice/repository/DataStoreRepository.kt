@@ -1,6 +1,5 @@
 package team.bjtuss.bjtuselfservice.repository
 
-import android.R.attr.password
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -11,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import team.bjtuss.bjtuselfservice.MainApplication.Companion.appContext
-import team.bjtuss.bjtuselfservice.viewmodel.Credentials
+import team.bjtuss.bjtuselfservice.statemanager.Credentials
 
 object DataStoreRepository {
     private val Context.dataStore by preferencesDataStore("settings")

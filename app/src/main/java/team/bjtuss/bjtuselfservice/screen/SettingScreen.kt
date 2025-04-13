@@ -51,7 +51,7 @@ import team.bjtuss.bjtuselfservice.R
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.database.AppDatabase
 import team.bjtuss.bjtuselfservice.repository.fetchLatestRelease
-import team.bjtuss.bjtuselfservice.viewmodel.AppStateManager
+import team.bjtuss.bjtuselfservice.statemanager.AppStateManager
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import java.time.Instant
 import java.time.ZoneId
