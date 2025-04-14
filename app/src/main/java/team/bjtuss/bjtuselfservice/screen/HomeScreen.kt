@@ -64,6 +64,9 @@ import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
 import team.bjtuss.bjtuselfservice.repository.NetworkRepository
+import team.bjtuss.bjtuselfservice.statemanager.AppState
+import team.bjtuss.bjtuselfservice.statemanager.AppStateManager
+import team.bjtuss.bjtuselfservice.statemanager.AppStateManager.appState
 import team.bjtuss.bjtuselfservice.utils.KotlinUtils
 import team.bjtuss.bjtuselfservice.viewmodel.DataChange
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
@@ -79,22 +82,25 @@ import kotlin.collections.component2
 fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
 
     // 使用 mutableStateOf 来追踪刷新状态
-    var isRefreshing by remember { mutableStateOf(false) }
-    val refreshState = rememberSwipeRefreshState(isRefreshing = isRefreshing)
+//    var isRefreshing by remember { mutableStateOf(false) }
+
+    val appState by AppStateManager.appState.collectAsState()
+    val refreshState =
+        rememberSwipeRefreshState(isRefreshing = appState == AppState.NetworkProgress)
 
     // 使用 LaunchedEffect 来监听网络请求队列状态
-    LaunchedEffect(Unit) {
-        NetworkRepository.getQueueStatus().observeForever { queueStatus ->
-            isRefreshing = queueStatus
-        }
-    }
+//    LaunchedEffect(Unit) {
+//        NetworkRepository.getQueueStatus().observeForever { queueStatus ->
+//            isRefreshing = queueStatus
+//        }
+//    }
 
     // 清理网络状态观察者
-    DisposableEffect(Unit) {
-        onDispose {
-            NetworkRepository.getQueueStatus().removeObserver { }
-        }
-    }
+//    DisposableEffect(Unit) {
+//        onDispose {
+//            NetworkRepository.getQueueStatus().removeObserver { }
+//        }
+//    }
 
     val gradeChangeList: List<DataChange<GradeEntity>> by mainViewModel.gradeViewModel.changeList.collectAsState()
     val courseChangeList: List<DataChange<CourseEntity>> by mainViewModel.courseScheduleViewModel.changeList.collectAsState()
@@ -117,7 +123,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
     val autoSyncExamEnable by mainViewModel.settingViewModel.autoSyncExamEnable.collectAsState()
     // 刷新处理函数
     val handleRefresh = {
-        if (!isRefreshing) {
+        if (appState != AppState.NetworkProgress) {
             mainViewModel.loadDataAndDetectChanges()
         }
     }

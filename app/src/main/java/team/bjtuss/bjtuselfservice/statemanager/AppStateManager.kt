@@ -50,11 +50,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
+import team.bjtuss.bjtuselfservice.App
 import team.bjtuss.bjtuselfservice.StudentAccountManager
+import team.bjtuss.bjtuselfservice.controller.NetworkRequestQueue
 import team.bjtuss.bjtuselfservice.database.AppDatabase
 import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
+import team.bjtuss.bjtuselfservice.repository.NetworkRepository
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 
 // Login View Model to handle login logic
@@ -107,7 +111,8 @@ sealed class AppState {
     object Logout : AppState()
     object Logging : AppState()
     object Error : AppState()
-    object LoggedIn : AppState()
+    object Idle : AppState()
+    object NetworkProgress : AppState()
 }
 
 
@@ -122,6 +127,7 @@ object AppStateManager {
     private val _appState = MutableStateFlow<AppState>(AppState.Logout)
     val appState: StateFlow<AppState> = _appState.asStateFlow()
 
+
     init {
         CoroutineScope(Dispatchers.IO).launch {
             // 从存储中恢复凭据并尝试登录
@@ -129,7 +135,16 @@ object AppStateManager {
             if (isValidCredentials(storedCredentials)) {
                 login(storedCredentials, {})
             }
+            NetworkRequestQueue.isBusy.collectLatest {
+                if (_appState.value == AppState.Idle && it) {
+                    _appState.value = AppState.NetworkProgress
+                }
+                if (_appState.value == AppState.NetworkProgress && !it) {
+                    _appState.value = AppState.Idle
+                }
+            }
         }
+
     }
 
     // 判断凭据是否有效
@@ -163,7 +178,7 @@ object AppStateManager {
                     // Only save credentials on successful login
                     DataStoreRepository.setCredentials(credentials)
 
-                    _appState.value = AppState.LoggedIn
+                    _appState.value = AppState.Idle
                     onLoginSuccess()
                     loginDeferred.complete(Unit)
                 } else {

@@ -105,6 +105,8 @@ import team.bjtuss.bjtuselfservice.error
 import team.bjtuss.bjtuselfservice.primary
 import team.bjtuss.bjtuselfservice.repository.NetworkRepository
 import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
+import team.bjtuss.bjtuselfservice.statemanager.AppState
+import team.bjtuss.bjtuselfservice.statemanager.AppStateManager
 import team.bjtuss.bjtuselfservice.utils.DownloadUtil
 import team.bjtuss.bjtuselfservice.utils.KotlinUtils
 import team.bjtuss.bjtuselfservice.viewmodel.DataChange
@@ -314,13 +316,8 @@ fun HomeworkSummaryCard(homeworkList: List<HomeworkEntity>) {
 fun HomeworkItemCard(homework: HomeworkEntity) {
     var showHtmlDialog by remember { mutableStateOf(false) }
     var showUploadHomeworkDialog by remember { mutableStateOf(false) }
-    var isRefreshing by remember { mutableStateOf(false) }
+    val appState by AppStateManager.appState.collectAsState()
 
-    LaunchedEffect(Unit) {
-        NetworkRepository.getQueueStatus().observeForever { queueStatus ->
-            isRefreshing = queueStatus
-        }
-    }
 
     // 计算截止时间是否临近
     val isDDLSoon = remember(homework.endTime) {
@@ -490,7 +487,7 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
                         }
 
                     },
-                    enabled = !isRefreshing,
+                    enabled = appState != AppState.NetworkProgress,
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -505,7 +502,7 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
 
                 HomeworkDownloadButton(
                     homework = homework,
-                    isRefreshing = isRefreshing,
+                    enabled = appState != AppState.NetworkProgress,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -606,21 +603,7 @@ fun UploadHomeDialog(homeworkEntity: HomeworkEntity, onDismiss: () -> Unit) {
         } ?: uri.lastPathSegment ?: "Unknown file"
     }
 
-    var networkQueueBusy by remember { mutableStateOf<Boolean>(true) }
-
-
-    LaunchedEffect(Unit) {
-        NetworkRepository.getQueueStatus().observeForever {
-            networkQueueBusy = it
-        }
-    }
-
-    // 清理网络状态观察者
-    DisposableEffect(Unit) {
-        onDispose {
-            NetworkRepository.getQueueStatus().removeObserver { }
-        }
-    }
+    val appState by AppStateManager.appState.collectAsState()
 
     val context = LocalContext.current
 
@@ -859,7 +842,7 @@ fun UploadHomeDialog(homeworkEntity: HomeworkEntity, onDismiss: () -> Unit) {
                         }
                     },
                     modifier = Modifier.weight(1f),
-                    enabled = selectedFiles.isNotEmpty() && !isUploading && !networkQueueBusy,
+                    enabled = selectedFiles.isNotEmpty() && !isUploading && (appState != AppState.NetworkProgress),
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
@@ -955,7 +938,7 @@ suspend fun downloadHomeworkFile(
     onProgress: (Float) -> Unit = {},
     onSuccess: (String) -> Unit = {},
     onError: (Exception) -> Unit = {}
-) = withContext(Dispatchers.IO)  {
+) = withContext(Dispatchers.IO) {
     try {
         // Show initial progress
         withContext(Dispatchers.Main) {
@@ -1109,7 +1092,7 @@ suspend fun downloadHomeworkFile(
 @Composable
 fun HomeworkDownloadButton(
     homework: HomeworkEntity,
-    isRefreshing: Boolean,
+    enabled: Boolean,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -1158,7 +1141,7 @@ fun HomeworkDownloadButton(
             },
             shape = RoundedCornerShape(8.dp),
 //            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-            enabled = !isDownloading && !isRefreshing,
+            enabled = !isDownloading && enabled,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)

@@ -29,9 +29,7 @@ object NetworkRepository {
         return result.getOrElse { emptyMap() }
     }
 
-    fun getQueueStatus(): LiveData<Boolean> {
-        return requestQueue.isBusy
-    }
+
 
     suspend fun getExamScheduleList(): List<ExamScheduleEntity> {
         val result = requestQueue.enqueue {

@@ -39,14 +39,12 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -63,14 +61,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
@@ -271,7 +267,7 @@ fun CoursewareTreeNode(
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(enabled = appState == AppState.LoggedIn || hasChildren) {
+                    .clickable(enabled = appState == AppState.Idle || hasChildren) {
                         if (hasChildren) {
                             expanded = !expanded
                         } else if (node.res != null) {
@@ -483,9 +479,6 @@ private fun downloadResource(node: CoursewareNode, onComplete: () -> Unit) {
             if (response.isSuccessful) {
 
                 val responseContent = response.body?.string()?.let {
-                    val a = it
-                    println("a")
-
                     adapter.fromJson(it) }
 
                 responseContent?.let { content ->

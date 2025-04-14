@@ -1,16 +1,21 @@
 package team.bjtuss.bjtuselfservice.controller
 
 import android.util.Log
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.asLiveData
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import team.bjtuss.bjtuselfservice.CaptchaModel.init
 import team.bjtuss.bjtuselfservice.statemanager.AppStateManager
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -21,8 +26,11 @@ object NetworkRequestQueue {
     private val queue = Channel<NetworkRequest>(Channel.UNLIMITED)
 
     private val activeJobs = AtomicInteger(0)
-    private val _isBusy = MutableLiveData<Boolean>(false)
-    val isBusy: LiveData<Boolean> get() = _isBusy
+//    private val _isBusy = MutableLiveData<Boolean>(false)
+//    val isBusy: LiveData<Boolean> get() = _isBusy
+
+    private val _isBusy: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isBusy = _isBusy.asStateFlow()
 
 
     init {
@@ -49,8 +57,7 @@ object NetworkRequestQueue {
         AppStateManager.loginDeferred.await()
         try {
             activeJobs.incrementAndGet()
-            _isBusy.postValue(activeJobs.get() > 0)
-
+            _isBusy.value = activeJobs.get() > 0
             val result = request.operation()
             request.deferred.complete(result)
         } catch (e: Exception) {
@@ -58,7 +65,7 @@ object NetworkRequestQueue {
             request.deferred.complete(Result.failure(e))
         } finally {
             if (activeJobs.decrementAndGet() == 0) {
-                _isBusy.postValue(false)
+                _isBusy.value = false
             }
         }
     }
@@ -82,7 +89,6 @@ object NetworkRequestQueue {
         queue.send(request)
         return deferred.await() as Result<T>
     }
-
 
 
     fun shutdown() {
