@@ -198,15 +198,21 @@ object SmartCurriculumPlatformRepository {
         val type = Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
         val adapter = moshi.adapter<Map<String, Any>>(type)
         return withContext(Dispatchers.IO) {
+            try {
 
-            NetworkUtils.get(client, url).let { str ->
-                try {
-                    val jsonMap = adapter.fromJson(str)
-                    (jsonMap?.get("weekCode") as String).toIntOrNull() ?: 0
-                } catch (e: Exception) {
-                    println("Failed to parse JSON: ${e.message}")
-                    0
-                }
+                NetworkUtils.get(client, url)
+            } catch (e: Exception) {
+                Log.e(
+                    "SmartCurriculumPlatformRepository",
+                    "Error fetching current week: ${e.message}"
+                )
+                return@withContext 0
+            }.let { response ->
+                val jsonString = response
+                    .replace("\"resList\"\\s*:\\s*\"\"".toRegex(), "\"resList\": []")
+                    .replace("\"bagList\"\\s*:\\s*\"\"".toRegex(), "\"bagList\": []")
+                val map = adapter.fromJson(jsonString)
+                map?.get("currentWeek")?.toString()?.toIntOrNull() ?: 0
             }
         }
     }

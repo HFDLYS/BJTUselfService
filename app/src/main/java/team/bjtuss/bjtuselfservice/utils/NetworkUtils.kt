@@ -23,12 +23,15 @@ object NetworkUtils {
 
         return withContext(Dispatchers.IO) {
             val response = client.newCall(request).execute()
+
             response.use {
                 if (!response.isSuccessful) {
                     throw IOException("Unexpected code $response")
                 }
                 response.body?.string() ?: throw IOException("Empty response body")
             }
+
+
         }
     }
 
