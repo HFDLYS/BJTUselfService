@@ -80,6 +80,8 @@ import team.bjtuss.bjtuselfservice.component.RotatingImageLoader
 import team.bjtuss.bjtuselfservice.jsonclass.CoursewareDownloadPostRequestResponse
 import team.bjtuss.bjtuselfservice.jsonclass.CoursewareNode
 import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
+import team.bjtuss.bjtuselfservice.statemanager.AppState
+import team.bjtuss.bjtuselfservice.statemanager.AppStateManager
 import team.bjtuss.bjtuselfservice.utils.DownloadUtil
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import java.net.URLDecoder
@@ -93,21 +95,17 @@ fun CoursewareScreen(mainViewModel: MainViewModel) {
     val scrollState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        "课程资源库",
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            fontWeight = FontWeight.Bold
-                        )
-                    )
-                }
-                // Removed top bar colors to use default theme colors
+    Scaffold(topBar = {
+        TopAppBar(title = {
+            Text(
+                "课程资源库", style = MaterialTheme.typography.headlineSmall.copy(
+                    fontWeight = FontWeight.Bold
+                )
             )
         }
-    ) { paddingValues ->
+            // Removed top bar colors to use default theme colors
+        )
+    }) { paddingValues ->
         Surface(
             modifier = Modifier
                 .fillMaxSize()
@@ -161,8 +159,7 @@ private fun LoadingScreen() {
         modifier = Modifier
             .fillMaxSize()
             // Simplified gradient to a solid background
-            .background(MaterialTheme.colorScheme.background),
-        contentAlignment = Alignment.Center
+            .background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
@@ -174,11 +171,9 @@ private fun LoadingScreen() {
 
             Spacer(modifier = Modifier.height(24.dp))
             Text(
-                "正在加载课程资源...",
-                style = MaterialTheme.typography.bodyLarge.copy(
+                "正在加载课程资源...", style = MaterialTheme.typography.bodyLarge.copy(
                     fontWeight = FontWeight.Medium
-                ),
-                color = MaterialTheme.colorScheme.onBackground
+                ), color = MaterialTheme.colorScheme.onBackground
             )
         }
     }
@@ -223,12 +218,9 @@ fun CoursewareTreeView(
 
 @Composable
 fun CoursewareTreeNode(
-    node: CoursewareNode,
-    level: Int = 0
+    node: CoursewareNode, level: Int = 0
 ) {
-    val context = LocalContext.current
     var expanded by remember { mutableStateOf(level == -1) } // 默认展开顶级节点
-    var isDownloading by remember { mutableStateOf(false) }
     var downloadProgress by remember { mutableStateOf(0f) }
     var showDownloadSnackbar by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
@@ -251,13 +243,14 @@ fun CoursewareTreeNode(
 
     // 简化背景颜色 - 只区分展开与否，不基于层级
     val backgroundColor by animateColorAsState(
-        targetValue = if (expanded)
-            MaterialTheme.colorScheme.primaryContainer
-        else
-            MaterialTheme.colorScheme.surface,
+        targetValue = if (expanded) MaterialTheme.colorScheme.primaryContainer
+        else MaterialTheme.colorScheme.surface,
         animationSpec = tween(durationMillis = 300),
         label = "BackgroundColor"
     )
+
+
+    val appState by AppStateManager.appState.collectAsState()
 
     Column(
         modifier = Modifier.padding(start = (level * 16).dp)
@@ -272,31 +265,26 @@ fun CoursewareTreeNode(
                 containerColor = backgroundColor,
             ),
             elevation = CardDefaults.elevatedCardElevation(
-                defaultElevation = 3.dp,
-                pressedElevation = 6.dp
+                defaultElevation = 3.dp, pressedElevation = 6.dp
             )
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            if (hasChildren) {
-                                expanded = !expanded
-                            } else if (!isDownloading && node.res != null) {
-                                isDownloading = true
-                                showDownloadSnackbar = true
+                Row(modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = appState == AppState.LoggedIn || hasChildren) {
+                        if (hasChildren) {
+                            expanded = !expanded
+                        } else if (node.res != null) {
+//                            showDownloadSnackbar = true
 
-                                downloadResource(node) {
-                                    isDownloading = false
-                                    downloadProgress = 0f
-                                }
-
+                            downloadResource(node) {
+//                                isDownloading = false
+//                                downloadProgress = 0f
                             }
+
                         }
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                    }
+                    .padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (hasChildren) {
                         // 使用统一的图标颜色
                         Box(
@@ -318,8 +306,7 @@ fun CoursewareTreeNode(
 
                     // 节点图标区域 - 使用统一的图标颜色方案
                     Box(
-                        modifier = Modifier.size(32.dp),
-                        contentAlignment = Alignment.Center
+                        modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center
                     ) {
                         val icon = when {
                             level == 0 -> Icons.Default.Book
@@ -349,8 +336,7 @@ fun CoursewareTreeNode(
                     }
 
                     Column(
-                        modifier = Modifier
-                            .weight(1f)
+                        modifier = Modifier.weight(1f)
                     ) {
                         Text(
                             text = nodeText,
@@ -379,65 +365,49 @@ fun CoursewareTreeNode(
                     // 下载指示器或下载按钮
                     if (!hasChildren && node.res != null) {
                         Box(
-                            modifier = Modifier.size(32.dp),
-                            contentAlignment = Alignment.Center
+                            modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center
                         ) {
-                            if (isDownloading) {
-                                CircularProgressIndicator(
-                                    progress = { downloadProgress },
-                                    modifier = Modifier.size(28.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.primary
+//                            if (isDownloading) {
+//                                CircularProgressIndicator(
+//                                    progress = { downloadProgress },
+//                                    modifier = Modifier.size(28.dp),
+//                                    strokeWidth = 2.dp,
+//                                    color = MaterialTheme.colorScheme.primary
+//                                )
+//                            } else {
+
+
+                            IconButton(
+                                onClick = {
+                                    showDownloadSnackbar = true
+                                    downloadResource(node) {
+                                    }
+
+                                }, modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Download,
+                                    contentDescription = "下载",
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
-                            } else {
-                                IconButton(
-                                    onClick = {
-                                        isDownloading = true
-                                        showDownloadSnackbar = true
-
-
-                                        downloadResource(node) {
-                                            isDownloading = false
-                                            downloadProgress = 0f
-                                        }
-
-                                    },
-                                    modifier = Modifier.size(32.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Download,
-                                        contentDescription = "下载",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
                             }
+
                         }
                     }
                 }
 
                 // 显示下载进度条（仅在下载时）
-                if (isDownloading && !hasChildren && node.res != null) {
-                    LinearProgressIndicator(
-                        progress = { downloadProgress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                }
+
             }
         }
 
         // 子节点展开动画
         AnimatedVisibility(
-            visible = expanded,
-            enter = expandVertically(
+            visible = expanded, enter = expandVertically(
                 animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
             ) + fadeIn(
                 animationSpec = tween(durationMillis = 300)
-            ),
-            exit = shrinkVertically(
+            ), exit = shrinkVertically(
                 animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
             ) + fadeOut(
                 animationSpec = tween(durationMillis = 200)
@@ -449,8 +419,7 @@ fun CoursewareTreeNode(
             ) {
                 node.children.forEach { childNode ->
                     CoursewareTreeNode(
-                        node = childNode,
-                        level = level + 1
+                        node = childNode, level = level + 1
                     )
                 }
             }
@@ -498,38 +467,32 @@ fun CoursewareTreeNode(
 private fun downloadResource(node: CoursewareNode, onComplete: () -> Unit) {
     CoroutineScope(Dispatchers.IO).launch {
         try {
-            val url = "http://123.121.147.7:88/ve/back/resourceSpace.shtml?" +
-                    "method=rpinfoDownloadUrl" +
-                    "&rpId=${node.res?.rpId}"
+            val url =
+                "http://123.121.147.7:88/ve/back/resourceSpace.shtml?" + "method=rpinfoDownloadUrl" + "&rpId=${node.res?.rpId}"
 
-            val request = Request.Builder()
-                .url(url)
-                .post(FormBody.Builder().build())
+            val request = Request.Builder().url(url).post(FormBody.Builder().build())
                 .addHeader("Cookie", "your_session_cookie") // From login session
-                .addHeader("User-Agent", "Your-App-Name/1.0")
-                .build()
+                .addHeader("User-Agent", "Your-App-Name/1.0").build()
 
             val adapter = SmartCurriculumPlatformRepository.moshi.adapter(
                 CoursewareDownloadPostRequestResponse::class.java
             )
 
-            val response = SmartCurriculumPlatformRepository.client
-                .newCall(request)
-                .execute()
+            val response = SmartCurriculumPlatformRepository.client.newCall(request).execute()
 
             if (response.isSuccessful) {
-                val responseContent = response.body
-                    ?.string()
-                    ?.let { adapter.fromJson(it) }
+
+                val responseContent = response.body?.string()?.let {
+                    val a = it
+                    println("a")
+
+                    adapter.fromJson(it) }
 
                 responseContent?.let { content ->
-                    val headRequest = Request.Builder()
-                        .url(content.rpUrl)
-                        .build()
+                    val headRequest = Request.Builder().url(content.rpUrl).build()
 
-                    val headResponse = SmartCurriculumPlatformRepository.client
-                        .newCall(headRequest)
-                        .execute()
+                    val headResponse =
+                        SmartCurriculumPlatformRepository.client.newCall(headRequest).execute()
 
                     val contentDisposition = headResponse.header("Content-Disposition")
                     val fileName = contentDisposition?.let {
