@@ -286,18 +286,12 @@ fun CoursewareTreeNode(
                             } else if (!isDownloading && node.res != null) {
                                 isDownloading = true
                                 showDownloadSnackbar = true
-                                coroutineScope.launch {
-                                    // 模拟下载进度
-                                    for (i in 1..10) {
-                                        delay(200)
-                                        downloadProgress = i / 10f
-                                    }
 
-                                    downloadResource(node) {
-                                        isDownloading = false
-                                        downloadProgress = 0f
-                                    }
+                                downloadResource(node) {
+                                    isDownloading = false
+                                    downloadProgress = 0f
                                 }
+
                             }
                         }
                         .padding(12.dp),
@@ -400,18 +394,13 @@ fun CoursewareTreeNode(
                                     onClick = {
                                         isDownloading = true
                                         showDownloadSnackbar = true
-                                        coroutineScope.launch {
-                                            // 模拟下载进度
-                                            for (i in 1..10) {
-                                                delay(200)
-                                                downloadProgress = i / 10f
-                                            }
 
-                                            downloadResource(node) {
-                                                isDownloading = false
-                                                downloadProgress = 0f
-                                            }
+
+                                        downloadResource(node) {
+                                            isDownloading = false
+                                            downloadProgress = 0f
                                         }
+
                                     },
                                     modifier = Modifier.size(32.dp)
                                 ) {

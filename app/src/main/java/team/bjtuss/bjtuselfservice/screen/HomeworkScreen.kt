@@ -955,7 +955,7 @@ suspend fun downloadHomeworkFile(
     onProgress: (Float) -> Unit = {},
     onSuccess: (String) -> Unit = {},
     onError: (Exception) -> Unit = {}
-) = withContext(Dispatchers.IO) {
+) = withContext(Dispatchers.IO)  {
     try {
         // Show initial progress
         withContext(Dispatchers.Main) {
