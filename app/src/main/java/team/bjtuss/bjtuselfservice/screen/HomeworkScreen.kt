@@ -487,7 +487,7 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
                         }
 
                     },
-                    enabled = appState != AppState.NetworkProgress,
+                    enabled = checkLoadPermission(appState),
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -502,7 +502,7 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
 
                 HomeworkDownloadButton(
                     homework = homework,
-                    enabled = appState != AppState.NetworkProgress,
+                    enabled = checkLoadPermission(appState),
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -516,6 +516,11 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
         UploadHomeDialog(homework) { showUploadHomeworkDialog = false }
     }
 }
+
+private fun checkLoadPermission(appState: AppState):Boolean {
+    return appState== AppState.Idle
+}
+
 
 @Composable
 private fun InfoItem(

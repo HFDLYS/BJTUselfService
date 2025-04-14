@@ -114,7 +114,6 @@ fun CoursewareScreen(mainViewModel: MainViewModel) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     CoursewareTreeView(
                         coursewareRootNodeList = coursewareRootNodeList,
-//                        scrollState = scrollState
                     )
 
                     // 快速滚动到顶部的按钮
@@ -178,25 +177,9 @@ private fun LoadingScreen() {
 @Composable
 fun CoursewareTreeView(
     coursewareRootNodeList: List<CoursewareNode>,
-//    scrollState: LazyListState = rememberLazyListState()
 ) {
     val scrollState = rememberScrollState()
-//    LazyColumn(
-//        state = scrollState,
-//        modifier = Modifier
-//            .fillMaxSize()
-//            .padding(horizontal = 16.dp, vertical = 12.dp),
-//        verticalArrangement = Arrangement.spacedBy(12.dp)
-//    ) {
-//        items(coursewareRootNodeList) { rootNode ->
-//            CoursewareTreeNode(node = rootNode)
-//        }
-//
-//        // 底部添加间距
-//        item {
-//            Spacer(modifier = Modifier.height(72.dp))
-//        }
-//    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -217,10 +200,7 @@ fun CoursewareTreeNode(
     node: CoursewareNode, level: Int = 0
 ) {
     var expanded by remember { mutableStateOf(level == -1) } // 默认展开顶级节点
-    var downloadProgress by remember { mutableStateOf(0f) }
     var showDownloadSnackbar by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
-
     val hasChildren = node.children.isNotEmpty()
 
     // 扩展/折叠图标的旋转动画
@@ -271,11 +251,9 @@ fun CoursewareTreeNode(
                         if (hasChildren) {
                             expanded = !expanded
                         } else if (node.res != null) {
-//                            showDownloadSnackbar = true
 
                             downloadResource(node) {
-//                                isDownloading = false
-//                                downloadProgress = 0f
+
                             }
 
                         }
@@ -363,14 +341,6 @@ fun CoursewareTreeNode(
                         Box(
                             modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center
                         ) {
-//                            if (isDownloading) {
-//                                CircularProgressIndicator(
-//                                    progress = { downloadProgress },
-//                                    modifier = Modifier.size(28.dp),
-//                                    strokeWidth = 2.dp,
-//                                    color = MaterialTheme.colorScheme.primary
-//                                )
-//                            } else {
 
 
                             IconButton(
@@ -479,7 +449,8 @@ private fun downloadResource(node: CoursewareNode, onComplete: () -> Unit) {
             if (response.isSuccessful) {
 
                 val responseContent = response.body?.string()?.let {
-                    adapter.fromJson(it) }
+                    adapter.fromJson(it)
+                }
 
                 responseContent?.let { content ->
                     val headRequest = Request.Builder().url(content.rpUrl).build()
