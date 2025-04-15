@@ -31,17 +31,13 @@ object SmartCurriculumPlatformRepository {
     val client = StudentAccountManager.getInstance().client
     private val userAgent = StudentAccountManager.getInstance().userAgent
     val moshi = KotlinUtils.moshi
-    private val initializationDeferred = CompletableDeferred<Unit>()
+//    private val initializationDeferred = CompletableDeferred<Unit>()
 
 
     private var courseFromJson: CourseJsonType? = null
 
-    init {
-        initClient()
-    }
 
-
-    fun initClient() {
+    suspend fun initClient() {
 
         var request1 = Request.Builder()
             .url("https://mis.bjtu.edu.cn/module/module/104/")
@@ -52,34 +48,13 @@ object SmartCurriculumPlatformRepository {
             .url("https://bksycenter.bjtu.edu.cn/NoMasterJumpPage.aspx?URL=jwcZhjx&FPC=page:jwcZhjx")
             .header("User-Agent", userAgent)
             .build()
-        CoroutineScope(Dispatchers.IO).launch {
-            AppStateManager.loginDeferred.await()
-            client.newCall(request1).execute()
-            client.newCall(request2).execute()
-//            NetworkRequestQueue.enqueue {
-//                client.newCall(request1).execute()
-//            }.onFailure {
-//                Log.e(
-//                    "SmartCurriculumPlatformRepository",
-//                    "Failed to initialize client: ${it.message}"
-//                )
-//            }
-//
-//            NetworkRequestQueue.enqueue {
-//                client.newCall(request2).execute()
-//            }.onFailure {
-//                Log.e(
-//                    "SmartCurriculumPlatformRepository",
-//                    "Failed to initialize client: ${it.message}"
-//                )
-//            }
 
+        client.newCall(request1).execute()
+        client.newCall(request2).execute()
+        val semesterFromJson = getSemesterTypeList()
+        courseFromJson =
+            semesterFromJson.result?.get(0)?.xqCode?.let { getCourseTypeList(xqCode = it) }
 
-            val semesterFromJson = getSemesterTypeList()
-            courseFromJson =
-                semesterFromJson.result?.get(0)?.xqCode?.let { getCourseTypeList(xqCode = it) }
-            initializationDeferred.complete(Unit)
-        }
     }
 
     private suspend fun getSemesterTypeList(): SemesterJsonType {
@@ -220,13 +195,13 @@ object SmartCurriculumPlatformRepository {
     }
 
     suspend fun getCourseList(): List<Course> {
-        initializationDeferred.await()
+        AppStateManager.awaitLoginState()
         return courseFromJson?.courseList ?: emptyList()
     }
 
 
     suspend fun generateCoursewareRootNode(course: Course): CoursewareNode {
-        initializationDeferred.await()
+        AppStateManager.awaitLoginState()
         val coursewareRootNode: CoursewareNode =
             CoursewareNode(id = 0, course = course)
         coursewareRootNode.children = generateChildrenNodeList(parentNode = coursewareRootNode)
@@ -295,7 +270,7 @@ object SmartCurriculumPlatformRepository {
 
 
     private suspend fun getHomeWorkListByHomeworkType(homeworkType: Int): List<HomeworkEntity> {
-        initializationDeferred.await()
+        AppStateManager.awaitLoginState()
 
         val listFromJson = mutableListOf<HomeworkJsonType>()
         courseFromJson?.courseList?.forEach {

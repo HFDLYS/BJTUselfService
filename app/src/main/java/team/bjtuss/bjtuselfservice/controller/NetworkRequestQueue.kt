@@ -36,7 +36,7 @@ object NetworkRequestQueue {
     init {
         repeat(MAX_CONCURRENT_JOBS) {
             scope.launch {
-                AppStateManager.loginDeferred.await()
+                AppStateManager.awaitLoginState()
                 processQueue()
             }
         }
@@ -54,7 +54,7 @@ object NetworkRequestQueue {
     }
 
     private suspend fun processRequestAfterLogin(request: NetworkRequest) {
-        AppStateManager.loginDeferred.await()
+        AppStateManager.awaitLoginState()
         try {
             activeJobs.incrementAndGet()
             _isBusy.value = activeJobs.get() > 0
@@ -81,9 +81,6 @@ object NetworkRequestQueue {
             } catch (e: Exception) {
                 Result.failure(e)
             }
-        }
-        withContext(Dispatchers.IO) {
-            AppStateManager.loginDeferred.await()
         }
         val request = NetworkRequest(wrappedOperation, deferred)
         queue.send(request)

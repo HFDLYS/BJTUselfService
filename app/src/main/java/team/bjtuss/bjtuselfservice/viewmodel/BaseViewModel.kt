@@ -110,7 +110,7 @@ abstract class BaseSyncViewModel<T : BaseEntity>(
         viewModelScope.launch {
 
             dataLock.withLock {
-                AppStateManager.loginDeferred.await()
+                AppStateManager.awaitLoginState()
                 val networkData = fetchNetworkData()
                 val localData = fetchLocalData()
                 val changes = dataSyncManager.detectChanges(networkData, localData)
@@ -123,7 +123,7 @@ abstract class BaseSyncViewModel<T : BaseEntity>(
     // 数据同步与清理变更
     override fun syncDataAndClearChange() {
         viewModelScope.launch {
-            AppStateManager.loginDeferred.await()
+            AppStateManager.awaitLoginState()
             dataLock.withLock {
                 dataSyncManager.applyChanges(_changeList.value)
                 _changeList.value = emptyList()

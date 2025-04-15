@@ -44,22 +44,21 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.controller.NetworkRequestQueue
 import team.bjtuss.bjtuselfservice.database.AppDatabase
 import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
+import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
-import java.util.concurrent.TimeoutException
 
 // Login View Model to handle login logic
 // 定义密封类表示登录状态
@@ -135,16 +134,12 @@ sealed class AppState {
 
 
 object AppStateManager {
-
-    var loginDeferred: CompletableDeferred<Unit> = CompletableDeferred()
-
     // 状态定义
-    private val _credentials = MutableStateFlow<Credentials>(Credentials("", ""))
+    private val _credentials = MutableStateFlow(Credentials("", ""))
     val credentials: StateFlow<Credentials> = _credentials.asStateFlow()
 
     private val _appState = MutableStateFlow<AppState>(AppState.Logout)
     val appState: StateFlow<AppState> = _appState.asStateFlow()
-
 
     init {
         CoroutineScope(Dispatchers.IO).launch {
@@ -153,6 +148,7 @@ object AppStateManager {
             if (isValidCredentials(storedCredentials)) {
                 login(storedCredentials, {})
             }
+
             NetworkRequestQueue.isBusy.collectLatest {
                 if (_appState.value == AppState.Idle && it) {
                     _appState.value = AppState.NetworkProgress
@@ -162,9 +158,7 @@ object AppStateManager {
                 }
             }
         }
-
     }
-
 
     // 判断凭据是否有效
     private fun isValidCredentials(credentials: Credentials): Boolean {
@@ -174,7 +168,7 @@ object AppStateManager {
 
     // 登录方法
     fun login(credentials: Credentials, onLoginSuccess: () -> Unit) {
-        println("Login attempt with credentials: $credentials")  // Debug log
+        println("Login attempt with credentials: $credentials") // Debug log
 
         // Validate credentials first
         if (!isValidCredentials(credentials)) {
@@ -184,7 +178,6 @@ object AppStateManager {
 
         CoroutineScope(Dispatchers.IO).launch {
             _appState.value = AppState.Logging
-
             try {
                 // Update the credentials in the state BEFORE login attempt
                 _credentials.value = credentials
@@ -196,15 +189,14 @@ object AppStateManager {
                 if (result.isSuccess) {
                     // Only save credentials on successful login
                     DataStoreRepository.setCredentials(credentials)
-
+                   SmartCurriculumPlatformRepository.initClient()
                     _appState.value = AppState.Idle
                     onLoginSuccess()
-                    loginDeferred.complete(Unit)
                 } else {
                     _appState.value = AppState.Error
                 }
             } catch (e: Exception) {
-                println("Login exception: ${e.message}")  // Debug log
+                println("Login exception: ${e.message}") // Debug log
                 _appState.value = AppState.Error
             }
         }
@@ -215,17 +207,11 @@ object AppStateManager {
         StudentAccountManager.getInstance().clearCookie()
         // 清理数据
         _credentials.value = Credentials("", "")
-
-
-
         mainViewModel.clearChange()
         // 重置状态
         _appState.value = AppState.Logout
 
-
-        // 重新初始化登录延迟对象
-        loginDeferred = CompletableDeferred()
-        println("协成开始")
+        println("协程开始")
         CoroutineScope(Dispatchers.IO).launch {
             // 清除登录状态
             with(AppDatabase.getInstance()) {
@@ -237,9 +223,23 @@ object AppStateManager {
                 DataStoreRepository.setCredentials(Credentials("", ""))
             }
         }
+        println("协程结束")
+    }
 
-        println("协成结束")
+    // 替代 loginDeferred 的阻塞方法
+    suspend fun awaitLoginState() {
+        // 等待直到状态不是Logout或Logging
+        appState.first { it != AppState.Logout && it != AppState.Logging }
+    }
 
+    // 等待特定状态的方法
+    suspend fun awaitState(targetState: AppState) {
+        appState.first { it == targetState }
+    }
+
+    // 等待直到满足条件的方法
+    suspend fun awaitStateCondition(condition: (AppState) -> Boolean) {
+        appState.first { condition(it) }
     }
 }
 
