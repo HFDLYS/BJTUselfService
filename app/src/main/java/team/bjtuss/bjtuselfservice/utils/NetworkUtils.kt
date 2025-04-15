@@ -1,13 +1,9 @@
 package team.bjtuss.bjtuselfservice.utils
 
-import com.squareup.moshi.Types
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Response
-import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
-import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository.moshi
 import java.io.IOException
 
 object NetworkUtils {
