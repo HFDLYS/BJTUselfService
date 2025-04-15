@@ -210,7 +210,7 @@ fun CoursewareTreeNode(
     node: CoursewareNode,
     level: Int = 0
 ) {
-    var expanded by remember { mutableStateOf(level == 0) } // 默认展开顶级节点
+    var expanded by remember { mutableStateOf(level == -1) } // 默认展开顶级节点
     val hasChildren = node.children.isNotEmpty()
     val appState by AppStateManager.appState.collectAsState()
 
