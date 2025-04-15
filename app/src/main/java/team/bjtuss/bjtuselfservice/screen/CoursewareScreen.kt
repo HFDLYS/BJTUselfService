@@ -14,6 +14,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -52,6 +53,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -197,14 +199,12 @@ fun CoursewareTreeView(
 }
 
 
-
 @Composable
 fun CoursewareTreeNode(
     node: CoursewareNode,
     level: Int = 0
 ) {
     var expanded by remember { mutableStateOf(level == 0) } // 默认展开顶级节点
-    var showDownloadSnackbar by remember { mutableStateOf(false) }
     val hasChildren = node.children.isNotEmpty()
     val appState by AppStateManager.appState.collectAsState()
 
@@ -218,22 +218,62 @@ fun CoursewareTreeNode(
         label = "Rotation"
     )
 
-    // 卡片抬升动画效果
+    // 卡片抬升动画效果 - 增强层次感
     val elevation by animateDpAsState(
-        targetValue = if (expanded) 2.dp else 1.dp,
+        targetValue = when {
+            expanded -> 4.dp
+            isClickable -> 2.dp
+            else -> 1.dp
+        },
         animationSpec = tween(durationMillis = 200),
         label = "Elevation"
     )
 
-    // 背景颜色 - 区分展开与否和可点击状态
+    // 颜色方案优化
+    val colorScheme = MaterialTheme.colorScheme
+
+    // 背景颜色 - 优化层次感和视觉区分
     val backgroundColor by animateColorAsState(
         targetValue = when {
-            !isClickable -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-            expanded -> MaterialTheme.colorScheme.primaryContainer
-            else -> MaterialTheme.colorScheme.surface
+            !isClickable -> colorScheme.surfaceVariant
+            expanded -> colorScheme.primaryContainer
+            else -> colorScheme.surface
         },
         animationSpec = tween(durationMillis = 300),
         label = "BackgroundColor"
+    )
+
+    // 边框颜色 - 增加视觉层次
+    val borderColor by animateColorAsState(
+        targetValue = when {
+            expanded -> colorScheme.primary.copy(alpha = 0.4f)
+            isClickable -> colorScheme.outline.copy(alpha = 0.2f)
+            else -> colorScheme.outline.copy(alpha = 0.1f)
+        },
+        animationSpec = tween(durationMillis = 300),
+        label = "BorderColor"
+    )
+
+    // 图标颜色 - 统一颜色体系
+    val iconColor by animateColorAsState(
+        targetValue = when {
+            !isClickable -> colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            expanded -> colorScheme.primary
+            else -> colorScheme.primary.copy(alpha = 0.8f)
+        },
+        animationSpec = tween(durationMillis = 300),
+        label = "IconColor"
+    )
+
+    // 文本颜色 - 增强可读性和层次感
+    val textColor by animateColorAsState(
+        targetValue = when {
+            !isClickable -> colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            expanded -> colorScheme.onPrimaryContainer
+            else -> colorScheme.onSurface
+        },
+        animationSpec = tween(durationMillis = 300),
+        label = "TextColor"
     )
 
     Column(
@@ -243,143 +283,120 @@ fun CoursewareTreeNode(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 4.dp)
-                .shadow(elevation = elevation, shape = RoundedCornerShape(12.dp)),
+
+                .border(
+                    width = 1.dp,
+                    color = borderColor,
+                    shape = RoundedCornerShape(12.dp)
+                ),
             shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(
                 containerColor = backgroundColor,
+                contentColor = backgroundColor
             ),
             elevation = CardDefaults.elevatedCardElevation(
-                defaultElevation = if (isClickable) 3.dp else 1.dp,
-                pressedElevation = if (isClickable) 6.dp else 1.dp
+                defaultElevation = elevation,
+                pressedElevation = elevation + 2.dp,
+                // 增加焦点和悬停状态的阴影以增强交互感
+                focusedElevation = elevation + 1.dp,
+                hoveredElevation = elevation + 1.dp
             )
         ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(
-                            enabled = isClickable,
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = rememberRipple(bounded = true)
-                        ) {
+            // 注意：这里移除了Column的background修饰符，避免颜色分层
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(
+                        enabled = isClickable,
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = rememberRipple(
+                            bounded = true,
+                            color = colorScheme.primary.copy(alpha = 0.1f)
+                        ),
+                        onClick = {
                             if (hasChildren) {
                                 expanded = !expanded
                             } else if (node.res != null && appState.canDownloadCourseware()) {
                                 downloadResource(node) {}
                             }
                         }
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (hasChildren) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .padding(4.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.KeyboardArrowDown,
-                                contentDescription = if (expanded) "折叠" else "展开",
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .rotate(rotationState),
-                                tint = if (isClickable)
-                                    MaterialTheme.colorScheme.primary
-                                else
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                            )
-                        }
-                    }
+                    )
+                    .padding(12.dp)
 
-                    // 节点图标区域
+                ,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (hasChildren) {
                     Box(
-                        modifier = Modifier.size(32.dp),
+                        modifier = Modifier
+                            .size(32.dp)
+                            .padding(4.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        val icon = when {
-                            level == 0 -> Icons.Default.Book
-                            hasChildren -> Icons.Default.Folder
-                            node.res != null -> Icons.Default.Description
-                            else -> Icons.Default.Folder
-                        }
-
                         Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = if (isClickable)
-                                MaterialTheme.colorScheme.primary
-                            else
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            imageVector = Icons.Filled.KeyboardArrowDown,
+                            contentDescription = if (expanded) "折叠" else "展开",
+                            modifier = Modifier
+                                .size(20.dp)
+                                .rotate(rotationState),
+                            tint = iconColor
                         )
                     }
+                }
 
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    // 节点文本
-                    val nodeText = when {
-                        level == 0 -> node.course.name
-                        node.bag != null -> node.bag?.bag_name ?: "未命名文件夹"
-                        node.res != null -> node.res?.rpName ?: "未命名资源"
-                        else -> "未知项目"
+                // 节点图标区域
+                Box(
+                    modifier = Modifier.size(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val icon = when {
+                        level == 0 -> Icons.Default.Book
+                        hasChildren -> Icons.Default.Folder
+                        node.res != null -> Icons.Default.Description
+                        else -> Icons.Default.Folder
                     }
 
-                    Column(
-                        modifier = Modifier.weight(1f)
-                    ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = iconColor
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // 节点文本
+                val nodeText = when {
+                    level == 0 -> node.course.name
+                    node.bag != null -> node.bag?.bag_name ?: "未命名文件夹"
+                    node.res != null -> node.res?.rpName ?: "未命名资源"
+                    else -> "未知项目"
+                }
+
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = nodeText,
+                        style = when (level) {
+                            0 -> MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                            1 -> MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
+                            else -> MaterialTheme.typography.bodyMedium
+                        },
+                        color = textColor,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    // 顶级节点副标题
+                    if (level == 0) {
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = nodeText,
-                            style = when (level) {
-                                0 -> MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                                1 -> MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
-                                else -> MaterialTheme.typography.bodyMedium
-                            },
-                            color = if (isClickable)
-                                MaterialTheme.colorScheme.onSurface
-                            else
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                            text = "${node.children.size} 个项目",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = textColor.copy(alpha = 0.7f)
                         )
-
-                        // 顶级节点副标题
-                        if (level == 0) {
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "${node.children.size} 个项目",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                    alpha = if (isClickable) 0.8f else 0.5f
-                                )
-                            )
-                        }
-                    }
-
-                    // 下载按钮
-                    if (!hasChildren && node.res != null) {
-                        Box(
-                            modifier = Modifier.size(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            IconButton(
-                                onClick = {
-                                    showDownloadSnackbar = true
-                                    downloadResource(node) {}
-                                },
-                                modifier = Modifier.size(32.dp),
-                                enabled = appState.canDownloadCourseware()
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Download,
-                                    contentDescription = "下载",
-                                    tint = if (appState.canDownloadCourseware())
-                                        MaterialTheme.colorScheme.primary
-                                    else
-                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                                )
-                            }
-                        }
                     }
                 }
             }
@@ -418,7 +435,7 @@ fun CoursewareTreeNode(
             if (expanded) {
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    color = colorScheme.primary.copy(alpha = 0.1f)
                 )
             }
         }
