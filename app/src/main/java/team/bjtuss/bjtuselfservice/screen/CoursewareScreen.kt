@@ -17,6 +17,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +31,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -43,11 +45,13 @@ import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -63,8 +67,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -321,9 +327,7 @@ fun CoursewareTreeNode(
                             }
                         }
                     )
-                    .padding(12.dp)
-
-                ,
+                    .padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (hasChildren) {
@@ -399,6 +403,28 @@ fun CoursewareTreeNode(
                         )
                     }
                 }
+                if (hasChildren) {
+                    FilledTonalIconButton(
+                        onClick = {
+                            downloadResourceRecursion(node)
+                        },
+//                        modifier = Modifier.size(32.dp),
+                        enabled = appState.canDownloadCourseware(),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = Color.Transparent,
+                            contentColor = MaterialTheme.colorScheme.primary,
+                            disabledContainerColor = Color.Transparent,
+                            disabledContentColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            contentDescription = "下载",
+                            modifier = Modifier.size(16.dp)  // 稍微调小一点以适应按钮
+                        )
+                    }
+
+                }
             }
         }
 
@@ -439,6 +465,18 @@ fun CoursewareTreeNode(
                 )
             }
         }
+    }
+}
+
+private fun downloadResourceRecursion(
+    node: CoursewareNode,
+) {
+    if (node.children.isNotEmpty()) {
+        node.children.forEach { childNode ->
+            downloadResourceRecursion(childNode)
+        }
+    } else if (node.res != null) {
+        downloadResource(node) {}
     }
 }
 

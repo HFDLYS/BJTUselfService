@@ -55,8 +55,6 @@ object NetworkRequestQueue {
 
     private suspend fun processRequestAfterLogin(request: NetworkRequest) {
         AppStateManager.awaitLoginState()
-        val a = AppStateManager.appState.value
-        println(a)
 
         try {
             activeJobs.incrementAndGet()
@@ -71,8 +69,6 @@ object NetworkRequestQueue {
             request.deferred.complete(Result.failure(e))
         } finally {
             if (activeJobs.decrementAndGet() == 0) {
-                val a = AppStateManager.appState.value
-                println(a)
                 AppEventManager.sendEvent(AppEvent.DataSyncCompleted)
             }
         }

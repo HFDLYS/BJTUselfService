@@ -336,8 +336,6 @@ object AppStateManager {
     suspend fun awaitLoginState() {
         // 等待直到状态不是Logout或Logging
         appState.first {
-            val a = it
-            println(a)
             it.loginFish()
         }
     }

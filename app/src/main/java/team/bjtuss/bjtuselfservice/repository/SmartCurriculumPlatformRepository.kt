@@ -2,6 +2,7 @@ package team.bjtuss.bjtuselfservice.repository
 
 
 import android.util.Log
+import com.squareup.moshi.JsonDataException
 import com.squareup.moshi.Types
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -231,8 +232,6 @@ object SmartCurriculumPlatformRepository {
             responseContent?.let { str ->
                 try {
 
-//                    val a = str
-//                    println(a)
                     val jsonString = str
                         .replace("\"resList\"\\s*:\\s*\"\"".toRegex(), "\"resList\": []")
                         .replace("\"bagList\"\\s*:\\s*\"\"".toRegex(), "\"bagList\": []")
@@ -267,6 +266,7 @@ object SmartCurriculumPlatformRepository {
             } ?: throw IOException("Response body is null")
         }
     }
+
 
 
     private suspend fun getHomeWorkListByHomeworkType(homeworkType: Int): List<HomeworkEntity> {
