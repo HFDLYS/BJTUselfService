@@ -20,6 +20,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "BJTUselfService-compose"
+rootProject.name = "BJTUselfService"
 include(":app")
  

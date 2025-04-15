@@ -96,6 +96,7 @@ import team.bjtuss.bjtuselfservice.screen.SpaceScreen
 import team.bjtuss.bjtuselfservice.ui.theme.BJTUselfServicecomposeTheme
 import team.bjtuss.bjtuselfservice.statemanager.AppState
 import team.bjtuss.bjtuselfservice.statemanager.AppStateManager
+import team.bjtuss.bjtuselfservice.statemanager.AuthenticatorManager
 import team.bjtuss.bjtuselfservice.viewmodel.ClassroomViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.CourseScheduleViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.CoursewareViewModel
@@ -140,7 +141,7 @@ class MainActivity : ComponentActivity() {
                 Surface {
 
                     val appState by AppStateManager.appState.collectAsState()
-                    val credentials by AppStateManager.credentials.collectAsState()
+                    val credentials by AuthenticatorManager.credentials.collectAsState()
 
                     val classroomViewModel: ClassroomViewModel = viewModel()
                     val gradeViewModel: GradeViewModel = viewModel()
@@ -151,7 +152,6 @@ class MainActivity : ComponentActivity() {
                     val settingViewModel: SettingViewModel = viewModel()
                     val coursewareViewModel: CoursewareViewModel = viewModel()
                     val mainViewModel: MainViewModel = viewModel(
-
                         factory = MainViewModelFactory(
                             gradeViewModel,
                             courseScheduleViewModel,
@@ -169,9 +169,7 @@ class MainActivity : ComponentActivity() {
 
                     if (appState == AppState.Logout || appState == AppState.Error) {
 
-                        LoginDialog(credentials, onLoginSuccess = {
-                            mainViewModel.loadDataAndDetectChanges()
-                        })
+                        LoginDialog(credentials)
                     }
 
                     App(mainViewModel)
@@ -411,7 +409,6 @@ fun AppNavigation(
     )
 
     val pagerState = rememberPagerState(pageCount = { pages.size })
-    val appState by AppStateManager.appState.collectAsState()
 
 
     val clickSequence = remember { mutableStateListOf<Int>() }
@@ -470,7 +467,6 @@ fun AppNavigation(
                     }
                 }
             }
-
         })
 
 

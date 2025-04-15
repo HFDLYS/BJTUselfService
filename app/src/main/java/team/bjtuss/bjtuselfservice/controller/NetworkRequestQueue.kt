@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import team.bjtuss.bjtuselfservice.CaptchaModel.init
+import team.bjtuss.bjtuselfservice.statemanager.AppEvent
+import team.bjtuss.bjtuselfservice.statemanager.AppEventManager
 import team.bjtuss.bjtuselfservice.statemanager.AppStateManager
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -26,11 +28,9 @@ object NetworkRequestQueue {
     private val queue = Channel<NetworkRequest>(Channel.UNLIMITED)
 
     private val activeJobs = AtomicInteger(0)
-//    private val _isBusy = MutableLiveData<Boolean>(false)
-//    val isBusy: LiveData<Boolean> get() = _isBusy
 
-    private val _isBusy: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val isBusy = _isBusy.asStateFlow()
+//    private val _isBusy: MutableStateFlow<Boolean> = MutableStateFlow(false)
+//    val isBusy = _isBusy.asStateFlow()
 
 
     init {
@@ -55,9 +55,15 @@ object NetworkRequestQueue {
 
     private suspend fun processRequestAfterLogin(request: NetworkRequest) {
         AppStateManager.awaitLoginState()
+        val a = AppStateManager.appState.value
+        println(a)
+
         try {
             activeJobs.incrementAndGet()
-            _isBusy.value = activeJobs.get() > 0
+//            _isBusy.value = activeJobs.get() > 0
+//            if (activeJobs.get() > 0) {
+//                AppEventManager.sendEvent(AppEvent.DataSyncRequest)
+//            }
             val result = request.operation()
             request.deferred.complete(result)
         } catch (e: Exception) {
@@ -65,7 +71,9 @@ object NetworkRequestQueue {
             request.deferred.complete(Result.failure(e))
         } finally {
             if (activeJobs.decrementAndGet() == 0) {
-                _isBusy.value = false
+                val a = AppStateManager.appState.value
+                println(a)
+                AppEventManager.sendEvent(AppEvent.DataSyncCompleted)
             }
         }
     }

@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import team.bjtuss.bjtuselfservice.CaptchaModel.init
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.StudentAccountManager.Status
 import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
@@ -15,6 +16,7 @@ class StatusViewModel : ViewModel() {
     val status = _status.asStateFlow()
     private val _currentWeek: MutableStateFlow<Int> = MutableStateFlow(0)
     val currentWeek = _currentWeek.asStateFlow()
+
 
     init {
         loadData()

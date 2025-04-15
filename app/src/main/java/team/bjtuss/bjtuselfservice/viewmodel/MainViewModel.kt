@@ -2,6 +2,12 @@ package team.bjtuss.bjtuselfservice.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import team.bjtuss.bjtuselfservice.statemanager.AppEvent
+import team.bjtuss.bjtuselfservice.statemanager.AppEventManager
+
 
 class MainViewModel(
     val gradeViewModel: GradeViewModel,
@@ -13,6 +19,21 @@ class MainViewModel(
     val settingViewModel: SettingViewModel,
     val coursewareViewModel: CoursewareViewModel,
 ) : ViewModel() {
+
+    init {
+        viewModelScope.launch {
+            AppEventManager.events.collectLatest {
+                when (it) {
+                    is AppEvent.DataSyncRequest -> {
+                        loadDataAndDetectChanges()
+                    }
+
+                    else -> {}
+                }
+            }
+        }
+    }
+
     fun loadDataAndDetectChanges() {
         statusViewModel.loadData()
         gradeViewModel.loadDataAndDetectChanges()
@@ -40,7 +61,7 @@ class MainViewModelFactory(
     private val settingViewModel: SettingViewModel,
     private val coursewareViewModel: CoursewareViewModel,
 
-) : ViewModelProvider.Factory {
+    ) : ViewModelProvider.Factory {
 
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(MainViewModel::class.java)) {

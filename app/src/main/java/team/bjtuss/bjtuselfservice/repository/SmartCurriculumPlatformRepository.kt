@@ -39,7 +39,7 @@ object SmartCurriculumPlatformRepository {
 
     suspend fun initClient() {
 
-        var request1 = Request.Builder()
+        val request1 = Request.Builder()
             .url("https://mis.bjtu.edu.cn/module/module/104/")
             .header("User-Agent", userAgent)
             .build()

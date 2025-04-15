@@ -46,8 +46,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
@@ -58,13 +60,177 @@ import team.bjtuss.bjtuselfservice.controller.NetworkRequestQueue
 import team.bjtuss.bjtuselfservice.database.AppDatabase
 import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
+import team.bjtuss.bjtuselfservice.statemanager.AuthenticatorManager.credentials
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
+import team.bjtuss.bjtuselfservice.web.MisDataManager.login
 
 // Login View Model to handle login logic
 // 定义密封类表示登录状态
 
 
-class Authenticator(private val studentAccountManager: StudentAccountManager) {
+//class Authenticator(private val studentAccountManager: StudentAccountManager) {
+//
+//    suspend fun login(credentials: Credentials): Result<Boolean> {
+//        val (username, password) = credentials
+//        return try {
+//            Log.d("Authenticator", "开始登录：$username")
+//            val isInitialLoginSuccessful = studentAccountManager.init(username, password).await()
+//            Log.d("Authenticator", "初始登录结果：$isInitialLoginSuccessful")
+//
+//            if (isInitialLoginSuccessful) {
+//                val isXsMisLoginSuccessful = studentAccountManager.loginXsMis()
+//                isXsMisLoginSuccessful.thenAccept({
+//                    Log.d("Authenticator", "XSMIS登录结果：$it")
+//                })
+//
+//                val isAaLoginSuccessful = studentAccountManager.loginAa().await()
+//                Log.d("Authenticator", "AA登录结果：$isAaLoginSuccessful")
+//
+//                if (isAaLoginSuccessful) {
+//                    Result.success(true)
+//                } else {
+//                    Log.e("Authenticator", "AA登录失败")
+//                    Result.failure(Exception("AA登录失败"))
+//                }
+//
+//
+//            } else {
+//                Log.e("Authenticator", "初始登录失败")
+//                Result.failure(Exception("初始登录失败"))
+//            }
+//        } catch (e: Exception) {
+//            Log.e("Authenticator", "登录发生异常", e)
+//            Result.failure(e)
+//        }
+//    }
+//}
+
+data class Credentials(
+    val username: String, val password: String
+)
+
+
+sealed class AppEvent {
+    data class LoginRequest(val credentials: Credentials) : AppEvent()
+    object LoginSuccess : AppEvent()
+    object LoginFailed : AppEvent()
+    data class LogoutRequest(val clearAllData: () -> Unit) : AppEvent()
+    object DataSyncCompleted : AppEvent()
+    object DataSyncRequest : AppEvent()
+}
+
+object AppEventManager {
+    private val _events = MutableSharedFlow<AppEvent>()
+    val events = _events.asSharedFlow()
+
+
+    private val coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.Default)
+
+    init {
+        coroutineScope.launch {
+            _events.collect { event ->
+                processEvent(event)
+            }
+        }
+    }
+
+    fun sendEvent(event: AppEvent) {
+        coroutineScope.launch {
+            _events.emit(event)
+        }
+    }
+
+    private fun processEvent(event: AppEvent) {
+        when (event) {
+            is AppEvent.LoginRequest -> {
+                AppStateManager.updateState(AppState.Logging)
+                AuthenticatorManager.login(event.credentials, onSuccess = {
+                    sendEvent(AppEvent.LoginSuccess)
+                })
+            }
+            // 执行登录逻辑...
+            is AppEvent.LoginSuccess -> {
+                AppStateManager.updateState(AppState.Idle)
+                sendEvent(AppEvent.DataSyncRequest)
+            }
+
+            is AppEvent.LoginFailed -> {
+                AppStateManager.updateState(AppState.Error)
+            }
+
+            is AppEvent.LogoutRequest -> {
+                AppStateManager.updateState(AppState.Logout)
+                event.clearAllData()
+            }
+
+
+            is AppEvent.DataSyncCompleted -> {
+                AppStateManager.updateState(AppState.Idle)
+                // 执行数据同步完成逻辑...
+            }
+
+            is AppEvent.DataSyncRequest -> {
+                AppStateManager.updateState(AppState.NetworkProgress)
+            }
+        }
+    }
+
+    // 登录方法
+
+}
+
+object AuthenticatorManager {
+    private val studentAccountManager = StudentAccountManager.getInstance()
+
+    private var _credentials = MutableStateFlow(Credentials("", ""))
+    val credentials: StateFlow<Credentials> = _credentials.asStateFlow()
+
+    init {
+        tryAutoLogin()
+    }
+
+    private fun tryAutoLogin() {
+        CoroutineScope(Dispatchers.IO).launch {
+            // 从存储中恢复凭据并尝试登录
+            val storedCredentials = DataStoreRepository.getStoredCredentialsBlocking()
+            AppEventManager.sendEvent(AppEvent.LoginRequest(storedCredentials))
+
+        }
+    }
+
+
+    fun login(credentials: Credentials, onSuccess: () -> Unit) {
+        // Validate credentials first
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                AuthenticatorManager.updateCredentials(credentials)
+                val result = AuthenticatorManager.login(credentials)
+
+                if (result.isSuccess) {
+                    // Only save credentials on successful login
+                    DataStoreRepository.setCredentials(credentials)
+                    SmartCurriculumPlatformRepository.initClient()
+                    onSuccess()
+                } else {
+                    AppEventManager.sendEvent(AppEvent.LoginFailed)
+                }
+            } catch (e: Exception) {
+                println("Login exception: ${e.message}") // Debug log
+                AppEventManager.sendEvent(AppEvent.LoginFailed)
+            }
+        }
+    }
+
+
+    // 判断凭据是否有效
+    private fun isValidCredentials(credentials: Credentials): Boolean {
+        val (username, password) = credentials
+        return username.isNotBlank() && password.isNotBlank()
+    }
+
+    fun updateCredentials(newCredentials: Credentials) {
+        _credentials.value = newCredentials
+    }
 
     suspend fun login(credentials: Credentials): Result<Boolean> {
         val (username, password) = credentials
@@ -99,12 +265,25 @@ class Authenticator(private val studentAccountManager: StudentAccountManager) {
             Result.failure(e)
         }
     }
-}
 
-data class Credentials(
-    val username: String,
-    val password: String
-)
+    fun clearAllData(mainViewModel: MainViewModel) {
+        StudentAccountManager.getInstance().clearCookie()
+        // 清理数据
+        AuthenticatorManager.updateCredentials(Credentials("", ""))
+        mainViewModel.clearChange()
+        CoroutineScope(Dispatchers.IO).launch {
+            // 清除登录状态
+            with(AppDatabase.getInstance()) {
+                examScheduleEntityDao().deleteAll()
+                gradeEntityDao().deleteAll()
+                courseEntityDao().deleteAll()
+                homeworkEntityDao().deleteAll()
+                DataStoreRepository.clearCredentials()
+                DataStoreRepository.setCredentials(Credentials("", ""))
+            }
+        }
+    }
+}
 
 
 sealed class AppState {
@@ -128,108 +307,39 @@ sealed class AppState {
         }
     }
 
-
-
+    fun loginFish(): Boolean {
+        return when (this) {
+            is Logout, Error, Logging -> false
+            else -> true
+        }
+    }
 }
 
 
 object AppStateManager {
-    // 状态定义
-    private val _credentials = MutableStateFlow(Credentials("", ""))
-    val credentials: StateFlow<Credentials> = _credentials.asStateFlow()
 
     private val _appState = MutableStateFlow<AppState>(AppState.Logout)
     val appState: StateFlow<AppState> = _appState.asStateFlow()
 
-    init {
-        CoroutineScope(Dispatchers.IO).launch {
-            // 从存储中恢复凭据并尝试登录
-            val storedCredentials = DataStoreRepository.getStoredCredentialsBlocking()
-            if (isValidCredentials(storedCredentials)) {
-                login(storedCredentials, {})
-            }
-
-            NetworkRequestQueue.isBusy.collectLatest {
-                if (_appState.value == AppState.Idle && it) {
-                    _appState.value = AppState.NetworkProgress
-                }
-                if (_appState.value == AppState.NetworkProgress && !it) {
-                    _appState.value = AppState.Idle
-                }
-            }
-        }
-    }
-
-    // 判断凭据是否有效
-    private fun isValidCredentials(credentials: Credentials): Boolean {
-        val (username, password) = credentials
-        return username.isNotBlank() && password.isNotBlank()
-    }
-
-    // 登录方法
-    fun login(credentials: Credentials, onLoginSuccess: () -> Unit) {
-        println("Login attempt with credentials: $credentials") // Debug log
-
-        // Validate credentials first
-        if (!isValidCredentials(credentials)) {
-            _appState.value = AppState.Error
+    fun updateState(state: AppState) {
+        if (_appState.value == state) {
             return
         }
-
-        CoroutineScope(Dispatchers.IO).launch {
-            _appState.value = AppState.Logging
-            try {
-                // Update the credentials in the state BEFORE login attempt
-                _credentials.value = credentials
-
-                // Use the passed credentials for authentication
-                val authenticator = Authenticator(StudentAccountManager.getInstance())
-                val result = authenticator.login(credentials)
-
-                if (result.isSuccess) {
-                    // Only save credentials on successful login
-                    DataStoreRepository.setCredentials(credentials)
-                   SmartCurriculumPlatformRepository.initClient()
-                    _appState.value = AppState.Idle
-                    onLoginSuccess()
-                } else {
-                    _appState.value = AppState.Error
-                }
-            } catch (e: Exception) {
-                println("Login exception: ${e.message}") // Debug log
-                _appState.value = AppState.Error
-            }
-        }
+        _appState.value = state
     }
+
 
     // 登出方法
-    fun logout(mainViewModel: MainViewModel) {
-        StudentAccountManager.getInstance().clearCookie()
-        // 清理数据
-        _credentials.value = Credentials("", "")
-        mainViewModel.clearChange()
-        // 重置状态
-        _appState.value = AppState.Logout
 
-        println("协程开始")
-        CoroutineScope(Dispatchers.IO).launch {
-            // 清除登录状态
-            with(AppDatabase.getInstance()) {
-                examScheduleEntityDao().deleteAll()
-                gradeEntityDao().deleteAll()
-                courseEntityDao().deleteAll()
-                homeworkEntityDao().deleteAll()
-                DataStoreRepository.clearCredentials()
-                DataStoreRepository.setCredentials(Credentials("", ""))
-            }
-        }
-        println("协程结束")
-    }
 
     // 替代 loginDeferred 的阻塞方法
     suspend fun awaitLoginState() {
         // 等待直到状态不是Logout或Logging
-        appState.first { it != AppState.Logout && it != AppState.Logging }
+        appState.first {
+            val a = it
+            println(a)
+            it.loginFish()
+        }
     }
 
     // 等待特定状态的方法
@@ -245,7 +355,7 @@ object AppStateManager {
 
 
 @Composable
-fun LoginDialog(credentials: Credentials, onLoginSuccess: () -> Unit) {
+fun LoginDialog(credentials: Credentials) {
     var username by remember { mutableStateOf(credentials.username) }
     var password by remember { mutableStateOf(credentials.password) }
     val loginState by AppStateManager.appState.collectAsState()
@@ -270,8 +380,7 @@ fun LoginDialog(credentials: Credentials, onLoginSuccess: () -> Unit) {
                                     color = MaterialTheme.colorScheme.errorContainer,
                                     shape = RoundedCornerShape(8.dp)
                                 )
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .padding(12.dp), verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Error,
@@ -291,33 +400,28 @@ fun LoginDialog(credentials: Credentials, onLoginSuccess: () -> Unit) {
                     else -> {}
                 }
 
-                LoginForm(
-                    username = username,
+                LoginForm(username = username,
                     password = password,
                     onUsernameChange = { username = it },
-                    onPasswordChange = { password = it }
-                )
+                    onPasswordChange = { password = it })
             }
         },
         confirmButton = {
-            LoginButton(
-                enabled = username.isNotBlank() && password.isNotBlank(),
-                onClick = {
-                    AppStateManager.login(
+            LoginButton(enabled = username.isNotBlank() && password.isNotBlank(), onClick = {
+                AppEventManager.sendEvent(
+                    AppEvent.LoginRequest(
                         Credentials(
-                            username = username,
-                            password = password
-                        ),
-                        onLoginSuccess
+                            username, password
+                        )
                     )
-                }
-            )
+                )
+
+            })
         },
         shape = RoundedCornerShape(16.dp),
         containerColor = MaterialTheme.colorScheme.surface,
         properties = DialogProperties(
-            dismissOnBackPress = false,
-            dismissOnClickOutside = false
+            dismissOnBackPress = false, dismissOnClickOutside = false
         )
     )
 }
@@ -333,12 +437,10 @@ fun LoginForm(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
-        contentAlignment = Alignment.Center
+            .padding(8.dp), contentAlignment = Alignment.Center
     ) {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
+            horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()
         ) {
             // 应用图标
 //            Box(
@@ -419,8 +521,7 @@ fun LoginForm(
                 label = { Text("密码") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                visualTransformation = if (passwordVisibility)
-                    VisualTransformation.None
+                visualTransformation = if (passwordVisibility) VisualTransformation.None
                 else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 leadingIcon = {
@@ -431,8 +532,7 @@ fun LoginForm(
                     )
                 },
                 trailingIcon = {
-                    val image = if (passwordVisibility)
-                        Icons.Filled.Visibility
+                    val image = if (passwordVisibility) Icons.Filled.Visibility
                     else Icons.Filled.VisibilityOff
 
                     IconButton(onClick = { passwordVisibility = !passwordVisibility }) {
@@ -456,8 +556,7 @@ fun LoginForm(
 
 @Composable
 fun LoginButton(
-    enabled: Boolean,
-    onClick: () -> Unit
+    enabled: Boolean, onClick: () -> Unit
 ) {
     Button(
         onClick = onClick,
@@ -472,8 +571,7 @@ fun LoginButton(
             disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
         ),
         elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 4.dp,
-            pressedElevation = 8.dp
+            defaultElevation = 4.dp, pressedElevation = 8.dp
         )
     ) {
         Row(
@@ -487,11 +585,9 @@ fun LoginButton(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "登 录",
-                style = MaterialTheme.typography.titleMedium.copy(
+                text = "登 录", style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold
-                ),
-                color = MaterialTheme.colorScheme.onPrimary
+                ), color = MaterialTheme.colorScheme.onPrimary
             )
         }
     }
