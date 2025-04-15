@@ -53,13 +53,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
-import team.bjtuss.bjtuselfservice.App
+import kotlinx.coroutines.withTimeoutOrNull
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.controller.NetworkRequestQueue
 import team.bjtuss.bjtuselfservice.database.AppDatabase
 import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
-import team.bjtuss.bjtuselfservice.repository.NetworkRepository
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
+import java.util.concurrent.TimeoutException
 
 // Login View Model to handle login logic
 // 定义密封类表示登录状态
@@ -107,12 +107,30 @@ data class Credentials(
     val password: String
 )
 
+
 sealed class AppState {
     object Logout : AppState()
     object Logging : AppState()
     object Error : AppState()
     object Idle : AppState()
     object NetworkProgress : AppState()
+
+    fun canDownloadCourseware(): Boolean {
+        return when (this) {
+            is Idle, is NetworkProgress -> true
+            else -> false
+        }
+    }
+
+    fun canDownloadAndUpload(): Boolean {
+        return when (this) {
+            is Idle, is NetworkProgress -> true
+            else -> false
+        }
+    }
+
+
+
 }
 
 
@@ -146,6 +164,7 @@ object AppStateManager {
         }
 
     }
+
 
     // 判断凭据是否有效
     private fun isValidCredentials(credentials: Credentials): Boolean {

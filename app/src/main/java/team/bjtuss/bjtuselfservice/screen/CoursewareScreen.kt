@@ -15,6 +15,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -76,7 +78,6 @@ import team.bjtuss.bjtuselfservice.component.RotatingImageLoader
 import team.bjtuss.bjtuselfservice.jsonclass.CoursewareDownloadPostRequestResponse
 import team.bjtuss.bjtuselfservice.jsonclass.CoursewareNode
 import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
-import team.bjtuss.bjtuselfservice.statemanager.AppState
 import team.bjtuss.bjtuselfservice.statemanager.AppStateManager
 import team.bjtuss.bjtuselfservice.utils.DownloadUtil
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
@@ -195,13 +196,20 @@ fun CoursewareTreeView(
 
 }
 
+
+
 @Composable
 fun CoursewareTreeNode(
-    node: CoursewareNode, level: Int = 0
+    node: CoursewareNode,
+    level: Int = 0
 ) {
-    var expanded by remember { mutableStateOf(level == -1) } // 默认展开顶级节点
+    var expanded by remember { mutableStateOf(level == 0) } // 默认展开顶级节点
     var showDownloadSnackbar by remember { mutableStateOf(false) }
     val hasChildren = node.children.isNotEmpty()
+    val appState by AppStateManager.appState.collectAsState()
+
+    // 确定当前节点是否可点击
+    val isClickable = hasChildren || (node.res != null && appState.canDownloadCourseware())
 
     // 扩展/折叠图标的旋转动画
     val rotationState by animateFloatAsState(
@@ -210,23 +218,23 @@ fun CoursewareTreeNode(
         label = "Rotation"
     )
 
-    // 卡片抬升动画效果 - 简化高度变化
+    // 卡片抬升动画效果
     val elevation by animateDpAsState(
         targetValue = if (expanded) 2.dp else 1.dp,
         animationSpec = tween(durationMillis = 200),
         label = "Elevation"
     )
 
-    // 简化背景颜色 - 只区分展开与否，不基于层级
+    // 背景颜色 - 区分展开与否和可点击状态
     val backgroundColor by animateColorAsState(
-        targetValue = if (expanded) MaterialTheme.colorScheme.primaryContainer
-        else MaterialTheme.colorScheme.surface,
+        targetValue = when {
+            !isClickable -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+            expanded -> MaterialTheme.colorScheme.primaryContainer
+            else -> MaterialTheme.colorScheme.surface
+        },
         animationSpec = tween(durationMillis = 300),
         label = "BackgroundColor"
     )
-
-
-    val appState by AppStateManager.appState.collectAsState()
 
     Column(
         modifier = Modifier.padding(start = (level * 16).dp)
@@ -241,26 +249,29 @@ fun CoursewareTreeNode(
                 containerColor = backgroundColor,
             ),
             elevation = CardDefaults.elevatedCardElevation(
-                defaultElevation = 3.dp, pressedElevation = 6.dp
+                defaultElevation = if (isClickable) 3.dp else 1.dp,
+                pressedElevation = if (isClickable) 6.dp else 1.dp
             )
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
-                Row(modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(enabled = appState == AppState.Idle || hasChildren) {
-                        if (hasChildren) {
-                            expanded = !expanded
-                        } else if (node.res != null) {
-
-                            downloadResource(node) {
-
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            enabled = isClickable,
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = rememberRipple(bounded = true)
+                        ) {
+                            if (hasChildren) {
+                                expanded = !expanded
+                            } else if (node.res != null && appState.canDownloadCourseware()) {
+                                downloadResource(node) {}
                             }
-
                         }
-                    }
-                    .padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     if (hasChildren) {
-                        // 使用统一的图标颜色
                         Box(
                             modifier = Modifier
                                 .size(32.dp)
@@ -273,14 +284,18 @@ fun CoursewareTreeNode(
                                 modifier = Modifier
                                     .size(20.dp)
                                     .rotate(rotationState),
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = if (isClickable)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                             )
                         }
                     }
 
-                    // 节点图标区域 - 使用统一的图标颜色方案
+                    // 节点图标区域
                     Box(
-                        modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center
+                        modifier = Modifier.size(32.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         val icon = when {
                             level == 0 -> Icons.Default.Book
@@ -289,16 +304,17 @@ fun CoursewareTreeNode(
                             else -> Icons.Default.Folder
                         }
 
-                        // 统一使用主色调，让界面看起来更协调
                         Icon(
                             imageVector = icon,
                             contentDescription = null,
                             modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = if (isClickable)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )
                     }
 
-                    // 间隔
                     Spacer(modifier = Modifier.width(12.dp))
 
                     // 节点文本
@@ -319,61 +335,65 @@ fun CoursewareTreeNode(
                                 1 -> MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
                                 else -> MaterialTheme.typography.bodyMedium
                             },
-                            // 使用统一的文本颜色
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = if (isClickable)
+                                MaterialTheme.colorScheme.onSurface
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
 
-                        // 如果是顶级节点，添加一个副标题
+                        // 顶级节点副标题
                         if (level == 0) {
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = "${node.children.size} 个项目",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                    alpha = if (isClickable) 0.8f else 0.5f
+                                )
                             )
                         }
                     }
 
-                    // 下载指示器或下载按钮
+                    // 下载按钮
                     if (!hasChildren && node.res != null) {
                         Box(
-                            modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center
+                            modifier = Modifier.size(32.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-
-
                             IconButton(
                                 onClick = {
                                     showDownloadSnackbar = true
-                                    downloadResource(node) {
-                                    }
-
-                                }, modifier = Modifier.size(32.dp)
+                                    downloadResource(node) {}
+                                },
+                                modifier = Modifier.size(32.dp),
+                                enabled = appState.canDownloadCourseware()
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Download,
                                     contentDescription = "下载",
-                                    tint = MaterialTheme.colorScheme.primary
+                                    tint = if (appState.canDownloadCourseware())
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                                 )
                             }
-
                         }
                     }
                 }
-
-                // 显示下载进度条（仅在下载时）
-
             }
         }
 
         // 子节点展开动画
         AnimatedVisibility(
-            visible = expanded, enter = expandVertically(
+            visible = expanded,
+            enter = expandVertically(
                 animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
             ) + fadeIn(
                 animationSpec = tween(durationMillis = 300)
-            ), exit = shrinkVertically(
+            ),
+            exit = shrinkVertically(
                 animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
             ) + fadeOut(
                 animationSpec = tween(durationMillis = 200)
@@ -385,13 +405,14 @@ fun CoursewareTreeNode(
             ) {
                 node.children.forEach { childNode ->
                     CoursewareTreeNode(
-                        node = childNode, level = level + 1
+                        node = childNode,
+                        level = level + 1
                     )
                 }
             }
         }
 
-        // 在顶级项目后添加分隔线
+        // 顶级项目后添加分隔线
         if (level == 0) {
             Spacer(modifier = Modifier.height(8.dp))
             if (expanded) {
@@ -402,31 +423,6 @@ fun CoursewareTreeNode(
             }
         }
     }
-
-    // 处理下载通知
-//    if (showDownloadSnackbar) {
-//        val nodeText = when {
-//            node.res != null -> node.res?.rpName ?: "资源"
-//            else -> "文件"
-//        }
-//
-//        LaunchedEffect(key1 = showDownloadSnackbar) {
-//            // 使用Snackbar显示下载状态
-//            val snackbarHostState = SnackbarHostState()
-//            val snackbarResult = snackbarHostState.showSnackbar(
-//                message = "正在下载: $nodeText",
-//                actionLabel = "查看",
-//                duration = SnackbarDuration.Short
-//            )
-//
-//            if (snackbarResult == SnackbarResult.ActionPerformed) {
-//                // 打开下载文件夹
-//                // 可以实现查看下载内容的功能
-//            }
-//
-//            showDownloadSnackbar = false
-//        }
-//    }
 }
 
 // 保持原有的下载逻辑

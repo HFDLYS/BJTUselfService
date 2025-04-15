@@ -19,6 +19,8 @@ import team.bjtuss.bjtuselfservice.jsonclass.CourseResourceResponse
 import team.bjtuss.bjtuselfservice.jsonclass.CoursewareNode
 import team.bjtuss.bjtuselfservice.jsonclass.HomeworkJsonType
 import team.bjtuss.bjtuselfservice.jsonclass.SemesterJsonType
+import team.bjtuss.bjtuselfservice.statemanager.AppState
+import team.bjtuss.bjtuselfservice.statemanager.AppStateManager
 import team.bjtuss.bjtuselfservice.utils.KotlinUtils
 import team.bjtuss.bjtuselfservice.utils.NetworkUtils
 import java.io.IOException
@@ -51,32 +53,31 @@ object SmartCurriculumPlatformRepository {
             .header("User-Agent", userAgent)
             .build()
         CoroutineScope(Dispatchers.IO).launch {
-//            client.newCall(request1).execute()
-//            client.newCall(request2).execute()
-            NetworkRequestQueue.enqueue {
-                client.newCall(request1).execute()
-            }.onFailure {
-                Log.e(
-                    "SmartCurriculumPlatformRepository",
-                    "Failed to initialize client: ${it.message}"
-                )
-            }
-
-            NetworkRequestQueue.enqueue {
-                client.newCall(request2).execute()
-            }.onFailure {
-                Log.e(
-                    "SmartCurriculumPlatformRepository",
-                    "Failed to initialize client: ${it.message}"
-                )
-            }
+            AppStateManager.loginDeferred.await()
+            client.newCall(request1).execute()
+            client.newCall(request2).execute()
+//            NetworkRequestQueue.enqueue {
+//                client.newCall(request1).execute()
+//            }.onFailure {
+//                Log.e(
+//                    "SmartCurriculumPlatformRepository",
+//                    "Failed to initialize client: ${it.message}"
+//                )
+//            }
+//
+//            NetworkRequestQueue.enqueue {
+//                client.newCall(request2).execute()
+//            }.onFailure {
+//                Log.e(
+//                    "SmartCurriculumPlatformRepository",
+//                    "Failed to initialize client: ${it.message}"
+//                )
+//            }
 
 
             val semesterFromJson = getSemesterTypeList()
             courseFromJson =
                 semesterFromJson.result?.get(0)?.xqCode?.let { getCourseTypeList(xqCode = it) }
-
-
             initializationDeferred.complete(Unit)
         }
     }
