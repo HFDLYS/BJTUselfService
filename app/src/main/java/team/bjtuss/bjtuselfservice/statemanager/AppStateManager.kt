@@ -107,7 +107,11 @@ import team.bjtuss.bjtuselfservice.web.MisDataManager.login
 
 data class Credentials(
     val username: String, val password: String
-)
+) {
+    fun isValid(): Boolean {
+        return username.isNotBlank() && password.isNotBlank()
+    }
+}
 
 
 sealed class AppEvent {
@@ -193,8 +197,9 @@ object AuthenticatorManager {
         CoroutineScope(Dispatchers.IO).launch {
             // 从存储中恢复凭据并尝试登录
             val storedCredentials = DataStoreRepository.getStoredCredentialsBlocking()
-            AppEventManager.sendEvent(AppEvent.LoginRequest(storedCredentials))
-
+            if (storedCredentials.isValid()) {
+                AppEventManager.sendEvent(AppEvent.LoginRequest(storedCredentials))
+            }
         }
     }
 
