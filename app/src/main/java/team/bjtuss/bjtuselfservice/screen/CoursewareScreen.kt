@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -73,8 +74,10 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -174,11 +177,22 @@ private fun LoadingScreen() {
             )
 
             Spacer(modifier = Modifier.height(24.dp))
+
             Text(
-                "正在加载课程资源...", style = MaterialTheme.typography.bodyLarge.copy(
-                    fontWeight = FontWeight.Medium
-                ), color = MaterialTheme.colorScheme.onBackground
+                text = "正在加载课程资源\n第一次加载耗时较长，请耐心等待",
+                modifier = Modifier
+
+                    .padding(vertical = 8.dp),
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = FontWeight.Medium,
+                    lineHeight = 24.sp  // 增加行高提升可读性
+                ),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),  // 降低对比度避免刺眼
+                textAlign = TextAlign.Center,  // 居中文本
+                maxLines = 2,  // 明确限制行数
+                overflow = TextOverflow.Ellipsis  // 防止意外溢出
             )
+
         }
     }
 }
