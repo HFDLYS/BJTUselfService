@@ -9,13 +9,14 @@ import kotlinx.coroutines.launch
 import team.bjtuss.bjtuselfservice.CaptchaModel.init
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.StudentAccountManager.Status
+import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
+import team.bjtuss.bjtuselfservice.repository.NetworkRepository
 import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
 
 class StatusViewModel : ViewModel() {
     private val _status: MutableStateFlow<Status> = MutableStateFlow(Status())
     val status = _status.asStateFlow()
-    private val _currentWeek: MutableStateFlow<Int> = MutableStateFlow(0)
-    val currentWeek = _currentWeek.asStateFlow()
+    val currentWeek = DataStoreRepository.getCurrentWeek()
 
 
     init {
@@ -23,17 +24,19 @@ class StatusViewModel : ViewModel() {
     }
 
     fun loadData() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val week = NetworkRepository.getCurrentWeek()
+//            _currentWeek.value = week
+            DataStoreRepository.setCurrentWeek(week)
 
+
+        }
 
         StudentAccountManager.getInstance().status.thenAccept {
             _status.value = it
         }
 
-        viewModelScope.launch(Dispatchers.IO) {
-            val week = SmartCurriculumPlatformRepository.getCurrentWeek()
-            _currentWeek.value = week
 
-        }
 
 
     }

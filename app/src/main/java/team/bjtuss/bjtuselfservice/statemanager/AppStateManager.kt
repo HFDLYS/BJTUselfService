@@ -64,46 +64,6 @@ import team.bjtuss.bjtuselfservice.statemanager.AuthenticatorManager.credentials
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import team.bjtuss.bjtuselfservice.web.MisDataManager.login
 
-// Login View Model to handle login logic
-// 定义密封类表示登录状态
-
-
-//class Authenticator(private val studentAccountManager: StudentAccountManager) {
-//
-//    suspend fun login(credentials: Credentials): Result<Boolean> {
-//        val (username, password) = credentials
-//        return try {
-//            Log.d("Authenticator", "开始登录：$username")
-//            val isInitialLoginSuccessful = studentAccountManager.init(username, password).await()
-//            Log.d("Authenticator", "初始登录结果：$isInitialLoginSuccessful")
-//
-//            if (isInitialLoginSuccessful) {
-//                val isXsMisLoginSuccessful = studentAccountManager.loginXsMis()
-//                isXsMisLoginSuccessful.thenAccept({
-//                    Log.d("Authenticator", "XSMIS登录结果：$it")
-//                })
-//
-//                val isAaLoginSuccessful = studentAccountManager.loginAa().await()
-//                Log.d("Authenticator", "AA登录结果：$isAaLoginSuccessful")
-//
-//                if (isAaLoginSuccessful) {
-//                    Result.success(true)
-//                } else {
-//                    Log.e("Authenticator", "AA登录失败")
-//                    Result.failure(Exception("AA登录失败"))
-//                }
-//
-//
-//            } else {
-//                Log.e("Authenticator", "初始登录失败")
-//                Result.failure(Exception("初始登录失败"))
-//            }
-//        } catch (e: Exception) {
-//            Log.e("Authenticator", "登录发生异常", e)
-//            Result.failure(e)
-//        }
-//    }
-//}
 
 data class Credentials(
     val username: String, val password: String
@@ -178,9 +138,6 @@ object AppEventManager {
             }
         }
     }
-
-    // 登录方法
-
 }
 
 object AuthenticatorManager {

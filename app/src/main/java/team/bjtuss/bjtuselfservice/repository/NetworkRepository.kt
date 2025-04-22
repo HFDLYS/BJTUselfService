@@ -2,12 +2,24 @@ package team.bjtuss.bjtuselfservice.repository
 
 import android.util.Log
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.asLiveData
+import com.squareup.moshi.Types
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.future.await
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import team.bjtuss.bjtuselfservice.CaptchaModel.init
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.controller.NetworkRequestQueue
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
+import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository.client
+import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository.moshi
+import team.bjtuss.bjtuselfservice.utils.NetworkUtils
 
 
 object NetworkRepository {
@@ -28,7 +40,6 @@ object NetworkRepository {
         }
         return result.getOrElse { emptyMap() }
     }
-
 
 
     suspend fun getExamScheduleList(): List<ExamScheduleEntity> {
@@ -122,6 +133,30 @@ object NetworkRepository {
         return result.getOrElse { emptyList() }
     }
 
+    suspend fun getCurrentWeek(): Int {
+        val url = "http://123.121.147.7:88/ve/back/coursePlatform/course.shtml?method=getTimeList"
+        val type = Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
+        val adapter = moshi.adapter<Map<String, Any>>(type)
+        return withContext(Dispatchers.IO) {
+            try {
+                NetworkUtils.get(client, url)
+            } catch (e: Exception) {
+                Log.e(
+                    "SmartCurriculumPlatformRepository",
+                    "Failed to get current week: ${e.message}"
+                )
+                return@withContext 0
+            }.let { str ->
+                try {
+                    val jsonMap = adapter.fromJson(str)
+                    (jsonMap?.get("weekCode") as String).toIntOrNull() ?: 0
+                } catch (e: Exception) {
+                    println("Failed to parse JSON: ${e.message}")
+                    0
+                }
+            }
+        }
+    }
 
 
 }

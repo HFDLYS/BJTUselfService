@@ -29,9 +29,6 @@ object NetworkRequestQueue {
 
     private val activeJobs = AtomicInteger(0)
 
-//    private val _isBusy: MutableStateFlow<Boolean> = MutableStateFlow(false)
-//    val isBusy = _isBusy.asStateFlow()
-
 
     init {
         repeat(MAX_CONCURRENT_JOBS) {
@@ -58,7 +55,6 @@ object NetworkRequestQueue {
 
         try {
             activeJobs.incrementAndGet()
-//            _isBusy.value = activeJobs.get() > 0
 //            if (activeJobs.get() > 0) {
 //                AppEventManager.sendEvent(AppEvent.DataSyncRequest)
 //            }
@@ -70,6 +66,7 @@ object NetworkRequestQueue {
         } finally {
             if (activeJobs.decrementAndGet() == 0) {
                 AppEventManager.sendEvent(AppEvent.DataSyncCompleted)
+
             }
         }
     }

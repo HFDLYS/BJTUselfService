@@ -51,6 +51,7 @@ import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
 import team.bjtuss.bjtuselfservice.onSurface
 import team.bjtuss.bjtuselfservice.primary
+import team.bjtuss.bjtuselfservice.repository.NetworkRepository
 import team.bjtuss.bjtuselfservice.screen.ExamItemCard
 import team.bjtuss.bjtuselfservice.screen.HomeworkItemCard
 import team.bjtuss.bjtuselfservice.scrim
@@ -66,7 +67,8 @@ import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
-
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 /**
  * Main calendar component that displays a week view with tasks
@@ -74,7 +76,7 @@ import java.util.Locale
 @Composable
 fun CalendarComponent(mainViewModel: MainViewModel) {
     val currentDate = LocalDate.now()
-    val currentWeek by mainViewModel.statusViewModel.currentWeek.collectAsState()
+    val currentWeek by mainViewModel.statusViewModel.currentWeek.collectAsState(0)
     val state = rememberWeekCalendarState(
         startDate = currentDate.minusWeeks(currentWeek.toLong() - 1),
         endDate = currentDate.plusWeeks(53),

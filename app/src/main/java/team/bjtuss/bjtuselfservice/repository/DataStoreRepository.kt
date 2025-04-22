@@ -22,6 +22,7 @@ object DataStoreRepository {
     private val SYNC_HOMEWORK_KEY = booleanPreferencesKey("auto_sync_homework")
     private val SYNC_SCHEDULE_KEY = booleanPreferencesKey("auto_sync_schedule")
     private val SYNC_EXAMS_KEY = booleanPreferencesKey("auto_sync_exams")
+    private val CURRENT_WEEK_KEY = stringPreferencesKey("current_week")
 
 
     private val COURSEWARE_JSON = stringPreferencesKey("courseware_json")
@@ -124,6 +125,20 @@ object DataStoreRepository {
     suspend fun setCoursewareJson(json: String) {
         appContext.dataStore.edit { preferences ->
             preferences[COURSEWARE_JSON] = json
+        }
+    }
+
+    fun getCurrentWeek(): Flow<Int> {
+        return appContext.dataStore.data.map { preferences ->
+            preferences[CURRENT_WEEK_KEY] ?: ""
+        }.map { weekString ->
+            weekString.toIntOrNull() ?: 0
+        }
+    }
+
+    suspend fun setCurrentWeek(week: Int) {
+        appContext.dataStore.edit { preferences ->
+            preferences[CURRENT_WEEK_KEY] = week.toString()
         }
     }
 

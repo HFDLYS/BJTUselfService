@@ -61,6 +61,8 @@ import team.bjtuss.bjtuselfservice.entity.CourseEntity
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
+import team.bjtuss.bjtuselfservice.statemanager.AppEvent
+import team.bjtuss.bjtuselfservice.statemanager.AppEventManager
 import team.bjtuss.bjtuselfservice.statemanager.AppState
 import team.bjtuss.bjtuselfservice.statemanager.AppStateManager
 import team.bjtuss.bjtuselfservice.viewmodel.DataChange
@@ -81,19 +83,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
     val refreshState =
         rememberSwipeRefreshState(isRefreshing = appState == AppState.NetworkProgress)
 
-    // 使用 LaunchedEffect 来监听网络请求队列状态
-//    LaunchedEffect(Unit) {
-//        NetworkRepository.getQueueStatus().observeForever { queueStatus ->
-//            isRefreshing = queueStatus
-//        }
-//    }
 
-    // 清理网络状态观察者
-//    DisposableEffect(Unit) {
-//        onDispose {
-//            NetworkRepository.getQueueStatus().removeObserver { }
-//        }
-//    }
 
     val gradeChangeList: List<DataChange<GradeEntity>> by mainViewModel.gradeViewModel.changeList.collectAsState()
     val courseChangeList: List<DataChange<CourseEntity>> by mainViewModel.courseScheduleViewModel.changeList.collectAsState()
@@ -117,7 +107,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
     // 刷新处理函数
     val handleRefresh = {
         if (appState != AppState.NetworkProgress) {
-            mainViewModel.loadDataAndDetectChanges()
+            AppEventManager.sendEvent(AppEvent.DataSyncRequest)
         }
     }
 
