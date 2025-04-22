@@ -69,6 +69,7 @@ import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 
 /**
  * Main calendar component that displays a week view with tasks
@@ -76,7 +77,9 @@ import androidx.compose.runtime.setValue
 @Composable
 fun CalendarComponent(mainViewModel: MainViewModel) {
     val currentDate = LocalDate.now()
-    val currentWeek by mainViewModel.statusViewModel.currentWeek.collectAsState(0)
+    val currentWeek by DataStoreRepository.getCurrentWeek().collectAsState(1)
+    println(329183921)
+    println(currentWeek)
     val state = rememberWeekCalendarState(
         startDate = currentDate.minusWeeks(currentWeek.toLong() - 1),
         endDate = currentDate.plusWeeks(53),

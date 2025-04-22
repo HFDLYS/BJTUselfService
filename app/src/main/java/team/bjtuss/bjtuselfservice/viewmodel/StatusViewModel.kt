@@ -27,7 +27,7 @@ class StatusViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             val week = NetworkRepository.getCurrentWeek()
 //            _currentWeek.value = week
-            DataStoreRepository.setCurrentWeek(week)
+//            DataStoreRepository.setCurrentWeek(week)
 
 
         }

@@ -138,23 +138,26 @@ object NetworkRepository {
         val type = Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
         val adapter = moshi.adapter<Map<String, Any>>(type)
         return withContext(Dispatchers.IO) {
-            try {
-                NetworkUtils.get(client, url)
-            } catch (e: Exception) {
-                Log.e(
-                    "SmartCurriculumPlatformRepository",
-                    "Failed to get current week: ${e.message}"
-                )
-                return@withContext 0
-            }.let { str ->
+            val currentWeek =
                 try {
-                    val jsonMap = adapter.fromJson(str)
-                    (jsonMap?.get("weekCode") as String).toIntOrNull() ?: 0
+                    NetworkUtils.get(client, url)
                 } catch (e: Exception) {
-                    println("Failed to parse JSON: ${e.message}")
-                    0
+                    Log.e(
+                        "SmartCurriculumPlatformRepository",
+                        "Failed to get current week: ${e.message}"
+                    )
+                    return@withContext 0
+                }.let { str ->
+                    try {
+                        val jsonMap = adapter.fromJson(str)
+                        (jsonMap?.get("weekCode") as String).toIntOrNull() ?: 0
+                    } catch (e: Exception) {
+                        println("Failed to parse JSON: ${e.message}")
+                        0
+                    }
                 }
-            }
+            DataStoreRepository.setCurrentWeek(currentWeek)
+            currentWeek
         }
     }
 
