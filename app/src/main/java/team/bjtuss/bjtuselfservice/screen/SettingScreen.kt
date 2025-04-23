@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,9 +17,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Settings
@@ -45,9 +49,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.jeziellago.compose.markdowntext.MarkdownText
@@ -56,6 +62,7 @@ import team.bjtuss.bjtuselfservice.MainApplication.Companion.appContext
 import team.bjtuss.bjtuselfservice.R
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.database.AppDatabase
+import team.bjtuss.bjtuselfservice.primary
 import team.bjtuss.bjtuselfservice.repository.fetchLatestRelease
 import team.bjtuss.bjtuselfservice.statemanager.AppEvent
 import team.bjtuss.bjtuselfservice.statemanager.AppEventManager
@@ -113,16 +120,6 @@ fun SettingScreen(mainViewModel: MainViewModel) {
         item {
             ClearLocalCacheItem(mainViewModel)
         }
-
-        // Theme selection section
-        item {
-            Text(
-                text = "界面设置",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-            )
-        }
-
         item {
             ThemeSelectionItem(
                 currentTheme = currentTheme,
@@ -194,6 +191,7 @@ fun SettingScreen(mainViewModel: MainViewModel) {
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = {
+//                    AppStateManager.logout(mainViewModel)
                     AppEventManager.sendEvent(AppEvent.LogoutRequest(clearAllData = {
                         AuthenticatorManager.clearAllData(
                             mainViewModel
@@ -207,101 +205,6 @@ fun SettingScreen(mainViewModel: MainViewModel) {
                     text = "退出账号",
                     fontSize = 16.sp,
                     modifier = Modifier.padding(vertical = 4.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun ThemeSelectionItem(
-    currentTheme: Theme,
-    onThemeSelected: (Theme) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-        ) {
-            Icon(
-                imageVector = when (currentTheme) {
-                    is Theme.Light -> Icons.Default.LightMode
-                    is Theme.Dark -> Icons.Default.DarkMode
-                    else -> Icons.Default.Settings
-                },
-                contentDescription = "Theme icon",
-                modifier = Modifier.padding(end = 16.dp)
-            )
-
-            Text(
-                text = "应用主题",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f)
-            )
-
-            TextButton(onClick = { expanded = true }) {
-                Text(
-                    text = when (currentTheme) {
-                        is Theme.Light -> "浅色模式"
-                        is Theme.Dark -> "深色模式"
-                        is Theme.System -> "跟随系统"
-                    }
-                )
-            }
-
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                DropdownMenuItem(
-                    text = { Text("浅色模式") },
-                    onClick = {
-                        onThemeSelected(Theme.Light)
-                        expanded = false
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.LightMode,
-                            contentDescription = "Light theme"
-                        )
-                    }
-                )
-
-                DropdownMenuItem(
-                    text = { Text("深色模式") },
-                    onClick = {
-                        onThemeSelected(Theme.Dark)
-                        expanded = false
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.DarkMode,
-                            contentDescription = "Dark theme"
-                        )
-                    }
-                )
-
-                DropdownMenuItem(
-                    text = { Text("跟随系统") },
-                    onClick = {
-                        onThemeSelected(Theme.System)
-                        expanded = false
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "System theme"
-                        )
-                    }
                 )
             }
         }
@@ -561,7 +464,7 @@ fun CheckForUpdateSettingItem() {
             Text(
                 text = "当前版本: $versionName",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                color = primary
             )
         }
     }
@@ -644,7 +547,7 @@ fun CheckForUpdateSettingItem() {
                         } else {
                             Text(
                                 "当前版本: $versionName",
-                                style = MaterialTheme.typography.titleLarge
+                                style = MaterialTheme.typography.titleLarge,
                             )
                             if (versionLatest.isNotEmpty()) {
                                 Text(
@@ -717,6 +620,137 @@ fun SwitchSettingItem(
     }
 }
 
+@Composable
+fun DropdownSettingItem(
+    title: String,
+    subtitle: String = "",
+    icon: ImageVector? = null,
+    selectedOption: String,
+    options: List<String>,
+    onOptionSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    // 保存下拉菜单锚点的引用
+
+    SettingItemBase(
+        onClick = { expanded = true }  // 移动点击事件到SettingItemBase
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)  // 给左侧内容一个权重
+            ) {
+                icon?.let {
+                    Icon(
+                        imageVector = it,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Spacer(Modifier.width(16.dp))
+
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    if (subtitle.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+
+            // 选项内容和下拉箭头
+            Box(
+                modifier = Modifier.wrapContentSize(Alignment.TopEnd)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Text(
+                        text = selectedOption,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                // 将下拉菜单与Box对齐
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    offset = DpOffset(0.dp, 0.dp)  // 调整菜单出现位置
+                ) {
+                    options.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(text = option) },
+                            onClick = {
+                                onOptionSelected(option)
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+/**
+ * 主题选择设置项
+ */
+@Composable
+fun ThemeSelectionItem(
+    currentTheme: Theme,
+    onThemeSelected: (Theme) -> Unit
+) {
+    val themeOptions = listOf(Theme.Light, Theme.Dark, Theme.System)
+
+    // 将Theme转换为显示名称
+    val themeNameMap = mapOf(
+        Theme.Light to "浅色",
+        Theme.Dark to "深色",
+        Theme.System to "跟随系统"
+    )
+
+    // 当前主题的名称
+    val currentThemeName = themeNameMap[currentTheme] ?: "跟随系统"
+
+    // 所有主题的名称列表
+    val themeNames = themeOptions.map { themeNameMap[it] ?: "" }
+
+    DropdownSettingItem(
+        title = "主题设置",
+//        subtitle = "选择应用的显示主题",
+        icon = Icons.Default.Brush, // 可以添加一个主题图标的资源ID
+        selectedOption = currentThemeName,
+        options = themeNames,
+        onOptionSelected = { selectedName ->
+            // 根据选择的名称找到对应的Theme
+            themeNameMap.entries.find { it.value == selectedName }?.key?.let { theme ->
+                onThemeSelected(theme)
+            }
+        }
+    )
+}
 
 
 
