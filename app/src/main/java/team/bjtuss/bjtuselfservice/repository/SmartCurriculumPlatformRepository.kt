@@ -72,15 +72,17 @@ object SmartCurriculumPlatformRepository {
         val adapter = moshi.adapter(SemesterJsonType::class.java)
 
         return withContext(Dispatchers.IO) {
-            val response = client.newCall(semesterRequest).execute()
-            response.body?.source()?.let { source ->
-                try {
-                    adapter.fromJson(source)
-                } catch (e: Exception) {
-                    println("Failed to parse JSON: ${e.message}")
-                    null
-                }
-            } ?: throw IOException("Response body is null")
+            client.newCall(semesterRequest).execute().use{
+                it.body?.source()?.let { source ->
+                    try {
+                        adapter.fromJson(source)
+                    } catch (e: Exception) {
+                        println("Failed to parse JSON: ${e.message}")
+                        null
+                    }
+                } ?: throw IOException("Response body is null")
+            }
+
         }
     }
 
@@ -99,15 +101,16 @@ object SmartCurriculumPlatformRepository {
         val adapter = moshi.adapter<CourseJsonType>(CourseJsonType::class.java)
 
         return withContext(Dispatchers.IO) {
-            val response = client.newCall(courseRequest).execute()
-            response.body?.source()?.let { source ->
-                try {
-                    adapter.fromJson(source)
-                } catch (e: Exception) {
-                    println("Failed to parse JSON: ${e.message}")
-                    null
-                }
-            } ?: throw IOException("Response body is null")
+            client.newCall(courseRequest).execute().use {
+                it.body?.source()?.let { source ->
+                    try {
+                        adapter.fromJson(source)
+                    } catch (e: Exception) {
+                        println("Failed to parse JSON: ${e.message}")
+                        null
+                    }
+                } ?: throw IOException("Response body is null")
+            }
         }
     }
 
@@ -153,23 +156,22 @@ object SmartCurriculumPlatformRepository {
 
     suspend fun getHomework(): List<HomeworkEntity> {
 
-        return NetworkRequestQueue.enqueue {
+        return NetworkRequestQueue.enqueueHighPriority("Homework") {
             getHomeWorkListByHomeworkType(0)
         }.getOrElse { emptyList() }
     }
 
     suspend fun getCourseDesign(): List<HomeworkEntity> {
-        return NetworkRequestQueue.enqueue {
+        return NetworkRequestQueue.enqueueHighPriority("CourseDesign") {
             getHomeWorkListByHomeworkType(1)
         }.getOrElse { emptyList() }
     }
 
     suspend fun getExperimentReport(): List<HomeworkEntity> {
-        return NetworkRequestQueue.enqueue {
+        return NetworkRequestQueue.enqueueHighPriority("ExperimentReport") {
             getHomeWorkListByHomeworkType(2)
         }.getOrElse { emptyList() }
     }
-
 
 
     suspend fun getCourseList(): List<Course> {
@@ -204,46 +206,48 @@ object SmartCurriculumPlatformRepository {
                 .header("User-Agent", userAgent)
                 .build()
             val adapter = moshi.adapter(CourseResourceResponse::class.java)
-            val response = client.newCall(request).execute()
-            val responseContent = response.body?.string()
-            responseContent?.let { str ->
-                try {
+            val courseWareNodeList = client.newCall(request).execute().use { response ->
+                val responseContent = response.body?.string()
+                responseContent?.let { str ->
+                    try {
 
-                    val jsonString = str
-                        .replace("\"resList\"\\s*:\\s*\"\"".toRegex(), "\"resList\": []")
-                        .replace("\"bagList\"\\s*:\\s*\"\"".toRegex(), "\"bagList\": []")
-                    val courseResourceResponse = adapter.fromJson(jsonString)
+                        val jsonString = str
+                            .replace("\"resList\"\\s*:\\s*\"\"".toRegex(), "\"resList\": []")
+                            .replace("\"bagList\"\\s*:\\s*\"\"".toRegex(), "\"bagList\": []")
+                        val courseResourceResponse = adapter.fromJson(jsonString)
 
-                    // 处理 bagList
-                    val bagNodes = courseResourceResponse?.bagList?.map { bag ->
-                        CoursewareNode(
-                            id = bag.id,
-                            bag = bag,
-                            course = parentNode.course
-                        ).apply {
-                            children = generateChildrenNodeList(this) // 递归生成子节点
-                        }
-                    } ?: emptyList()
+                        // 处理 bagList
+                        val bagNodes = courseResourceResponse?.bagList?.map { bag ->
+                            CoursewareNode(
+                                id = bag.id,
+                                bag = bag,
+                                course = parentNode.course
+                            ).apply {
+                                children = generateChildrenNodeList(this) // 递归生成子节点
+                            }
+                        } ?: emptyList()
 
-                    // 处理 resList
-                    val resNodes = courseResourceResponse?.resList?.map { res ->
-                        CoursewareNode(
-                            id = res.resId, // 假设 Res 类有 resId 字段
-                            res = res,
-                            course = parentNode.course
-                        ) // 资源节点通常没有子节点
-                    } ?: emptyList()
+                        // 处理 resList
+                        val resNodes = courseResourceResponse?.resList?.map { res ->
+                            CoursewareNode(
+                                id = res.resId, // 假设 Res 类有 resId 字段
+                                res = res,
+                                course = parentNode.course
+                            ) // 资源节点通常没有子节点
+                        } ?: emptyList()
 
-                    bagNodes + resNodes // 合并两类节点
+                        bagNodes + resNodes // 合并两类节点
 
-                } catch (e: Exception) {
-                    println("Failed to parse JSON: ${e.message}")
-                    emptyList()
-                }
-            } ?: throw IOException("Response body is null")
+                    } catch (e: Exception) {
+                        println("Failed to parse JSON: ${e.message}")
+                        emptyList()
+                    }
+                } ?: throw IOException("Response body is null")
+            }
+            courseWareNodeList
+
         }
     }
-
 
 
     private suspend fun getHomeWorkListByHomeworkType(homeworkType: Int): List<HomeworkEntity> {

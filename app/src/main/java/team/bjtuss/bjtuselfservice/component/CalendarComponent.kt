@@ -78,8 +78,6 @@ import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 fun CalendarComponent(mainViewModel: MainViewModel) {
     val currentDate = LocalDate.now()
     val currentWeek by DataStoreRepository.getCurrentWeek().collectAsState(1)
-    println(329183921)
-    println(currentWeek)
     val state = rememberWeekCalendarState(
         startDate = currentDate.minusWeeks(currentWeek.toLong() - 1),
         endDate = currentDate.plusWeeks(53),

@@ -75,9 +75,6 @@ object DownloadUtil {
                 val downloadsDir =
                     Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
                 val outputFile = File(downloadsDir, "$title.$fileType")
-                val cookie2 = cookie
-                println("8731287312879312879")
-                println(cookie)
                 // 创建通知
                 val notificationManager =
                     context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -275,9 +272,11 @@ object DownloadUtil {
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         val file = File(downloadDir, filename)
 
-        response.body?.byteStream()?.use { input ->
-            FileOutputStream(file).use { output ->
-                input.copyTo(output)
+        response.use {
+            it.body?.byteStream()?.use { input ->
+                FileOutputStream(file).use { output ->
+                    input.copyTo(output)
+                }
             }
         }
 

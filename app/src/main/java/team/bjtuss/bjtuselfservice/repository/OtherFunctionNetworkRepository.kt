@@ -17,9 +17,14 @@ object OtherFunctionNetworkRepository {
                 .url("https://bksy.bjtu.edu.cn/Admin/SemesterTranPage.aspx?noRemark=1")
                 .header("User-Agent", StudentAccountManager.getInstance().userAgent)
                 .build()
-            client.newCall(request).execute().body?.string()?.let {
+            client.newCall(request).execute().use{
+                it.body?.string()?.let {
                 val url = parseCalendarUrlFromRawHtml(it)
                 DownloadUtil.downloadFile(url = url, title = "校历")
+
+            }
+
+
 
             }
         }

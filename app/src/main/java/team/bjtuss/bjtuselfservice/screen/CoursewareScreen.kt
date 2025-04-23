@@ -13,9 +13,11 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -100,7 +102,7 @@ fun CoursewareScreen(mainViewModel: MainViewModel) {
     val coursewareViewModel = mainViewModel.coursewareViewModel
     val coursewareRootNodeList by coursewareViewModel.coursewareRootNodeList.collectAsState()
     val isLoading = coursewareRootNodeList.isEmpty()
-    val scrollState = rememberLazyListState()
+    val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(topBar = {
@@ -126,11 +128,12 @@ fun CoursewareScreen(mainViewModel: MainViewModel) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     CoursewareTreeView(
                         coursewareRootNodeList = coursewareRootNodeList,
+                        scrollState = scrollState
                     )
 
                     // 快速滚动到顶部的按钮
                     AnimatedVisibility(
-                        visible = scrollState.firstVisibleItemIndex > 3,
+                        visible = scrollState.value  > 300,
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(16.dp),
@@ -140,7 +143,7 @@ fun CoursewareScreen(mainViewModel: MainViewModel) {
                         FloatingActionButton(
                             onClick = {
                                 coroutineScope.launch {
-                                    scrollState.animateScrollToItem(0)
+                                    scrollState.animateScrollTo(0)
                                 }
                             },
                             // Using a simple primary color for consistency
@@ -200,8 +203,8 @@ private fun LoadingScreen() {
 @Composable
 fun CoursewareTreeView(
     coursewareRootNodeList: List<CoursewareNode>,
+    scrollState: ScrollState
 ) {
-    val scrollState = rememberScrollState()
 
     Column(
         modifier = Modifier
@@ -513,8 +516,10 @@ private fun downloadResource(node: CoursewareNode, onComplete: () -> Unit) {
 
             if (response.isSuccessful) {
 
-                val responseContent = response.body?.string()?.let {
-                    adapter.fromJson(it)
+                val responseContent = response.use {
+                    it.body?.string()?.let {
+                        adapter.fromJson(it)
+                    }
                 }
 
                 responseContent?.let { content ->

@@ -28,7 +28,7 @@ object NetworkRepository {
 
 
     suspend fun getClassroomMap(): Map<String, MutableList<Int>>? {
-        val result = requestQueue.enqueue {
+        val result = requestQueue.enqueue("ClassroomMap") {
 
             val classroomMap = try {
                 studentAccountManager.getClassroom().await()
@@ -43,7 +43,7 @@ object NetworkRepository {
 
 
     suspend fun getExamScheduleList(): List<ExamScheduleEntity> {
-        val result = requestQueue.enqueue {
+        val result = requestQueue.enqueue("ExamSchedule") {
             try {
                 val result = studentAccountManager.getExamSchedule().await()
                 result
@@ -56,7 +56,7 @@ object NetworkRepository {
     }
 
     suspend fun getCourseList(): List<CourseEntity> {
-        val result = requestQueue.enqueue {
+        val result = requestQueue.enqueue("CourseList") {
             val courseListOfOneDim: MutableList<CourseEntity> = mutableListOf()
             val preCourseList = DatabaseRepository.getCourseList();
             // 当前学期课程
@@ -111,7 +111,7 @@ object NetworkRepository {
     }
 
     suspend fun getGradeList(): List<GradeEntity> {
-        val result = requestQueue.enqueue {
+        val result = requestQueue.enqueue("GradeList") {
             val lnGrades = try {
                 studentAccountManager.getGrade("ln").await()
             } catch (e: Exception) {

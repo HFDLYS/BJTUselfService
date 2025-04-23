@@ -16,7 +16,6 @@ import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
 class StatusViewModel : ViewModel() {
     private val _status: MutableStateFlow<Status> = MutableStateFlow(Status())
     val status = _status.asStateFlow()
-    val currentWeek = DataStoreRepository.getCurrentWeek()
 
 
     init {
@@ -24,13 +23,12 @@ class StatusViewModel : ViewModel() {
     }
 
     fun loadData() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val week = NetworkRepository.getCurrentWeek()
-//            _currentWeek.value = week
-//            DataStoreRepository.setCurrentWeek(week)
-
-
-        }
+//        viewModelScope.launch(Dispatchers.IO) {
+////            _currentWeek.value = week
+////            DataStoreRepository.setCurrentWeek(week)
+//
+//
+//        }
 
         StudentAccountManager.getInstance().status.thenAccept {
             _status.value = it
