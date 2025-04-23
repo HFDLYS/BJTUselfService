@@ -18,11 +18,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -54,6 +60,7 @@ import team.bjtuss.bjtuselfservice.repository.fetchLatestRelease
 import team.bjtuss.bjtuselfservice.statemanager.AppEvent
 import team.bjtuss.bjtuselfservice.statemanager.AppEventManager
 import team.bjtuss.bjtuselfservice.statemanager.AuthenticatorManager
+import team.bjtuss.bjtuselfservice.ui.theme.Theme
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import java.time.Instant
 import java.time.ZoneId
@@ -72,7 +79,7 @@ fun SettingScreen(mainViewModel: MainViewModel) {
     val autoSyncScheduleEnable by settingViewModel.autoSyncScheduleEnable.collectAsState()
     val autoSyncExamEnable by settingViewModel.autoSyncExamEnable.collectAsState()
     val checkUpdateEnable by settingViewModel.checkUpdateEnable.collectAsState()
-
+    val currentTheme by settingViewModel.currentTheme.collectAsState()
 
     LazyColumn(
         modifier = Modifier
@@ -105,6 +112,22 @@ fun SettingScreen(mainViewModel: MainViewModel) {
 
         item {
             ClearLocalCacheItem(mainViewModel)
+        }
+
+        // Theme selection section
+        item {
+            Text(
+                text = "界面设置",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+            )
+        }
+
+        item {
+            ThemeSelectionItem(
+                currentTheme = currentTheme,
+                onThemeSelected = { settingViewModel.setTheme(it) }
+            )
         }
 
         item {
@@ -171,7 +194,6 @@ fun SettingScreen(mainViewModel: MainViewModel) {
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = {
-//                    AppStateManager.logout(mainViewModel)
                     AppEventManager.sendEvent(AppEvent.LogoutRequest(clearAllData = {
                         AuthenticatorManager.clearAllData(
                             mainViewModel
@@ -185,6 +207,101 @@ fun SettingScreen(mainViewModel: MainViewModel) {
                     text = "退出账号",
                     fontSize = 16.sp,
                     modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ThemeSelectionItem(
+    currentTheme: Theme,
+    onThemeSelected: (Theme) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            Icon(
+                imageVector = when (currentTheme) {
+                    is Theme.Light -> Icons.Default.LightMode
+                    is Theme.Dark -> Icons.Default.DarkMode
+                    else -> Icons.Default.Settings
+                },
+                contentDescription = "Theme icon",
+                modifier = Modifier.padding(end = 16.dp)
+            )
+
+            Text(
+                text = "应用主题",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f)
+            )
+
+            TextButton(onClick = { expanded = true }) {
+                Text(
+                    text = when (currentTheme) {
+                        is Theme.Light -> "浅色模式"
+                        is Theme.Dark -> "深色模式"
+                        is Theme.System -> "跟随系统"
+                    }
+                )
+            }
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("浅色模式") },
+                    onClick = {
+                        onThemeSelected(Theme.Light)
+                        expanded = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.LightMode,
+                            contentDescription = "Light theme"
+                        )
+                    }
+                )
+
+                DropdownMenuItem(
+                    text = { Text("深色模式") },
+                    onClick = {
+                        onThemeSelected(Theme.Dark)
+                        expanded = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.DarkMode,
+                            contentDescription = "Dark theme"
+                        )
+                    }
+                )
+
+                DropdownMenuItem(
+                    text = { Text("跟随系统") },
+                    onClick = {
+                        onThemeSelected(Theme.System)
+                        expanded = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "System theme"
+                        )
+                    }
                 )
             }
         }

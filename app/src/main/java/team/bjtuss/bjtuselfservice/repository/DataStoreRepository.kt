@@ -25,6 +25,8 @@ object DataStoreRepository {
     private val CURRENT_WEEK_KEY = stringPreferencesKey("current_week")
     private val CHECK_UPDATE_KEY = booleanPreferencesKey("check_update")
 
+    private val THEME_KEY = stringPreferencesKey("theme")
+
     private val COURSEWARE_JSON = stringPreferencesKey("courseware_json")
 
     suspend fun setCredentials(credentials: Credentials) {
@@ -152,6 +154,19 @@ object DataStoreRepository {
     suspend fun setCheckUpdateOption(enabled: Boolean) {
         appContext.dataStore.edit { preferences ->
             preferences[CHECK_UPDATE_KEY] = enabled
+        }
+    }
+
+
+    fun getTheme(): Flow<String> {
+        return appContext.dataStore.data.map { preferences ->
+            preferences[THEME_KEY] ?: "System"
+        }
+    }
+
+    suspend fun setTheme(theme: String) {
+        appContext.dataStore.edit { preferences ->
+            preferences[THEME_KEY] = theme
         }
     }
 

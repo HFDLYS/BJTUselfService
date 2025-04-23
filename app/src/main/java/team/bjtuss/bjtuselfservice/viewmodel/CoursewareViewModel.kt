@@ -30,9 +30,7 @@ class CoursewareViewModel() : ViewModel() {
 
             if (json != "" && json != "[]") {
                 _coursewareRootNodeList.value = gson.fromJson(json, type) ?: mutableListOf()
-
             }
-
             val list = mutableListOf<CoursewareNode>()
             getCourseList().forEach { course ->
                 list.add(

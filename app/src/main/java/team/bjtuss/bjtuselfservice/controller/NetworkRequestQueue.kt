@@ -1,23 +1,15 @@
 package team.bjtuss.bjtuselfservice.controller
 
 import android.util.Log
-import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.asLiveData
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
-import team.bjtuss.bjtuselfservice.CaptchaModel.init
 import team.bjtuss.bjtuselfservice.statemanager.AppEvent
 import team.bjtuss.bjtuselfservice.statemanager.AppEventManager
 import team.bjtuss.bjtuselfservice.statemanager.AppStateManager
@@ -244,7 +236,7 @@ object NetworkRequestQueue {
         } finally {
             // 任务完成后从活跃请求映射中移除
             activeRequests.remove(request.name)
-
+            println("完成任务：${request.name}")
             jobCounter.decrementAndGet()
             checkSyncState(false) // 结束任务，检查是否需要发送完成事件
         }
@@ -261,7 +253,7 @@ object NetworkRequestQueue {
         }
     }
 
-    suspend fun <T> enqueue(name: String, operation: suspend () -> T): Result<T> {
+    suspend fun <T> enqueueLowPriorityQueue(name: String, operation: suspend () -> T): Result<T> {
         return enqueueInternal(name, operation, lowPriorityQueue)
     }
 

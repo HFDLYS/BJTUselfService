@@ -11,7 +11,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-
+sealed class Theme(val themeString: String) {
+    object Light : Theme("Light")
+    object Dark : Theme("Dark")
+    object System : Theme("System")
+}
 private val lightScheme = lightColorScheme(
     primary = primaryLight,
     onPrimary = onPrimaryLight,
@@ -275,4 +279,6 @@ fun BJTUselfServicecomposeTheme(
         content = content
     )
 }
+
+
 

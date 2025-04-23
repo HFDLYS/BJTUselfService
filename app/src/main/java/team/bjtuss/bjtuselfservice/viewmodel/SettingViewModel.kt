@@ -5,7 +5,10 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import team.bjtuss.bjtuselfservice.CaptchaModel.init
 import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
+import team.bjtuss.bjtuselfservice.ui.theme.Theme
+
 
 class SettingViewModel : ViewModel() {
     private val _autoSyncGradeEnable = MutableStateFlow(false)
@@ -22,6 +25,9 @@ class SettingViewModel : ViewModel() {
 
     private val _checkUpdateEnable = MutableStateFlow(true)
     val checkUpdateEnable = _checkUpdateEnable.asStateFlow()
+
+    private val _currentTheme: MutableStateFlow<Theme> = MutableStateFlow(Theme.System)
+    val currentTheme = _currentTheme.asStateFlow()
 
 
     init {
@@ -53,6 +59,16 @@ class SettingViewModel : ViewModel() {
                 _checkUpdateEnable.value = it
             }
         }
+        viewModelScope.launch {
+            DataStoreRepository.getTheme().collect {
+                _currentTheme.value = when (it) {
+                    Theme.Light.themeString -> Theme.Light
+                    Theme.Dark.themeString -> Theme.Dark
+                    Theme.System.themeString -> Theme.System
+                    else -> Theme.System
+                }
+            }
+        }
     }
 
     fun setGradeAutoSyncOption(enabled: Boolean) {
@@ -82,6 +98,12 @@ class SettingViewModel : ViewModel() {
     fun setCheckUpdateEnable(enabled: Boolean) {
         viewModelScope.launch {
             DataStoreRepository.setCheckUpdateOption(enabled)
+        }
+    }
+
+    fun setTheme(theme: Theme) {
+        viewModelScope.launch {
+            DataStoreRepository.setTheme(theme.themeString)
         }
     }
 }

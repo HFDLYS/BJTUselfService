@@ -1,17 +1,10 @@
 package team.bjtuss.bjtuselfservice.repository
 
 import android.util.Log
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.asLiveData
 import com.squareup.moshi.Types
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.future.await
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import team.bjtuss.bjtuselfservice.CaptchaModel.init
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.controller.NetworkRequestQueue
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
@@ -28,7 +21,7 @@ object NetworkRepository {
 
 
     suspend fun getClassroomMap(): Map<String, MutableList<Int>>? {
-        val result = requestQueue.enqueue("ClassroomMap") {
+        val result = requestQueue.enqueueHighPriority("ClassroomMap") {
 
             val classroomMap = try {
                 studentAccountManager.getClassroom().await()
@@ -43,7 +36,7 @@ object NetworkRepository {
 
 
     suspend fun getExamScheduleList(): List<ExamScheduleEntity> {
-        val result = requestQueue.enqueue("ExamSchedule") {
+        val result = requestQueue.enqueueLowPriorityQueue("ExamSchedule") {
             try {
                 val result = studentAccountManager.getExamSchedule().await()
                 result
@@ -56,7 +49,7 @@ object NetworkRepository {
     }
 
     suspend fun getCourseList(): List<CourseEntity> {
-        val result = requestQueue.enqueue("CourseList") {
+        val result = requestQueue.enqueueLowPriorityQueue("CourseList") {
             val courseListOfOneDim: MutableList<CourseEntity> = mutableListOf()
             val preCourseList = DatabaseRepository.getCourseList();
             // 当前学期课程
@@ -111,7 +104,7 @@ object NetworkRepository {
     }
 
     suspend fun getGradeList(): List<GradeEntity> {
-        val result = requestQueue.enqueue("GradeList") {
+        val result = requestQueue.enqueueLowPriorityQueue("GradeList") {
             val lnGrades = try {
                 studentAccountManager.getGrade("ln").await()
             } catch (e: Exception) {
@@ -133,7 +126,7 @@ object NetworkRepository {
         return result.getOrElse { emptyList() }
     }
 
-    suspend fun getCurrentWeek(): Int {
+    suspend fun loadCurrentWeek(): Int {
         val url = "http://123.121.147.7:88/ve/back/coursePlatform/course.shtml?method=getTimeList"
         val type = Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
         val adapter = moshi.adapter<Map<String, Any>>(type)
