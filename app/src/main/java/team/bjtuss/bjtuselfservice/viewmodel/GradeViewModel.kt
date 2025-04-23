@@ -16,7 +16,7 @@ class GradeViewModel : BaseSyncViewModel<GradeEntity>(
     val gradeList: StateFlow<List<GradeEntity>> = DatabaseRepository.gradeList
 
     init {
-        loadDataAndDetectChanges()
+//        loadDataAndDetectChanges()
     }
 
     override suspend fun fetchNetworkData(): List<GradeEntity> {

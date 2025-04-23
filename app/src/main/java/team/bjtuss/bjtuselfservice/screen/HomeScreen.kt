@@ -84,7 +84,6 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
         rememberSwipeRefreshState(isRefreshing = appState == AppState.NetworkProgress)
 
 
-
     val gradeChangeList: List<DataChange<GradeEntity>> by mainViewModel.gradeViewModel.changeList.collectAsState()
     val courseChangeList: List<DataChange<CourseEntity>> by mainViewModel.courseScheduleViewModel.changeList.collectAsState()
     val examChangeList: List<DataChange<ExamScheduleEntity>> by mainViewModel.examScheduleViewModel.changeList.collectAsState()
@@ -107,6 +106,7 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
     // 刷新处理函数
     val handleRefresh = {
         if (appState != AppState.NetworkProgress) {
+            println("379183912")
             AppEventManager.sendEvent(AppEvent.DataSyncRequest)
         }
     }

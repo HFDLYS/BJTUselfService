@@ -25,6 +25,7 @@ class MainViewModel(
             AppEventManager.events.collectLatest {
                 when (it) {
                     is AppEvent.DataSyncRequest -> {
+                        println("这里执行了一次")
                         loadDataAndDetectChanges()
                     }
 

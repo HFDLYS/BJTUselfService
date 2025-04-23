@@ -15,7 +15,7 @@ class ExamScheduleViewModel : BaseSyncViewModel<ExamScheduleEntity>(
     val examScheduleList: StateFlow<List<ExamScheduleEntity>> = DatabaseRepository.examScheduleList
 
     init {
-        loadDataAndDetectChanges()
+//        loadDataAndDetectChanges()
     }
 
     override suspend fun fetchNetworkData(): List<ExamScheduleEntity> {

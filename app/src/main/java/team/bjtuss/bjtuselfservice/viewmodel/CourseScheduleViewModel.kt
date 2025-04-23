@@ -23,7 +23,7 @@ class CourseScheduleViewModel : BaseSyncViewModel<CourseEntity>(
 
 
     init {
-        loadDataAndDetectChanges()
+//        loadDataAndDetectChanges()
     }
 
     override suspend fun fetchNetworkData(): List<CourseEntity> {

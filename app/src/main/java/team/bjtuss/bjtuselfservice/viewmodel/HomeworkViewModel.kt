@@ -18,7 +18,7 @@ class HomeworkViewModel :
     val homeworkList: StateFlow<List<HomeworkEntity>> = DatabaseRepository.homeworkList
 
     init {
-        loadDataAndDetectChanges()
+//        loadDataAndDetectChanges()
 
     }
 
