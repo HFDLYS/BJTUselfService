@@ -104,6 +104,7 @@ import team.bjtuss.bjtuselfservice.viewmodel.ExamScheduleViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.GradeViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.HomeworkViewModel
 import team.bjtuss.bjtuselfservice.statemanager.LoginDialog
+import team.bjtuss.bjtuselfservice.ui.theme.AppTheme
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModelFactory
 import team.bjtuss.bjtuselfservice.viewmodel.SettingViewModel
@@ -120,51 +121,35 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         CaptchaModel.init(this)
-//        AppStateManager.autoLogin()
 
 
         setContent {
-            BJTUselfServicecomposeTheme(dynamicColor = true) {
-
-//                val filePickerLauncher = rememberLauncherForActivityResult(
-//                    contract = ActivityResultContracts.GetContent(),
-//                    onResult = { uri ->
-//                        uri?.let {
-//                            FilePickerManager.handleResult(it)
-//                        }
-//                    }
-//                )
-//                FilePickerManager.init(filePickerLauncher)
-
-
+            val classroomViewModel: ClassroomViewModel = viewModel()
+            val gradeViewModel: GradeViewModel = viewModel()
+            val courseScheduleViewModel: CourseScheduleViewModel = viewModel()
+            val examScheduleViewModel: ExamScheduleViewModel = viewModel()
+            val homeworkViewModel: HomeworkViewModel = viewModel()
+            val statusViewModel: StatusViewModel = viewModel()
+            val settingViewModel: SettingViewModel = viewModel()
+            val coursewareViewModel: CoursewareViewModel = viewModel()
+            val mainViewModel: MainViewModel = viewModel(
+                factory = MainViewModelFactory(
+                    gradeViewModel,
+                    courseScheduleViewModel,
+                    examScheduleViewModel,
+                    classroomViewModel,
+                    homeworkViewModel,
+                    statusViewModel,
+                    settingViewModel,
+                    coursewareViewModel,
+                )
+            )
+            val appState by AppStateManager.appState.collectAsState()
+            val credentials by AuthenticatorManager.credentials.collectAsState()
+            val currentTheme by mainViewModel.settingViewModel.currentTheme.collectAsState()
+            val checkUpdate by settingViewModel.checkUpdateEnable.collectAsState()
+            AppTheme(currentTheme=currentTheme,dynamicColor = true) {
                 Surface {
-
-                    val appState by AppStateManager.appState.collectAsState()
-                    val credentials by AuthenticatorManager.credentials.collectAsState()
-
-                    val classroomViewModel: ClassroomViewModel = viewModel()
-                    val gradeViewModel: GradeViewModel = viewModel()
-                    val courseScheduleViewModel: CourseScheduleViewModel = viewModel()
-                    val examScheduleViewModel: ExamScheduleViewModel = viewModel()
-                    val homeworkViewModel: HomeworkViewModel = viewModel()
-                    val statusViewModel: StatusViewModel = viewModel()
-                    val settingViewModel: SettingViewModel = viewModel()
-                    val coursewareViewModel: CoursewareViewModel = viewModel()
-                    val mainViewModel: MainViewModel = viewModel(
-                        factory = MainViewModelFactory(
-                            gradeViewModel,
-                            courseScheduleViewModel,
-                            examScheduleViewModel,
-                            classroomViewModel,
-                            homeworkViewModel,
-                            statusViewModel,
-                            settingViewModel,
-                            coursewareViewModel,
-                        )
-                    )
-
-
-                    val checkUpdate by settingViewModel.checkUpdateEnable.collectAsState()
                     if (checkUpdate) {
                         CheckUpdate()
                     }
