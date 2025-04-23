@@ -71,6 +71,8 @@ fun SettingScreen(mainViewModel: MainViewModel) {
     val autoSyncHomeworkEnable by settingViewModel.autoSyncHomeworkEnable.collectAsState()
     val autoSyncScheduleEnable by settingViewModel.autoSyncScheduleEnable.collectAsState()
     val autoSyncExamEnable by settingViewModel.autoSyncExamEnable.collectAsState()
+    val checkUpdateEnable by settingViewModel.checkUpdateEnable.collectAsState()
+
 
     LazyColumn(
         modifier = Modifier
@@ -156,6 +158,14 @@ fun SettingScreen(mainViewModel: MainViewModel) {
             )
         }
 
+        item {
+            SwitchSettingItem(
+                title = "打开更新提示",
+                checked = checkUpdateEnable,
+                onCheckedChange = { settingViewModel.setCheckUpdateEnable(it) }
+            )
+        }
+
         // Logout button
         item {
             Spacer(modifier = Modifier.height(8.dp))
@@ -167,7 +177,7 @@ fun SettingScreen(mainViewModel: MainViewModel) {
                             mainViewModel
                         )
                     }))
-                          },
+                },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -371,7 +381,8 @@ fun LinkSettingItem(
 
 @Composable
 fun CheckForUpdateSettingItem() {
-    val versionName = appContext.packageManager.getPackageInfo(appContext.packageName, 0).versionName
+    val versionName =
+        appContext.packageManager.getPackageInfo(appContext.packageName, 0).versionName
     var versionLatest by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     var showDialog by remember { mutableStateOf(false) }

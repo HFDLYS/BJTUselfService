@@ -20,7 +20,8 @@ class SettingViewModel : ViewModel() {
     private val _autoSyncExamEnable = MutableStateFlow(false)
     val autoSyncExamEnable = _autoSyncExamEnable.asStateFlow()
 
-
+    private val _checkUpdateEnable = MutableStateFlow(true)
+    val checkUpdateEnable = _checkUpdateEnable.asStateFlow()
 
 
     init {
@@ -47,6 +48,11 @@ class SettingViewModel : ViewModel() {
                 _autoSyncExamEnable.value = it
             }
         }
+        viewModelScope.launch {
+            DataStoreRepository.getCheckUpdateOption().collect {
+                _checkUpdateEnable.value = it
+            }
+        }
     }
 
     fun setGradeAutoSyncOption(enabled: Boolean) {
@@ -70,6 +76,12 @@ class SettingViewModel : ViewModel() {
     fun setAutoSyncExamsEnable(enabled: Boolean) {
         viewModelScope.launch {
             DataStoreRepository.setExamsAutoSyncOption(enabled)
+        }
+    }
+
+    fun setCheckUpdateEnable(enabled: Boolean) {
+        viewModelScope.launch {
+            DataStoreRepository.setCheckUpdateOption(enabled)
         }
     }
 }

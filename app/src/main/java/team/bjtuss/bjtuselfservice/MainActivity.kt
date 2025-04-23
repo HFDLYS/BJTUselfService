@@ -126,7 +126,7 @@ class MainActivity : ComponentActivity() {
         setContent {
 
             BJTUselfServicecomposeTheme(dynamicColor = true) {
-                CheckForUpdate()
+
 //                val filePickerLauncher = rememberLauncherForActivityResult(
 //                    contract = ActivityResultContracts.GetContent(),
 //                    onResult = { uri ->
@@ -165,7 +165,10 @@ class MainActivity : ComponentActivity() {
                     )
 
 
-
+                    val checkUpdate by settingViewModel.checkUpdateEnable.collectAsState()
+                    if (checkUpdate) {
+                        CheckUpdate()
+                    }
 
                     if (appState == AppState.Logout || appState == AppState.Error) {
 
@@ -184,7 +187,7 @@ class MainActivity : ComponentActivity() {
 
 @SuppressLint("CoroutineCreationDuringComposition")
 @Composable
-fun CheckForUpdate() {
+fun CheckUpdate() {
     val versionName =
         appContext.packageManager.getPackageInfo(appContext.packageName, 0).versionName
     var versionLatest by remember { mutableStateOf("") }

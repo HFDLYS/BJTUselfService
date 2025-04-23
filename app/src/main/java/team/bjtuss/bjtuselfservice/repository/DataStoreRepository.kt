@@ -23,7 +23,7 @@ object DataStoreRepository {
     private val SYNC_SCHEDULE_KEY = booleanPreferencesKey("auto_sync_schedule")
     private val SYNC_EXAMS_KEY = booleanPreferencesKey("auto_sync_exams")
     private val CURRENT_WEEK_KEY = stringPreferencesKey("current_week")
-
+    private val CHECK_UPDATE_KEY = booleanPreferencesKey("check_update")
 
     private val COURSEWARE_JSON = stringPreferencesKey("courseware_json")
 
@@ -139,6 +139,19 @@ object DataStoreRepository {
     suspend fun setCurrentWeek(week: Int) {
         appContext.dataStore.edit { preferences ->
             preferences[CURRENT_WEEK_KEY] = week.toString()
+        }
+    }
+
+
+    fun getCheckUpdateOption(): Flow<Boolean> {
+        return appContext.dataStore.data.map { preferences ->
+            preferences[CHECK_UPDATE_KEY] ?: true
+        }
+    }
+
+    suspend fun setCheckUpdateOption(enabled: Boolean) {
+        appContext.dataStore.edit { preferences ->
+            preferences[CHECK_UPDATE_KEY] = enabled
         }
     }
 
