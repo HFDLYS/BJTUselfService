@@ -78,6 +78,7 @@ import team.bjtuss.bjtuselfservice.surfaceContainerHigh
 import team.bjtuss.bjtuselfservice.surfaceContainerHighest
 import team.bjtuss.bjtuselfservice.surfaceContainerLow
 import team.bjtuss.bjtuselfservice.surfaceContainerLowest
+import team.bjtuss.bjtuselfservice.surfaceVariant
 
 /**
  * Main calendar component that displays a week view with tasks
@@ -220,7 +221,7 @@ fun Day(
 }
 
 /**
- * Beautiful task details dialog
+ * Beautiful task details dialog with improved Material Design colors
  */
 @Composable
 fun TaskDetailsDialog(
@@ -241,8 +242,11 @@ fun TaskDetailsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.background(color = background, shape = RoundedCornerShape(16.dp)),
-        containerColor = Color.Transparent,
+        modifier = Modifier.background(
+            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(24.dp)
+        ),
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         title = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -252,10 +256,13 @@ fun TaskDetailsDialog(
                     text = dateDisplay,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = primary
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider(thickness = 1.dp, color = secondary.copy(alpha = 0.5f))
+                HorizontalDivider(
+                    thickness = 1.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
             }
         },
         text = {
@@ -275,7 +282,7 @@ fun TaskDetailsDialog(
                             Text(
                                 text = "今天没有任何任务 😊",
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -295,7 +302,7 @@ fun TaskDetailsDialog(
                     item {
                         TaskSectionHeader(
                             title = "今天开始的作业",
-                            color = Color(0xFF3F51B5),
+                            color = MaterialTheme.colorScheme.primary,
                             count = startHomeworkList.size
                         )
                     }
@@ -310,7 +317,7 @@ fun TaskDetailsDialog(
                     item {
                         TaskSectionHeader(
                             title = "今天截止的作业",
-                            color = Color(0xFFE53935),
+                            color = MaterialTheme.colorScheme.error,
                             count = endHomeworkList.size
                         )
                     }
@@ -325,7 +332,7 @@ fun TaskDetailsDialog(
                     item {
                         TaskSectionHeader(
                             title = "今天的考试",
-                            color = Color(0xFFFF9800),
+                            color = MaterialTheme.colorScheme.tertiary,
                             count = examList.size
                         )
                     }
@@ -339,10 +346,6 @@ fun TaskDetailsDialog(
         confirmButton = {
             Button(
                 onClick = onDismiss,
-//                colors = ButtonDefaults.buttonColors(
-//                    containerColor = primary,
-//                    contentColor = Color.White
-//                ),
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text(
@@ -355,7 +358,7 @@ fun TaskDetailsDialog(
 }
 
 /**
- * Task summary section for the dialog
+ * Task summary section for the dialog with improved colors
  */
 @Composable
 fun TaskSummarySection(
