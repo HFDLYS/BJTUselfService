@@ -69,7 +69,10 @@ import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import team.bjtuss.bjtuselfservice.primaryContainer
 import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
+import team.bjtuss.bjtuselfservice.surfaceContainerHigh
+import team.bjtuss.bjtuselfservice.surfaceContainerHighest
 
 /**
  * Main calendar component that displays a week view with tasks
@@ -361,8 +364,8 @@ fun TaskSummarySection(
             .padding(vertical = 8.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = surface.copy(alpha = 0.7f)
-        )
+            containerColor = surface,
+        ),
     ) {
         Column(
             modifier = Modifier
