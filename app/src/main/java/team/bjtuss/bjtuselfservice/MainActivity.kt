@@ -148,7 +148,7 @@ class MainActivity : ComponentActivity() {
             val credentials by AuthenticatorManager.credentials.collectAsState()
             val currentTheme by mainViewModel.settingViewModel.currentTheme.collectAsState()
             val checkUpdate by settingViewModel.checkUpdateEnable.collectAsState()
-            AppTheme(currentTheme=currentTheme,dynamicColor = true) {
+            AppTheme(currentTheme = currentTheme, dynamicColor = true) {
                 Surface {
                     if (checkUpdate) {
                         CheckUpdate()
@@ -416,7 +416,13 @@ fun AppNavigation(
                         ClassroomCapacityService.ok = true
                     }
                     coroutineScope.launch {
-                        pagerState.animateScrollToPage(index)
+                        pagerState.animateScrollToPage(
+                            index,
+                            animationSpec = tween(
+                                durationMillis = 350,
+                                easing = LinearOutSlowInEasing
+                            )
+                        )
                     }
                 }, icon = {
                     Icon(imageVector = pageItem.icon, contentDescription = pageItem.title)
