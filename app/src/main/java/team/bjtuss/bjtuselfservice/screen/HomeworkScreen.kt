@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.DoNotDisturb
 import androidx.compose.material.icons.rounded.People
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Stars
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.AlertDialog
@@ -104,6 +105,7 @@ import team.bjtuss.bjtuselfservice.component.HomeworkUploader
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
 import team.bjtuss.bjtuselfservice.error
 import team.bjtuss.bjtuselfservice.primary
+import team.bjtuss.bjtuselfservice.primaryContainer
 import team.bjtuss.bjtuselfservice.repository.NetworkRepository
 import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
 import team.bjtuss.bjtuselfservice.statemanager.AppState
@@ -312,6 +314,36 @@ fun HomeworkSummaryCard(homeworkList: List<HomeworkEntity>) {
     }
 }
 
+data class HomeworkStatusInfo(
+    val icon: ImageVector,
+    val statusColor: Color,
+    val backgroundColor: Color,
+    val isSubmitted: Boolean
+)
+
+
+@Composable
+fun getHomeworkStatusInfo(
+    subStatus: String,
+): HomeworkStatusInfo {
+    return when (subStatus) {
+        "已提交" -> HomeworkStatusInfo(
+            icon = Icons.Rounded.CheckCircle,
+            statusColor = primary,
+            backgroundColor = primaryContainer,
+            isSubmitted = true
+        )
+
+        else -> HomeworkStatusInfo(
+            icon = Icons.Rounded.DoNotDisturb,
+            statusColor = error,
+            backgroundColor = MaterialTheme.colorScheme.errorContainer,
+            isSubmitted = false
+        )
+    }
+
+}
+
 
 @Composable
 fun HomeworkItemCard(homework: HomeworkEntity) {
@@ -337,15 +369,9 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
     val submitColor = primary
     val unSubmitColor = error
 
-    // 作业状态图标和颜色
-    val (statusIcon, statusColor) = remember(homework.subStatus) {
 
-        if (homework.subStatus == "已提交") {
-            Icons.Rounded.CheckCircle to submitColor
-        } else {
-            Icons.Rounded.DoNotDisturb to unSubmitColor
-        }
-    }
+    val (statusIcon, statusColor, backgroundColor, isSubmit) = getHomeworkStatusInfo(homework.subStatus)
+
 
     ElevatedCard(
         modifier = Modifier
@@ -394,10 +420,7 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
                 Box(
                     modifier = Modifier
                         .background(
-                            color = if (homework.subStatus == "已提交")
-                                MaterialTheme.colorScheme.primaryContainer
-                            else
-                                MaterialTheme.colorScheme.errorContainer,
+                            color = backgroundColor,
                             shape = RoundedCornerShape(12.dp)
                         )
                         .padding(horizontal = 10.dp, vertical = 4.dp)
@@ -415,10 +438,7 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
                         Text(
                             text = homework.subStatus,
                             style = MaterialTheme.typography.labelMedium,
-                            color = if (homework.subStatus == "已提交")
-                                MaterialTheme.colorScheme.primary
-                            else
-                                MaterialTheme.colorScheme.error
+                            color = statusColor
                         )
                     }
                 }
@@ -479,6 +499,7 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+
                 Button(
                     onClick = {
                         try {
@@ -488,7 +509,7 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
                         }
 
                     },
-                    enabled = appState.canDownloadAndUpload(),
+                    enabled = appState.canDownloadAndUpload() ,
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -496,14 +517,12 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
                         disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                     )
                 ) {
-
                     Text("上传作业")
-
                 }
 
                 HomeworkDownloadButton(
                     homework = homework,
-                    enabled = appState.canDownloadAndUpload(),
+                    enabled = appState.canDownloadAndUpload() and isSubmit,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -516,6 +535,7 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
     if (showUploadHomeworkDialog) {
         UploadHomeDialog(homework) { showUploadHomeworkDialog = false }
     }
+
 }
 
 
