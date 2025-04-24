@@ -9,6 +9,11 @@ import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -44,9 +49,12 @@ import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.DoNotDisturb
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Stars
+import androidx.compose.material.icons.rounded.Upload
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -56,7 +64,9 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -366,8 +376,6 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
             false
         }
     }
-    val submitColor = primary
-    val unSubmitColor = error
 
 
     val (statusIcon, statusColor, backgroundColor, isSubmit) = getHomeworkStatusInfo(homework.subStatus)
@@ -494,38 +502,13 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 按钮行
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            HomeworkActionButtons(
+                homework = homework,
+                isSubmit=isSubmit,
+                appState = appState,
+                onUploadClick = { showUploadHomeworkDialog = true },
 
-                Button(
-                    onClick = {
-                        try {
-                            showUploadHomeworkDialog = true
-                        } catch (e: Exception) {
-                            // Handle error
-                        }
-
-                    },
-                    enabled = appState.canDownloadAndUpload() ,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                    )
-                ) {
-                    Text("上传作业")
-                }
-
-                HomeworkDownloadButton(
-                    homework = homework,
-                    enabled = appState.canDownloadAndUpload() and isSubmit,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            )
         }
     }
 
@@ -1110,9 +1093,156 @@ suspend fun downloadHomeworkFile(
     }
 }
 
+//
+//@Composable
+//fun HomeworkDownloadButton(
+//    homework: HomeworkEntity,
+//    enabled: Boolean,
+//    modifier: Modifier = Modifier
+//) {
+//    val context = LocalContext.current
+//    val coroutineScope = rememberCoroutineScope()
+//
+//    // State for download progress and status
+//    var isDownloading by remember { mutableStateOf(false) }
+//    var downloadProgress by remember { mutableFloatStateOf(0f) }
+//    var errorMessage by remember { mutableStateOf<String?>(null) }
+//
+//    Column(modifier = modifier) {
+//        Button(
+//            onClick = {
+//                if (!isDownloading) {
+//                    isDownloading = true
+//                    downloadProgress = 0f
+//                    errorMessage = null
+//
+//                    coroutineScope.launch {
+//                        try {
+//                            downloadHomeworkFile(
+//                                homework = homework,
+//                                onProgress = { progress ->
+//                                    downloadProgress = progress
+//                                },
+//                                onSuccess = { message ->
+//                                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+//                                    isDownloading = false
+//                                },
+//                                onError = { error ->
+//                                    errorMessage = error.message ?: "下载失败"
+//                                    isDownloading = false
+//                                    Toast.makeText(
+//                                        context,
+//                                        "下载失败: ${error.message}",
+//                                        Toast.LENGTH_SHORT
+//                                    ).show()
+//                                }
+//                            )
+//                        } catch (e: Exception) {
+//                            // Exception is already handled in the download function
+//                            isDownloading = false
+//                        }
+//                    }
+//                }
+//            },
+//            shape = RoundedCornerShape(8.dp),
+////            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+//            enabled = !isDownloading && enabled,
+//            colors = ButtonDefaults.buttonColors(
+//                containerColor = MaterialTheme.colorScheme.primary,
+//                disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+//            )
+//        ) {
+//            Row(
+//                verticalAlignment = Alignment.CenterVertically,
+//                horizontalArrangement = Arrangement.Center,
+//                modifier = Modifier.fillMaxWidth()
+//            ) {
+//                if (isDownloading) {
+//                    CircularProgressIndicator(
+//                        modifier = Modifier.size(16.dp),
+//                        color = MaterialTheme.colorScheme.onPrimary,
+//                        strokeWidth = 2.dp
+//                    )
+//                    Spacer(modifier = Modifier.width(8.dp))
+//                }
+//                Text(if (isDownloading) "正在下载..." else "下载作业")
+//            }
+//        }
+//
+//        // Show progress bar when downloading
+//        if (isDownloading) {
+//            Spacer(modifier = Modifier.height(8.dp))
+//            LinearProgressIndicator(
+//                progress = { downloadProgress },
+//                modifier = Modifier.fillMaxWidth()
+//            )
+//        }
+//
+//        // Show error message if any
+//        errorMessage?.let {
+//            Spacer(modifier = Modifier.height(4.dp))
+//            Text(
+//                text = it,
+//                color = MaterialTheme.colorScheme.error,
+//                style = MaterialTheme.typography.bodySmall
+//            )
+//        }
+//    }
+//}
+
 
 @Composable
-fun HomeworkDownloadButton(
+fun HomeworkActionButtons(
+    homework: HomeworkEntity,
+    isSubmit: Boolean,
+    appState: AppState,
+    onUploadClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp) // 更宽的按钮间距，符合Material Design规范
+    ) {
+        // 上传作业按钮
+        FilledTonalButton(
+            onClick = onUploadClick,
+            enabled = appState.canDownloadAndUpload(),
+            modifier = Modifier.weight(1f),
+            elevation = ButtonDefaults.buttonElevation(
+                defaultElevation = 4.dp,
+            ),
+            shape = RoundedCornerShape(24.dp), // 胶囊形状
+            colors = ButtonDefaults.filledTonalButtonColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                disabledContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.38f),
+                disabledContentColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.38f)
+            )
+        ) {
+            Text(
+                "上传作业",
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(vertical = 2.dp)
+            )
+        }
+
+        // 下载作业按钮（使用美化后的组件）
+        MaterialHomeworkDownloadButton(
+            homework = homework,
+            enabled = appState.canDownloadAndUpload() && isSubmit,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+/**
+ * Material Design风格的下载按钮
+ */
+@Composable
+fun MaterialHomeworkDownloadButton(
     homework: HomeworkEntity,
     enabled: Boolean,
     modifier: Modifier = Modifier
@@ -1120,13 +1250,13 @@ fun HomeworkDownloadButton(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    // State for download progress and status
+    // 下载状态
     var isDownloading by remember { mutableStateOf(false) }
     var downloadProgress by remember { mutableFloatStateOf(0f) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Column(modifier = modifier) {
-        Button(
+        FilledTonalButton(
             onClick = {
                 if (!isDownloading) {
                     isDownloading = true
@@ -1155,54 +1285,69 @@ fun HomeworkDownloadButton(
                                 }
                             )
                         } catch (e: Exception) {
-                            // Exception is already handled in the download function
                             isDownloading = false
                         }
                     }
                 }
             },
-            shape = RoundedCornerShape(8.dp),
-//            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+            shape = RoundedCornerShape(24.dp), // 胶囊形状
+            elevation = ButtonDefaults.buttonElevation(
+                defaultElevation = 4.dp,
+            ),
             enabled = !isDownloading && enabled,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-            )
+            colors = ButtonDefaults.filledTonalButtonColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                disabledContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.38f),
+                disabledContentColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.38f)
+            ),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                if (isDownloading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-                Text(if (isDownloading) "正在下载..." else "下载作业")
+            Text(
+                text = if (isDownloading) "正在下载..." else "下载作业",
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 1,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(vertical = 2.dp)
+            )
+        }
+
+        // 进度指示器
+        AnimatedVisibility(
+            visible = isDownloading,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            Column {
+                Spacer(modifier = Modifier.height(8.dp))
+                LinearProgressIndicator(
+                    progress = { downloadProgress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp) // Material Design推荐高度
+                        .clip(RoundedCornerShape(2.dp)),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             }
         }
 
-        // Show progress bar when downloading
-        if (isDownloading) {
-            Spacer(modifier = Modifier.height(8.dp))
-            LinearProgressIndicator(
-                progress = { downloadProgress },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-
-        // Show error message if any
-        errorMessage?.let {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = it,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
-            )
+        // 错误信息
+        AnimatedVisibility(
+            visible = errorMessage != null,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            errorMessage?.let {
+                Column {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
         }
     }
 }

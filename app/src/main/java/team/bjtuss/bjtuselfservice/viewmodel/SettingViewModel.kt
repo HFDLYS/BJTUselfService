@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import team.bjtuss.bjtuselfservice.CaptchaModel.init
 import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 import team.bjtuss.bjtuselfservice.ui.theme.Theme
 
@@ -28,6 +27,9 @@ class SettingViewModel : ViewModel() {
 
     private val _currentTheme: MutableStateFlow<Theme> = MutableStateFlow(Theme.System)
     val currentTheme = _currentTheme.asStateFlow()
+
+    private val _dynamicColorEnable = MutableStateFlow(false)
+    val dynamicColorEnable = _dynamicColorEnable.asStateFlow()
 
 
     init {
@@ -69,6 +71,11 @@ class SettingViewModel : ViewModel() {
                 }
             }
         }
+        viewModelScope.launch {
+            DataStoreRepository.getDynamicColorOption().collect {
+                _dynamicColorEnable.value = it
+            }
+        }
     }
 
     fun setGradeAutoSyncOption(enabled: Boolean) {
@@ -89,7 +96,7 @@ class SettingViewModel : ViewModel() {
         }
     }
 
-    fun setAutoSyncExamsEnable(enabled: Boolean) {
+    fun setExamsAutoSyncOption(enabled: Boolean) {
         viewModelScope.launch {
             DataStoreRepository.setExamsAutoSyncOption(enabled)
         }
@@ -101,9 +108,14 @@ class SettingViewModel : ViewModel() {
         }
     }
 
-    fun setTheme(theme: Theme) {
+    fun setThemeOption(theme: Theme) {
         viewModelScope.launch {
-            DataStoreRepository.setTheme(theme.themeString)
+            DataStoreRepository.setThemeOption(theme.themeString)
+        }
+    }
+    fun setDynamicColorOption(enabled: Boolean) {
+        viewModelScope.launch {
+            DataStoreRepository.setDynamicColorOption(enabled)
         }
     }
 }

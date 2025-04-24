@@ -302,7 +302,7 @@ fun TaskDetailsDialog(
                     item {
                         TaskSectionHeader(
                             title = "今天开始的作业",
-                            color = MaterialTheme.colorScheme.primary,
+                            color = Color(0xFF3F51B5),
                             count = startHomeworkList.size
                         )
                     }
@@ -317,7 +317,7 @@ fun TaskDetailsDialog(
                     item {
                         TaskSectionHeader(
                             title = "今天截止的作业",
-                            color = MaterialTheme.colorScheme.error,
+                            color = Color(0xFFE53935),
                             count = endHomeworkList.size
                         )
                     }
@@ -332,7 +332,7 @@ fun TaskDetailsDialog(
                     item {
                         TaskSectionHeader(
                             title = "今天的考试",
-                            color = MaterialTheme.colorScheme.tertiary,
+                            color = Color(0xFFFF9800),
                             count = examList.size
                         )
                     }

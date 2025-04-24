@@ -7,7 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,7 +24,6 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -87,6 +85,8 @@ fun SettingScreen(mainViewModel: MainViewModel) {
     val autoSyncExamEnable by settingViewModel.autoSyncExamEnable.collectAsState()
     val checkUpdateEnable by settingViewModel.checkUpdateEnable.collectAsState()
     val currentTheme by settingViewModel.currentTheme.collectAsState()
+    val dynamicColorEnable by settingViewModel.dynamicColorEnable.collectAsState()
+
 
     LazyColumn(
         modifier = Modifier
@@ -123,7 +123,14 @@ fun SettingScreen(mainViewModel: MainViewModel) {
         item {
             ThemeSelectionItem(
                 currentTheme = currentTheme,
-                onThemeSelected = { settingViewModel.setTheme(it) }
+                onThemeSelected = { settingViewModel.setThemeOption(it) }
+            )
+        }
+        item{
+            SwitchSettingItem(
+                title = "Dynamic Color",
+                checked = dynamicColorEnable,
+                onCheckedChange = { settingViewModel.setDynamicColorOption(it) },
             )
         }
 
@@ -174,7 +181,7 @@ fun SettingScreen(mainViewModel: MainViewModel) {
             SwitchSettingItem(
                 title = "自动同步考试",
                 checked = autoSyncExamEnable,
-                onCheckedChange = { settingViewModel.setAutoSyncExamsEnable(it) }
+                onCheckedChange = { settingViewModel.setExamsAutoSyncOption(it) }
             )
         }
 

@@ -24,10 +24,12 @@ object DataStoreRepository {
     private val SYNC_EXAMS_KEY = booleanPreferencesKey("auto_sync_exams")
     private val CURRENT_WEEK_KEY = stringPreferencesKey("current_week")
     private val CHECK_UPDATE_KEY = booleanPreferencesKey("check_update")
+    private val DYNAMIC_COLOR_KEY = booleanPreferencesKey("dynamic_color")
 
     private val THEME_KEY = stringPreferencesKey("theme")
 
     private val COURSEWARE_JSON = stringPreferencesKey("courseware_json")
+
 
     suspend fun setCredentials(credentials: Credentials) {
         appContext.dataStore.edit { preferences ->
@@ -164,10 +166,23 @@ object DataStoreRepository {
         }
     }
 
-    suspend fun setTheme(theme: String) {
+    suspend fun setThemeOption(theme: String) {
         appContext.dataStore.edit { preferences ->
             preferences[THEME_KEY] = theme
         }
+    }
+
+    fun getDynamicColorOption(): Flow<Boolean> {
+        return appContext.dataStore.data.map { preferences ->
+            preferences[DYNAMIC_COLOR_KEY] ?: true
+        }
+    }
+
+    suspend fun setDynamicColorOption(enabled: Boolean) {
+        appContext.dataStore.edit { preferences ->
+            preferences[DYNAMIC_COLOR_KEY] = enabled
+        }
+
     }
 
 }
