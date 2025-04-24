@@ -25,10 +25,12 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -69,10 +71,13 @@ import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import team.bjtuss.bjtuselfservice.background
 import team.bjtuss.bjtuselfservice.primaryContainer
 import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 import team.bjtuss.bjtuselfservice.surfaceContainerHigh
 import team.bjtuss.bjtuselfservice.surfaceContainerHighest
+import team.bjtuss.bjtuselfservice.surfaceContainerLow
+import team.bjtuss.bjtuselfservice.surfaceContainerLowest
 
 /**
  * Main calendar component that displays a week view with tasks
@@ -236,8 +241,8 @@ fun TaskDetailsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier,
-        containerColor = surfaceContainer,
+        modifier = Modifier.background(color = background, shape = RoundedCornerShape(16.dp)),
+        containerColor = Color.Transparent,
         title = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -358,14 +363,15 @@ fun TaskSummarySection(
     endHomeworkCount: Int,
     examCount: Int
 ) {
-    Card(
+
+    ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = surface,
-        ),
+        )
     ) {
         Column(
             modifier = Modifier
