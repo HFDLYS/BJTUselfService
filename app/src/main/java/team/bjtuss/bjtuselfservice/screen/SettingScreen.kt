@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material3.AlertDialog
@@ -120,19 +121,7 @@ fun SettingScreen(mainViewModel: MainViewModel) {
         item {
             ClearLocalCacheItem(mainViewModel)
         }
-        item {
-            ThemeSelectionItem(
-                currentTheme = currentTheme,
-                onThemeSelected = { settingViewModel.setThemeOption(it) }
-            )
-        }
-        item{
-            SwitchSettingItem(
-                title = "Dynamic Color",
-                checked = dynamicColorEnable,
-                onCheckedChange = { settingViewModel.setDynamicColorOption(it) },
-            )
-        }
+
 
         item {
             LinkSettingItem(
@@ -140,6 +129,37 @@ fun SettingScreen(mainViewModel: MainViewModel) {
                 subtitle = "查看源代码",
                 icon = R.drawable.ic_github,
                 link = "https://github.com/HFDLYS/BJTUselfService"
+            )
+        }
+
+        item {
+            Text(
+                text = "主题",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+            )
+        }
+
+        item {
+            ThemeSelectionItem(
+                currentTheme = currentTheme,
+                onThemeSelected = { settingViewModel.setThemeOption(it) }
+            )
+        }
+        item {
+            SwitchSettingItem(
+                title = "动态配色",
+                subtitle = "配色跟随系统主题",
+                iconContent = {
+                    Icon(
+                        imageVector = Icons.Default.ColorLens,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
+                checked = dynamicColorEnable,
+                onCheckedChange = { settingViewModel.setDynamicColorOption(it) },
             )
         }
 
@@ -471,7 +491,6 @@ fun CheckForUpdateSettingItem() {
             Text(
                 text = "当前版本: $versionName",
                 style = MaterialTheme.typography.bodyMedium,
-                color = primary
             )
         }
     }
@@ -584,26 +603,23 @@ fun CheckForUpdateSettingItem() {
 fun SwitchSettingItem(
     title: String,
     subtitle: String = "",
-    icon: Int? = null,
+    iconContent: @Composable (() -> Unit)? = null, // 改用可组合内容参数
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit = {}
+    onCheckedChange: (Boolean) -> Unit = {},
+    modifier: Modifier = Modifier
 ) {
-    SettingItemBase {
+    SettingItemBase(modifier) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                icon?.let {
-                    Icon(
-                        painter = painterResource(id = it),
-                        contentDescription = null,
-                        modifier = Modifier.size(24.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                // 图标内容区域
+                iconContent?.invoke()?.also {
                     Spacer(Modifier.width(16.dp))
                 }
+
                 Column {
                     Text(
                         text = title,
@@ -689,7 +705,6 @@ fun DropdownSettingItem(
                     Text(
                         text = selectedOption,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
