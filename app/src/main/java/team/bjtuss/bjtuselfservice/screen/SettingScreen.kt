@@ -20,11 +20,21 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Quiz
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -47,6 +57,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalUriHandler
@@ -109,6 +120,16 @@ fun SettingScreen(mainViewModel: MainViewModel) {
         // User profile section
         item {
             SettingItem(
+                iconContent = {
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .padding(end = 8.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
                 title = studentInfo.value?.stuName ?: "未登录",
             )
         }
@@ -176,6 +197,14 @@ fun SettingScreen(mainViewModel: MainViewModel) {
         item {
             SwitchSettingItem(
                 title = "自动同步成绩",
+                iconContent = {
+                    Icon(
+                        imageVector =  Icons.Default.School,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
                 checked = autoSyncGradeEnable,
                 onCheckedChange = { settingViewModel.setGradeAutoSyncOption(it) }
             )
@@ -184,6 +213,14 @@ fun SettingScreen(mainViewModel: MainViewModel) {
         item {
             SwitchSettingItem(
                 title = "自动同步作业",
+                iconContent = {
+                    Icon(
+                        imageVector =  Icons. AutoMirrored.Filled.Assignment,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
                 checked = autoSyncHomeworkEnable,
                 onCheckedChange = { settingViewModel.setHomeworkAutoSyncOption(it) }
             )
@@ -192,6 +229,14 @@ fun SettingScreen(mainViewModel: MainViewModel) {
         item {
             SwitchSettingItem(
                 title = "自动同步课表",
+                iconContent = {
+                    Icon(
+                        imageVector =  Icons.Default.CalendarMonth,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
                 checked = autoSyncScheduleEnable,
                 onCheckedChange = { settingViewModel.setScheduleAutoSyncOption(it) }
             )
@@ -200,6 +245,13 @@ fun SettingScreen(mainViewModel: MainViewModel) {
         item {
             SwitchSettingItem(
                 title = "自动同步考试",
+                iconContent = {
+                    Icon(
+                        imageVector =  Icons.Default.Quiz,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary)
+                },
                 checked = autoSyncExamEnable,
                 onCheckedChange = { settingViewModel.setExamsAutoSyncOption(it) }
             )
@@ -208,6 +260,14 @@ fun SettingScreen(mainViewModel: MainViewModel) {
         item {
             SwitchSettingItem(
                 title = "打开更新提示",
+                iconContent = {
+                    Icon(
+                        imageVector =  Icons.Default.Update,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
                 checked = checkUpdateEnable,
                 onCheckedChange = { settingViewModel.setCheckUpdateEnable(it) }
             )
@@ -215,10 +275,9 @@ fun SettingScreen(mainViewModel: MainViewModel) {
 
         // Logout button
         item {
-            Spacer(modifier = Modifier.height(8.dp))
+//            Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = {
-//                    AppStateManager.logout(mainViewModel)
                     AppEventManager.sendEvent(AppEvent.LogoutRequest(clearAllData = {
                         AuthenticatorManager.clearAllData(
                             mainViewModel
@@ -226,7 +285,7 @@ fun SettingScreen(mainViewModel: MainViewModel) {
                     }))
                 },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(24.dp)
             ) {
                 Text(
                     text = "退出账号",
@@ -308,6 +367,14 @@ fun ClearLocalCacheItem(mainViewModel: MainViewModel) {
 
     SettingItem(
         title = "清除本地数据",
+        iconContent = {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
         onClick = { showConfirmationDialog = true }
     )
 }
@@ -316,7 +383,8 @@ fun ClearLocalCacheItem(mainViewModel: MainViewModel) {
 fun SettingItem(
     title: String,
     subtitle: String = "",
-    icon: Int? = null,
+    iconContent: @Composable (() -> Unit)? = null, // 改用可组合内容参数
+
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
 ) {
@@ -325,20 +393,17 @@ fun SettingItem(
         onClick = onClick
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            icon?.let {
-                Icon(
-                    painter = painterResource(id = it),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
+            iconContent?.let {
+                it.invoke()
                 Spacer(Modifier.width(16.dp))
             }
+
             Column {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium
                 )
+
                 if (subtitle.isNotBlank()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
