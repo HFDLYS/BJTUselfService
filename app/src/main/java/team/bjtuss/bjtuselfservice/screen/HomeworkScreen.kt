@@ -497,11 +497,11 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
 
             HomeworkActionButtons(
                 homework = homework,
-                isSubmit=isSubmit,
+                isSubmit = isSubmit,
                 appState = appState,
                 onUploadClick = { showUploadHomeworkDialog = true },
 
-            )
+                )
         }
     }
 
@@ -794,14 +794,11 @@ fun UploadHomeDialog(homeworkEntity: HomeworkEntity, onDismiss: () -> Unit) {
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                OutlinedButton(
+                TextButton(
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(8.dp),
-                    border = BorderStroke(
-                        1.dp,
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                    )
+
                 ) {
                     Text("取消")
                 }
@@ -857,7 +854,8 @@ fun UploadHomeDialog(homeworkEntity: HomeworkEntity, onDismiss: () -> Unit) {
                     }
                     Text(
                         "上传作业",
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium)
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 1,
                     )
                 }
             }
@@ -1203,7 +1201,7 @@ fun HomeworkActionButtons(
             enabled = appState.canDownloadAndUpload(),
             modifier = Modifier.weight(1f),
             elevation = ButtonDefaults.buttonElevation(
-                defaultElevation = 4.dp,
+                defaultElevation = 3.dp,
             ),
             shape = RoundedCornerShape(24.dp), // 胶囊形状
             colors = ButtonDefaults.filledTonalButtonColors(
@@ -1285,7 +1283,7 @@ fun MaterialHomeworkDownloadButton(
             },
             shape = RoundedCornerShape(24.dp), // 胶囊形状
             elevation = ButtonDefaults.buttonElevation(
-                defaultElevation = 4.dp,
+                defaultElevation = 3.dp,
             ),
             enabled = !isDownloading && enabled,
             colors = ButtonDefaults.filledTonalButtonColors(
