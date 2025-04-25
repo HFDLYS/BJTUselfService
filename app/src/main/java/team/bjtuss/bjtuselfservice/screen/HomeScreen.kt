@@ -350,7 +350,7 @@ fun MailButton(content: @Composable () -> Unit, navController: NavController) {
             navController.navigate(RouteManager.Email)
         },
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(32.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -390,7 +390,7 @@ fun EcardButton(content: @Composable () -> Unit) {
     Button(
         onClick = { showDialog = true },
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(32.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -473,7 +473,7 @@ fun NetButton(content: @Composable () -> Unit) {
     Button(
         onClick = { showDialog = true },
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(32.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
