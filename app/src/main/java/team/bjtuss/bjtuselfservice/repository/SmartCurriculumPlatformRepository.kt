@@ -1,13 +1,7 @@
 package team.bjtuss.bjtuselfservice.repository
 
 
-import android.util.Log
-import com.squareup.moshi.JsonDataException
-import com.squareup.moshi.Types
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import okhttp3.ResponseBody.Companion.toResponseBody
@@ -20,10 +14,8 @@ import team.bjtuss.bjtuselfservice.jsonclass.CourseResourceResponse
 import team.bjtuss.bjtuselfservice.jsonclass.CoursewareNode
 import team.bjtuss.bjtuselfservice.jsonclass.HomeworkJsonType
 import team.bjtuss.bjtuselfservice.jsonclass.SemesterJsonType
-import team.bjtuss.bjtuselfservice.statemanager.AppState
 import team.bjtuss.bjtuselfservice.statemanager.AppStateManager
 import team.bjtuss.bjtuselfservice.utils.KotlinUtils
-import team.bjtuss.bjtuselfservice.utils.NetworkUtils
 import java.io.IOException
 
 

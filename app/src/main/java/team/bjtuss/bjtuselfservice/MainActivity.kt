@@ -93,18 +93,17 @@ import team.bjtuss.bjtuselfservice.screen.HomeworkScreen
 import team.bjtuss.bjtuselfservice.screen.OtherFunctionScreen
 import team.bjtuss.bjtuselfservice.screen.SettingScreen
 import team.bjtuss.bjtuselfservice.screen.SpaceScreen
-import team.bjtuss.bjtuselfservice.ui.theme.BJTUselfServicecomposeTheme
 import team.bjtuss.bjtuselfservice.statemanager.AppState
 import team.bjtuss.bjtuselfservice.statemanager.AppStateManager
 import team.bjtuss.bjtuselfservice.statemanager.AuthenticatorManager
+import team.bjtuss.bjtuselfservice.statemanager.LoginDialog
+import team.bjtuss.bjtuselfservice.ui.theme.AppTheme
 import team.bjtuss.bjtuselfservice.viewmodel.ClassroomViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.CourseScheduleViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.CoursewareViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.ExamScheduleViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.GradeViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.HomeworkViewModel
-import team.bjtuss.bjtuselfservice.statemanager.LoginDialog
-import team.bjtuss.bjtuselfservice.ui.theme.AppTheme
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModelFactory
 import team.bjtuss.bjtuselfservice.viewmodel.SettingViewModel
@@ -124,6 +123,7 @@ class MainActivity : ComponentActivity() {
 
 
         setContent {
+
             val classroomViewModel: ClassroomViewModel = viewModel()
             val gradeViewModel: GradeViewModel = viewModel()
             val courseScheduleViewModel: CourseScheduleViewModel = viewModel()

@@ -23,14 +23,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -53,7 +51,7 @@ import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
 import team.bjtuss.bjtuselfservice.onSurface
 import team.bjtuss.bjtuselfservice.primary
-import team.bjtuss.bjtuselfservice.repository.NetworkRepository
+import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 import team.bjtuss.bjtuselfservice.screen.ExamItemCard
 import team.bjtuss.bjtuselfservice.screen.HomeworkItemCard
 import team.bjtuss.bjtuselfservice.scrim
@@ -69,16 +67,6 @@ import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import team.bjtuss.bjtuselfservice.background
-import team.bjtuss.bjtuselfservice.primaryContainer
-import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
-import team.bjtuss.bjtuselfservice.surfaceContainerHigh
-import team.bjtuss.bjtuselfservice.surfaceContainerHighest
-import team.bjtuss.bjtuselfservice.surfaceContainerLow
-import team.bjtuss.bjtuselfservice.surfaceContainerLowest
-import team.bjtuss.bjtuselfservice.surfaceVariant
 
 /**
  * Main calendar component that displays a week view with tasks

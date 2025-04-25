@@ -1,8 +1,6 @@
 package team.bjtuss.bjtuselfservice;
 
 
-import android.util.Log;
-
 import androidx.annotation.Nullable;
 import androidx.lifecycle.MutableLiveData;
 

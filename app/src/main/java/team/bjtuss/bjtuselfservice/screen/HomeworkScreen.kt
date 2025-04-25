@@ -49,12 +49,8 @@ import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.DoNotDisturb
-import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.People
-import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Stars
-import androidx.compose.material.icons.rounded.Upload
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -64,7 +60,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -78,7 +73,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -116,7 +110,6 @@ import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
 import team.bjtuss.bjtuselfservice.error
 import team.bjtuss.bjtuselfservice.primary
 import team.bjtuss.bjtuselfservice.primaryContainer
-import team.bjtuss.bjtuselfservice.repository.NetworkRepository
 import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
 import team.bjtuss.bjtuselfservice.statemanager.AppState
 import team.bjtuss.bjtuselfservice.statemanager.AppStateManager

@@ -51,18 +51,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
 import team.bjtuss.bjtuselfservice.StudentAccountManager
-import team.bjtuss.bjtuselfservice.controller.NetworkRequestQueue
 import team.bjtuss.bjtuselfservice.database.AppDatabase
 import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
-import team.bjtuss.bjtuselfservice.statemanager.AuthenticatorManager.credentials
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
-import team.bjtuss.bjtuselfservice.web.MisDataManager.login
 
 
 data class Credentials(
