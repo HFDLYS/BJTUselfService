@@ -81,7 +81,7 @@ fun GradeTopMenu(menuItemList: List<MenuItem>) {
         // 菜单弹出
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }  // 关闭菜单
+            onDismissRequest = { expanded = false }  // s关闭菜单
         ) {
             menuItemList.forEach { item ->
                 DropdownMenuItem(

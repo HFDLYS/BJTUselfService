@@ -40,8 +40,10 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FloatingActionButton
@@ -49,12 +51,15 @@ import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +68,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -71,8 +77,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
@@ -96,6 +104,9 @@ fun CoursewareScreen(mainViewModel: MainViewModel) {
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
 
+    // Collect download progress from DownloadUtil
+    val downloadProgressMap by DownloadUtil.downloadProgress.collectAsState()
+
     Scaffold(topBar = {
         TopAppBar(title = {
             Text(
@@ -103,9 +114,7 @@ fun CoursewareScreen(mainViewModel: MainViewModel) {
                     fontWeight = FontWeight.Bold
                 )
             )
-        }
-            // Removed top bar colors to use default theme colors
-        )
+        })
     }) { paddingValues ->
         Surface(
             modifier = Modifier
@@ -113,10 +122,10 @@ fun CoursewareScreen(mainViewModel: MainViewModel) {
                 .padding(paddingValues),
             color = MaterialTheme.colorScheme.background
         ) {
-            if (isLoading) {
-                LoadingScreen()
-            } else {
-                Box(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (isLoading) {
+                    LoadingScreen()
+                } else {
                     CoursewareTreeView(
                         coursewareRootNodeList = coursewareRootNodeList,
                         scrollState = scrollState
@@ -137,7 +146,6 @@ fun CoursewareScreen(mainViewModel: MainViewModel) {
                                     scrollState.animateScrollTo(0)
                                 }
                             },
-                            // Using a simple primary color for consistency
                             containerColor = MaterialTheme.colorScheme.primary,
                             elevation = FloatingActionButtonDefaults.elevation(6.dp)
                         ) {
@@ -148,8 +156,184 @@ fun CoursewareScreen(mainViewModel: MainViewModel) {
                             )
                         }
                     }
+
+                    // Show download progress dialog if there are active downloads
+                    if (downloadProgressMap.isNotEmpty()) {
+                        DownloadProgressDialog(
+                            downloadStatusMap = downloadProgressMap,
+                            onDismissRequest = { /* Cannot dismiss while downloads are in progress */ }
+                        )
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun DownloadProgressDialog(
+    downloadStatusMap: Map<String, DownloadUtil.DownloadStatus>,
+    onDismissRequest: () -> Unit
+) {
+    // Check if any downloads are still in progress
+    val hasActiveDownloads = downloadStatusMap.any {
+        it.value.status == DownloadUtil.Status.DOWNLOADING ||
+                it.value.status == DownloadUtil.Status.PENDING
+    }
+
+    // Dialog cannot be dismissed while downloads are in progress
+    val canDismiss = !hasActiveDownloads
+
+    // Track if the dialog should be shown
+    var showDialog by remember { mutableStateOf(true) }
+
+    // Auto-dismiss logic when all downloads complete or fail
+    LaunchedEffect(downloadStatusMap) {
+        if (!hasActiveDownloads && downloadStatusMap.isNotEmpty()) {
+            delay(2000) // Show completed status for 2 seconds before auto-dismissing
+            showDialog = false
+            // Clear completed downloads
+            downloadStatusMap.forEach { (id, status) ->
+                if (status.status == DownloadUtil.Status.COMPLETED ||
+                    status.status == DownloadUtil.Status.FAILED
+                ) {
+                    DownloadUtil.clearCompletedDownload(id)
+                }
+            }
+        }
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                if (canDismiss) {
+                    showDialog = false
+                    onDismissRequest()
+                }
+            },
+            title = {
+                Text("下载进度")
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    downloadStatusMap.entries.sortedBy { it.value.filename }
+                        .forEach { (_, status) ->
+                            DownloadProgressItem(status)
+                            if (downloadStatusMap.size > 1) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                                )
+                            }
+                        }
+
+                    // Summary text
+                    val totalDownloads = downloadStatusMap.size
+                    val completedDownloads =
+                        downloadStatusMap.count { it.value.status == DownloadUtil.Status.COMPLETED }
+                    val failedDownloads =
+                        downloadStatusMap.count { it.value.status == DownloadUtil.Status.FAILED }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "总计: $completedDownloads/$totalDownloads 完成, $failedDownloads 失败",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (canDismiss) {
+                            showDialog = false
+                            onDismissRequest()
+                        }
+                    },
+                    enabled = canDismiss
+                ) {
+                    Text(if (canDismiss) "关闭" else "下载中...")
+                }
+            },
+            properties = DialogProperties(
+                dismissOnClickOutside = canDismiss,
+                dismissOnBackPress = canDismiss
+            )
+        )
+    }
+}
+
+@Composable
+fun DownloadProgressItem(status: DownloadUtil.DownloadStatus) {
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        // File name and path
+        Text(
+            text = status.filename,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        if (status.path.isNotEmpty()) {
+            Text(
+                text = "路径: Download/${status.path}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Progress indicator
+        LinearProgressIndicator(
+            progress = { status.progress },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(RoundedCornerShape(4.dp)),
+            color = when (status.status) {
+                DownloadUtil.Status.COMPLETED -> MaterialTheme.colorScheme.primary
+                DownloadUtil.Status.FAILED -> MaterialTheme.colorScheme.error
+                else -> MaterialTheme.colorScheme.primary
+            },
+            trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Status text and percentage
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = when (status.status) {
+                    DownloadUtil.Status.PENDING -> "准备中..."
+                    DownloadUtil.Status.DOWNLOADING -> "下载中..."
+                    DownloadUtil.Status.COMPLETED -> "下载完成"
+                    DownloadUtil.Status.FAILED -> "下载失败"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = when (status.status) {
+                    DownloadUtil.Status.COMPLETED -> MaterialTheme.colorScheme.primary
+                    DownloadUtil.Status.FAILED -> MaterialTheme.colorScheme.error
+                    else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                }
+            )
+
+            Text(
+                text = "${(status.progress * 100).toInt()}%",
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
@@ -526,7 +710,6 @@ private fun downloadCourseWareWithOKHttp(
             val response = SmartCurriculumPlatformRepository.client.newCall(request).execute()
 
             if (response.isSuccessful) {
-
                 val responseContent = response.use {
                     it.body?.string()?.let {
                         adapter.fromJson(it)
@@ -547,9 +730,12 @@ private fun downloadCourseWareWithOKHttp(
                     val prefix = fileName?.split(".")?.first()
                     val postfix = fileName?.split(".")?.last() ?: "pdf"
 
+                    val cleanFileName = "${URLDecoder.decode(prefix, "UTF-8")}.$postfix"
+
+                    // Use the enhanced download utility with progress tracking
                     DownloadUtil.downloadFileWithOkHttp(
                         url = content.rpUrl,
-                        filename = "${URLDecoder.decode(prefix, "UTF-8")}.$postfix",
+                        filename = cleanFileName,
                         relativePath = path
                     )
                 }
