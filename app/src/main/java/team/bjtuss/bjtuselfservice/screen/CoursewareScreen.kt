@@ -124,7 +124,7 @@ fun CoursewareScreen(mainViewModel: MainViewModel) {
 
                     // 快速滚动到顶部的按钮
                     AnimatedVisibility(
-                        visible = scrollState.value  > 300,
+                        visible = scrollState.value > 300,
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(16.dp),
@@ -205,7 +205,7 @@ fun CoursewareTreeView(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         coursewareRootNodeList.forEach {
-            CoursewareTreeNode(node = it)
+            CoursewareTreeNode(node = it, path = "交大自由行下载目录")
         }
         Spacer(modifier = Modifier.height(72.dp))
     }
@@ -216,7 +216,8 @@ fun CoursewareTreeView(
 @Composable
 fun CoursewareTreeNode(
     node: CoursewareNode,
-    level: Int = 0
+    level: Int = 0,
+    path: String = "",
 ) {
     var expanded by remember { mutableStateOf(level == -1) } // 默认展开顶级节点
     val hasChildren = node.children.isNotEmpty()
@@ -290,6 +291,13 @@ fun CoursewareTreeNode(
         label = "TextColor"
     )
 
+    val nodeText = when {
+        level == 0 -> node.course.name
+        node.bag != null -> node.bag?.bag_name ?: "未命名文件夹"
+        node.res != null -> node.res?.rpName ?: "未命名资源"
+        else -> "未知项目"
+    }
+
     Column(
         modifier = Modifier.padding(start = (level * 16).dp)
     ) {
@@ -331,7 +339,7 @@ fun CoursewareTreeNode(
                             if (hasChildren) {
                                 expanded = !expanded
                             } else if (node.res != null && appState.canDownloadCourseware()) {
-                                downloadResource(node) {}
+                                downloadCourseWareWithOKHttp(node = node, path = path) {}
                             }
                         }
                     )
@@ -379,12 +387,7 @@ fun CoursewareTreeNode(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 // 节点文本
-                val nodeText = when {
-                    level == 0 -> node.course.name
-                    node.bag != null -> node.bag?.bag_name ?: "未命名文件夹"
-                    node.res != null -> node.res?.rpName ?: "未命名资源"
-                    else -> "未知项目"
-                }
+
 
                 Column(
                     modifier = Modifier.weight(1f)
@@ -414,9 +417,11 @@ fun CoursewareTreeNode(
                 if (hasChildren) {
                     FilledTonalIconButton(
                         onClick = {
-                            downloadResourceRecursion(node)
+                            downloadCourseWareWithOKHttpRecursion(
+                                node = node,
+                                path = "$path/${nodeText}"
+                            )
                         },
-//                        modifier = Modifier.size(32.dp),
                         enabled = appState.canDownloadCourseware(),
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
                             containerColor = Color.Transparent,
@@ -457,7 +462,8 @@ fun CoursewareTreeNode(
                 node.children.forEach { childNode ->
                     CoursewareTreeNode(
                         node = childNode,
-                        level = level + 1
+                        level = level + 1,
+                        path = "$path/${nodeText}"
                     )
                 }
             }
@@ -476,6 +482,17 @@ fun CoursewareTreeNode(
     }
 }
 
+
+private fun downloadCourseWareWithOKHttpRecursion(node: CoursewareNode, path: String) {
+    if (node.children.isNotEmpty()) {
+        node.children.forEach { childNode ->
+            downloadCourseWareWithOKHttpRecursion(childNode, path)
+        }
+    } else if (node.res != null) {
+        downloadCourseWareWithOKHttp(node = node, path = path) {}
+    }
+}
+
 private fun downloadResourceRecursion(
     node: CoursewareNode,
 ) {
@@ -485,6 +502,67 @@ private fun downloadResourceRecursion(
         }
     } else if (node.res != null) {
         downloadResource(node) {}
+    }
+}
+
+private fun downloadCourseWareWithOKHttp(
+    node: CoursewareNode,
+    path: String,
+    onComplete: () -> Unit
+) {
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val url =
+                "http://123.121.147.7:88/ve/back/resourceSpace.shtml?" + "method=rpinfoDownloadUrl" + "&rpId=${node.res?.rpId}"
+
+            val request = Request.Builder().url(url).post(FormBody.Builder().build())
+                .addHeader("Cookie", "your_session_cookie") // From login session
+                .addHeader("User-Agent", "Your-App-Name/1.0").build()
+
+            val adapter = SmartCurriculumPlatformRepository.moshi.adapter(
+                CoursewareDownloadPostRequestResponse::class.java
+            )
+
+            val response = SmartCurriculumPlatformRepository.client.newCall(request).execute()
+
+            if (response.isSuccessful) {
+
+                val responseContent = response.use {
+                    it.body?.string()?.let {
+                        adapter.fromJson(it)
+                    }
+                }
+
+                responseContent?.let { content ->
+                    val headRequest = Request.Builder().url(content.rpUrl).build()
+
+                    val headResponse =
+                        SmartCurriculumPlatformRepository.client.newCall(headRequest).execute()
+
+                    val contentDisposition = headResponse.header("Content-Disposition")
+                    val fileName = contentDisposition?.let {
+                        it.split(";")[1].trim()
+                    }?.split("=", limit = 2)?.last()
+
+                    val prefix = fileName?.split(".")?.first()
+                    val postfix = fileName?.split(".")?.last() ?: "pdf"
+
+                    DownloadUtil.downloadFileWithOkHttp(
+                        url = content.rpUrl,
+                        filename = "${URLDecoder.decode(prefix, "UTF-8")}.$postfix",
+                        relativePath = path
+                    )
+                }
+            } else {
+                Log.e("CoursewareDownload", "Request failed: ${response.code}")
+            }
+        } catch (e: Exception) {
+            Log.e("CoursewareDownload", "Download failed", e)
+        } finally {
+            withContext(Dispatchers.Main) {
+                onComplete()
+            }
+        }
     }
 }
 
