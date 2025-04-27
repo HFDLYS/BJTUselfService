@@ -190,8 +190,8 @@ fun DownloadProgressDialog(
     // Auto-dismiss logic when all downloads complete or fail
     LaunchedEffect(downloadStatusMap) {
         if (!hasActiveDownloads && downloadStatusMap.isNotEmpty()) {
-            delay(2000) // Show completed status for 2 seconds before auto-dismissing
-            showDialog = false
+//            delay(2000) // Show completed status for 2 seconds before auto-dismissing
+//            showDialog = false
             // Clear completed downloads
             downloadStatusMap.forEach { (id, status) ->
                 if (status.status == DownloadUtil.Status.COMPLETED ||
@@ -215,34 +215,43 @@ fun DownloadProgressDialog(
                 Text("下载进度")
             },
             text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    downloadStatusMap.entries.sortedBy { it.value.filename }
-                        .forEach { (_, status) ->
-                            DownloadProgressItem(status)
-                            if (downloadStatusMap.size > 1) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(vertical = 8.dp),
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
-                                )
-                            }
-                        }
-
-                    // Summary text
+                Column(modifier = Modifier.fillMaxWidth()) {
                     val totalDownloads = downloadStatusMap.size
                     val completedDownloads =
                         downloadStatusMap.count { it.value.status == DownloadUtil.Status.COMPLETED }
                     val failedDownloads =
                         downloadStatusMap.count { it.value.status == DownloadUtil.Status.FAILED }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    // 下载项列表（可滚动区域）
+                    Box(
+                        modifier = Modifier
+                            .weight(1f) // 使用weight确保剩余空间给总结文本
+
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            downloadStatusMap.entries.sortedBy { it.value.filename }
+                                .forEach { (_, status) ->
+                                    DownloadProgressItem(status)
+                                    if (downloadStatusMap.size > 1) {
+                                        HorizontalDivider(
+                                            modifier = Modifier.padding(vertical = 8.dp),
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                                        )
+                                    }
+                                }
+                        }
+                    }
+
+                    // 总结文本（固定在底部）
                     Text(
                         text = "总计: $completedDownloads/$totalDownloads 完成, $failedDownloads 失败",
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 8.dp)
                     )
                 }
             },
@@ -603,7 +612,8 @@ fun CoursewareTreeNode(
                         onClick = {
                             downloadCourseWareWithOKHttpRecursion(
                                 node = node,
-                                path = "$path/${nodeText}"
+                                path = "$path/${nodeText}",
+                                level
                             )
                         },
                         enabled = appState.canDownloadCourseware(),
@@ -667,10 +677,17 @@ fun CoursewareTreeNode(
 }
 
 
-private fun downloadCourseWareWithOKHttpRecursion(node: CoursewareNode, path: String) {
+private fun downloadCourseWareWithOKHttpRecursion(node: CoursewareNode, path: String, level: Int) {
+
+    val nodeText = when {
+        level == 0 -> node.course.name
+        node.bag != null -> node.bag?.bag_name ?: "未命名文件夹"
+        node.res != null -> node.res?.rpName ?: "未命名资源"
+        else -> "未知项目"
+    }
     if (node.children.isNotEmpty()) {
         node.children.forEach { childNode ->
-            downloadCourseWareWithOKHttpRecursion(childNode, path)
+            downloadCourseWareWithOKHttpRecursion(childNode, "$path/${nodeText}", level + 1)
         }
     } else if (node.res != null) {
         downloadCourseWareWithOKHttp(node = node, path = path) {}
