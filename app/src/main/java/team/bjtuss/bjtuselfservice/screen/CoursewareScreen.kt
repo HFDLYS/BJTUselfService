@@ -190,8 +190,8 @@ fun DownloadProgressDialog(
     // Auto-dismiss logic when all downloads complete or fail
     LaunchedEffect(downloadStatusMap) {
         if (!hasActiveDownloads && downloadStatusMap.isNotEmpty()) {
-//            delay(2000) // Show completed status for 2 seconds before auto-dismissing
-//            showDialog = false
+            delay(10000) // Show completed status for 2 seconds before auto-dismissing
+            showDialog = false
             // Clear completed downloads
             downloadStatusMap.forEach { (id, status) ->
                 if (status.status == DownloadUtil.Status.COMPLETED ||
