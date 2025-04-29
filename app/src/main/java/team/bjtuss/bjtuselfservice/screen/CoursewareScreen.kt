@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -94,7 +95,6 @@ import team.bjtuss.bjtuselfservice.statemanager.AppStateManager
 import team.bjtuss.bjtuselfservice.utils.DownloadUtil
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import java.net.URLDecoder
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoursewareScreen(mainViewModel: MainViewModel) {
@@ -106,6 +106,16 @@ fun CoursewareScreen(mainViewModel: MainViewModel) {
 
     // Collect download progress from DownloadUtil
     val downloadProgressMap by DownloadUtil.downloadProgress.collectAsState()
+
+    // 控制下载对话框显示的状态
+    var showDownloadDialog by remember { mutableStateOf(false) }
+
+    // 监听下载状态变化，自动显示对话框
+    LaunchedEffect(downloadProgressMap) {
+        if (downloadProgressMap.isNotEmpty()) {
+            showDownloadDialog = true
+        }
+    }
 
     Scaffold(topBar = {
         TopAppBar(title = {
@@ -157,11 +167,59 @@ fun CoursewareScreen(mainViewModel: MainViewModel) {
                         }
                     }
 
-                    // Show download progress dialog if there are active downloads
-                    if (downloadProgressMap.isNotEmpty()) {
+                    // 下载进度浮动指示器按钮 - 当有下载但对话框被关闭时显示
+                    AnimatedVisibility(
+                        visible = downloadProgressMap.isNotEmpty() && !showDownloadDialog,
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(16.dp),
+                        enter = fadeIn() + scaleIn(),
+                        exit = fadeOut() + scaleOut()
+                    ) {
+                        // 计算活跃下载数量
+                        val activeDownloads = downloadProgressMap.count {
+                            it.value.status == DownloadUtil.Status.DOWNLOADING ||
+                                    it.value.status == DownloadUtil.Status.PENDING
+                        }
+                        val completedDownloads = downloadProgressMap.count {
+                            it.value.status == DownloadUtil.Status.COMPLETED
+                        }
+                        val failedDownloads = downloadProgressMap.count {
+                            it.value.status == DownloadUtil.Status.FAILED
+                        }
+
+                        FloatingActionButton(
+                            onClick = { showDownloadDialog = true },
+                            containerColor = when {
+                                failedDownloads > 0 -> MaterialTheme.colorScheme.error
+                                activeDownloads > 0 -> MaterialTheme.colorScheme.primary
+                                else -> MaterialTheme.colorScheme.secondary
+                            }
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Download,
+                                    contentDescription = "下载进度",
+                                    tint = MaterialTheme.colorScheme.onPrimary
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "$activeDownloads 下载中 · $completedDownloads 完成 · $failedDownloads 失败",
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+
+                    // Show download progress dialog if there are active downloads and dialog is set to show
+                    if (downloadProgressMap.isNotEmpty() && showDownloadDialog) {
                         DownloadProgressDialog(
                             downloadStatusMap = downloadProgressMap,
-                            onDismissRequest = { /* Cannot dismiss while downloads are in progress */ }
+                            onDismissRequest = { showDownloadDialog = false }
                         )
                     }
                 }
@@ -181,99 +239,92 @@ fun DownloadProgressDialog(
                 it.value.status == DownloadUtil.Status.PENDING
     }
 
-    // Dialog cannot be dismissed while downloads are in progress
-    val canDismiss = !hasActiveDownloads
+    // 对话框可以随时关闭，不再自动关闭
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = {
+            Text("下载进度")
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 400.dp) // 限制最大高度
+            ) {
+                val totalDownloads = downloadStatusMap.size
+                val completedDownloads =
+                    downloadStatusMap.count { it.value.status == DownloadUtil.Status.COMPLETED }
+                val failedDownloads =
+                    downloadStatusMap.count { it.value.status == DownloadUtil.Status.FAILED }
 
-    // Track if the dialog should be shown
-    var showDialog by remember { mutableStateOf(true) }
-
-    // Auto-dismiss logic when all downloads complete or fail
-    LaunchedEffect(downloadStatusMap) {
-        if (!hasActiveDownloads && downloadStatusMap.isNotEmpty()) {
-            delay(10000) // Show completed status for 2 seconds before auto-dismissing
-            showDialog = false
-            // Clear completed downloads
-            downloadStatusMap.forEach { (id, status) ->
-                if (status.status == DownloadUtil.Status.COMPLETED ||
-                    status.status == DownloadUtil.Status.FAILED
+                // 下载项列表（可滚动区域）
+                Box(
+                    modifier = Modifier
+                        .weight(1f) // 使用weight确保剩余空间给总结文本
                 ) {
-                    DownloadUtil.clearCompletedDownload(id)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        downloadStatusMap.entries
+                            .sortedWith(
+                                compareBy<Map.Entry<String, DownloadUtil.DownloadStatus>> {
+                                    when (it.value.status) {
+                                        DownloadUtil.Status.DOWNLOADING -> 0
+                                        DownloadUtil.Status.PENDING -> 1
+                                        DownloadUtil.Status.FAILED -> 2
+                                        DownloadUtil.Status.COMPLETED -> 3
+                                    }
+                                }.thenBy { it.value.filename }
+                            )
+                            .forEach { (_, status) ->
+                                DownloadProgressItem(status)
+                                if (downloadStatusMap.size > 1) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(vertical = 8.dp),
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                                    )
+                                }
+                            }
+                    }
+                }
+
+                // 总结文本（固定在底部）
+                Text(
+                    text = "总计: $completedDownloads/$totalDownloads 完成, $failedDownloads 失败",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onDismissRequest
+            ) {
+                Text("关闭")
+            }
+        },
+        dismissButton = {
+            if (hasActiveDownloads) {
+                // 保持下载但关闭对话框
+                TextButton(onClick = onDismissRequest) {
+                    Text("在后台继续下载")
+                }
+            } else if (downloadStatusMap.any { it.value.status == DownloadUtil.Status.COMPLETED || it.value.status == DownloadUtil.Status.FAILED }) {
+                // 提供清除已完成/失败下载的选项
+                TextButton(
+                    onClick = {
+                        DownloadUtil.clearAllCompletedDownloads()
+                        onDismissRequest()
+                    }
+                ) {
+                    Text("清除已完成/失败的下载")
                 }
             }
         }
-    }
-
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                if (canDismiss) {
-                    showDialog = false
-                    onDismissRequest()
-                }
-            },
-            title = {
-                Text("下载进度")
-            },
-            text = {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    val totalDownloads = downloadStatusMap.size
-                    val completedDownloads =
-                        downloadStatusMap.count { it.value.status == DownloadUtil.Status.COMPLETED }
-                    val failedDownloads =
-                        downloadStatusMap.count { it.value.status == DownloadUtil.Status.FAILED }
-
-                    // 下载项列表（可滚动区域）
-                    Box(
-                        modifier = Modifier
-                            .weight(1f) // 使用weight确保剩余空间给总结文本
-
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .verticalScroll(rememberScrollState())
-                        ) {
-                            downloadStatusMap.entries.sortedBy { it.value.filename }
-                                .forEach { (_, status) ->
-                                    DownloadProgressItem(status)
-                                    if (downloadStatusMap.size > 1) {
-                                        HorizontalDivider(
-                                            modifier = Modifier.padding(vertical = 8.dp),
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
-                                        )
-                                    }
-                                }
-                        }
-                    }
-
-                    // 总结文本（固定在底部）
-                    Text(
-                        text = "总计: $completedDownloads/$totalDownloads 完成, $failedDownloads 失败",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (canDismiss) {
-                            showDialog = false
-                            onDismissRequest()
-                        }
-                    },
-                    enabled = canDismiss
-                ) {
-                    Text(if (canDismiss) "关闭" else "下载中...")
-                }
-            },
-            properties = DialogProperties(
-                dismissOnClickOutside = canDismiss,
-                dismissOnBackPress = canDismiss
-            )
-        )
-    }
+    )
 }
 
 @Composable
@@ -295,6 +346,18 @@ fun DownloadProgressItem(status: DownloadUtil.DownloadStatus) {
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        // 显示错误信息（如果有）
+        if (status.status == DownloadUtil.Status.FAILED && status.errorMessage.isNotEmpty()) {
+            Text(
+                text = "错误: ${status.errorMessage}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 2.dp)
             )
         }
 
@@ -694,17 +757,7 @@ private fun downloadCourseWareWithOKHttpRecursion(node: CoursewareNode, path: St
     }
 }
 
-private fun downloadResourceRecursion(
-    node: CoursewareNode,
-) {
-    if (node.children.isNotEmpty()) {
-        node.children.forEach { childNode ->
-            downloadResourceRecursion(childNode)
-        }
-    } else if (node.res != null) {
-        downloadResource(node) {}
-    }
-}
+
 
 private fun downloadCourseWareWithOKHttp(
     node: CoursewareNode,
@@ -750,68 +803,10 @@ private fun downloadCourseWareWithOKHttp(
                     val cleanFileName = "${URLDecoder.decode(prefix, "UTF-8")}.$postfix"
 
                     // Use the enhanced download utility with progress tracking
-                    DownloadUtil.downloadFileWithOkHttp(
+                    DownloadUtil.queueDownload(
                         url = content.rpUrl,
                         filename = cleanFileName,
                         relativePath = path
-                    )
-                }
-            } else {
-                Log.e("CoursewareDownload", "Request failed: ${response.code}")
-            }
-        } catch (e: Exception) {
-            Log.e("CoursewareDownload", "Download failed", e)
-        } finally {
-            withContext(Dispatchers.Main) {
-                onComplete()
-            }
-        }
-    }
-}
-
-// 保持原有的下载逻辑
-private fun downloadResource(node: CoursewareNode, onComplete: () -> Unit) {
-    CoroutineScope(Dispatchers.IO).launch {
-        try {
-            val url =
-                "http://123.121.147.7:88/ve/back/resourceSpace.shtml?" + "method=rpinfoDownloadUrl" + "&rpId=${node.res?.rpId}"
-
-            val request = Request.Builder().url(url).post(FormBody.Builder().build())
-                .addHeader("Cookie", "your_session_cookie") // From login session
-                .addHeader("User-Agent", "Your-App-Name/1.0").build()
-
-            val adapter = SmartCurriculumPlatformRepository.moshi.adapter(
-                CoursewareDownloadPostRequestResponse::class.java
-            )
-
-            val response = SmartCurriculumPlatformRepository.client.newCall(request).execute()
-
-            if (response.isSuccessful) {
-
-                val responseContent = response.use {
-                    it.body?.string()?.let {
-                        adapter.fromJson(it)
-                    }
-                }
-
-                responseContent?.let { content ->
-                    val headRequest = Request.Builder().url(content.rpUrl).build()
-
-                    val headResponse =
-                        SmartCurriculumPlatformRepository.client.newCall(headRequest).execute()
-
-                    val contentDisposition = headResponse.header("Content-Disposition")
-                    val fileName = contentDisposition?.let {
-                        it.split(";")[1].trim()
-                    }?.split("=", limit = 2)?.last()
-
-                    val prefix = fileName?.split(".")?.first()
-                    val postfix = fileName?.split(".")?.last() ?: "pdf"
-
-                    DownloadUtil.downloadFile(
-                        url = content.rpUrl,
-                        title = URLDecoder.decode(prefix, "UTF-8"),
-                        fileType = postfix,
                     )
                 }
             } else {
