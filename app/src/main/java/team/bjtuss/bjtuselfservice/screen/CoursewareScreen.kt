@@ -95,6 +95,7 @@ import team.bjtuss.bjtuselfservice.statemanager.AppStateManager
 import team.bjtuss.bjtuselfservice.utils.DownloadUtil
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import java.net.URLDecoder
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoursewareScreen(mainViewModel: MainViewModel) {
@@ -307,12 +308,7 @@ fun DownloadProgressDialog(
             }
         },
         dismissButton = {
-            if (hasActiveDownloads) {
-                // 保持下载但关闭对话框
-                TextButton(onClick = onDismissRequest) {
-                    Text("在后台继续下载")
-                }
-            } else if (downloadStatusMap.any { it.value.status == DownloadUtil.Status.COMPLETED || it.value.status == DownloadUtil.Status.FAILED }) {
+//            if (downloadStatusMap.any { it.value.status == DownloadUtil.Status.COMPLETED || it.value.status == DownloadUtil.Status.FAILED }) {
                 // 提供清除已完成/失败下载的选项
                 TextButton(
                     onClick = {
@@ -320,9 +316,11 @@ fun DownloadProgressDialog(
                         onDismissRequest()
                     }
                 ) {
-                    Text("清除已完成/失败的下载")
+                    Text("清除已完成/失败",
+                        overflow = TextOverflow.Ellipsis,
+                        maxLines = 1)
                 }
-            }
+//            }
         }
     )
 }
@@ -756,7 +754,6 @@ private fun downloadCourseWareWithOKHttpRecursion(node: CoursewareNode, path: St
         downloadCourseWareWithOKHttp(node = node, path = path) {}
     }
 }
-
 
 
 private fun downloadCourseWareWithOKHttp(

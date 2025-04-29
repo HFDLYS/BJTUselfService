@@ -37,7 +37,7 @@ object DownloadUtil {
     private val downloadQueue = ConcurrentLinkedQueue<DownloadRequest>()
 
     // 控制同时下载的最大数量
-    private val maxConcurrentDownloads = 4
+    private val maxConcurrentDownloads = 8
     private val activeDownloads = AtomicInteger(0)
 
     // 处理下载队列的协程作用域
