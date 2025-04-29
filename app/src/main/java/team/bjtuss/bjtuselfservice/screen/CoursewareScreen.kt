@@ -309,17 +309,19 @@ fun DownloadProgressDialog(
         },
         dismissButton = {
 //            if (downloadStatusMap.any { it.value.status == DownloadUtil.Status.COMPLETED || it.value.status == DownloadUtil.Status.FAILED }) {
-                // 提供清除已完成/失败下载的选项
-                TextButton(
-                    onClick = {
-                        DownloadUtil.clearAllCompletedDownloads()
-                        onDismissRequest()
-                    }
-                ) {
-                    Text("清除已完成/失败",
-                        overflow = TextOverflow.Ellipsis,
-                        maxLines = 1)
+            // 提供清除已完成/失败下载的选项
+            TextButton(
+                onClick = {
+                    DownloadUtil.clearAllCompletedDownloads()
+                    onDismissRequest()
                 }
+            ) {
+                Text(
+                    "清除已完成/失败",
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1
+                )
+            }
 //            }
         }
     )
@@ -739,16 +741,9 @@ fun CoursewareTreeNode(
 
 
 private fun downloadCourseWareWithOKHttpRecursion(node: CoursewareNode, path: String, level: Int) {
-
-    val nodeText = when {
-        level == 0 -> node.course.name
-        node.bag != null -> node.bag?.bag_name ?: "未命名文件夹"
-        node.res != null -> node.res?.rpName ?: "未命名资源"
-        else -> "未知项目"
-    }
     if (node.children.isNotEmpty()) {
         node.children.forEach { childNode ->
-            downloadCourseWareWithOKHttpRecursion(childNode, "$path/${nodeText}", level + 1)
+            downloadCourseWareWithOKHttpRecursion(childNode, "$path", level + 1)
         }
     } else if (node.res != null) {
         downloadCourseWareWithOKHttp(node = node, path = path) {}
