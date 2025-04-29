@@ -111,11 +111,11 @@ fun CoursewareScreen(mainViewModel: MainViewModel) {
     var showDownloadDialog by remember { mutableStateOf(false) }
 
     // 监听下载状态变化，自动显示对话框
-    LaunchedEffect(downloadProgressMap) {
-        if (downloadProgressMap.isNotEmpty()) {
-            showDownloadDialog = true
-        }
-    }
+//    LaunchedEffect(downloadProgressMap) {
+//        if (downloadProgressMap.isNotEmpty()) {
+//            showDownloadDialog = true
+//        }
+//    }
 
     Scaffold(topBar = {
         TopAppBar(title = {
