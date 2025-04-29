@@ -523,6 +523,7 @@ fun EmailSubscriptionDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         title = {
             Text(
                 "订阅作业提醒",

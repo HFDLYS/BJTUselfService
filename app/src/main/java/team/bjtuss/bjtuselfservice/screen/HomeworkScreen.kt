@@ -500,7 +500,6 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
                 isSubmit = isSubmit,
                 appState = appState,
                 onUploadClick = { showUploadHomeworkDialog = true },
-
                 )
         }
     }
@@ -670,7 +669,7 @@ fun UploadHomeDialog(homeworkEntity: HomeworkEntity, onDismiss: () -> Unit) {
                             .fillMaxWidth()
                             .height(100.dp)
                             .background(
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
                                 shape = RoundedCornerShape(8.dp)
                             ),
                         contentAlignment = Alignment.Center
@@ -699,7 +698,7 @@ fun UploadHomeDialog(homeworkEntity: HomeworkEntity, onDismiss: () -> Unit) {
                             .fillMaxWidth()
                             .height(150.dp)
                             .background(
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
                                 shape = RoundedCornerShape(8.dp)
                             )
                             .padding(8.dp)
@@ -860,8 +859,12 @@ fun UploadHomeDialog(homeworkEntity: HomeworkEntity, onDismiss: () -> Unit) {
                 }
             }
         },
+        modifier = Modifier.background(
+            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(24.dp)
+        ),
         shape = RoundedCornerShape(16.dp),
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         properties = DialogProperties(dismissOnClickOutside = false)
     )
 }
@@ -1084,102 +1087,6 @@ suspend fun downloadHomeworkFile(
     }
 }
 
-//
-//@Composable
-//fun HomeworkDownloadButton(
-//    homework: HomeworkEntity,
-//    enabled: Boolean,
-//    modifier: Modifier = Modifier
-//) {
-//    val context = LocalContext.current
-//    val coroutineScope = rememberCoroutineScope()
-//
-//    // State for download progress and status
-//    var isDownloading by remember { mutableStateOf(false) }
-//    var downloadProgress by remember { mutableFloatStateOf(0f) }
-//    var errorMessage by remember { mutableStateOf<String?>(null) }
-//
-//    Column(modifier = modifier) {
-//        Button(
-//            onClick = {
-//                if (!isDownloading) {
-//                    isDownloading = true
-//                    downloadProgress = 0f
-//                    errorMessage = null
-//
-//                    coroutineScope.launch {
-//                        try {
-//                            downloadHomeworkFile(
-//                                homework = homework,
-//                                onProgress = { progress ->
-//                                    downloadProgress = progress
-//                                },
-//                                onSuccess = { message ->
-//                                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-//                                    isDownloading = false
-//                                },
-//                                onError = { error ->
-//                                    errorMessage = error.message ?: "下载失败"
-//                                    isDownloading = false
-//                                    Toast.makeText(
-//                                        context,
-//                                        "下载失败: ${error.message}",
-//                                        Toast.LENGTH_SHORT
-//                                    ).show()
-//                                }
-//                            )
-//                        } catch (e: Exception) {
-//                            // Exception is already handled in the download function
-//                            isDownloading = false
-//                        }
-//                    }
-//                }
-//            },
-//            shape = RoundedCornerShape(8.dp),
-////            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-//            enabled = !isDownloading && enabled,
-//            colors = ButtonDefaults.buttonColors(
-//                containerColor = MaterialTheme.colorScheme.primary,
-//                disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-//            )
-//        ) {
-//            Row(
-//                verticalAlignment = Alignment.CenterVertically,
-//                horizontalArrangement = Arrangement.Center,
-//                modifier = Modifier.fillMaxWidth()
-//            ) {
-//                if (isDownloading) {
-//                    CircularProgressIndicator(
-//                        modifier = Modifier.size(16.dp),
-//                        color = MaterialTheme.colorScheme.onPrimary,
-//                        strokeWidth = 2.dp
-//                    )
-//                    Spacer(modifier = Modifier.width(8.dp))
-//                }
-//                Text(if (isDownloading) "正在下载..." else "下载作业")
-//            }
-//        }
-//
-//        // Show progress bar when downloading
-//        if (isDownloading) {
-//            Spacer(modifier = Modifier.height(8.dp))
-//            LinearProgressIndicator(
-//                progress = { downloadProgress },
-//                modifier = Modifier.fillMaxWidth()
-//            )
-//        }
-//
-//        // Show error message if any
-//        errorMessage?.let {
-//            Spacer(modifier = Modifier.height(4.dp))
-//            Text(
-//                text = it,
-//                color = MaterialTheme.colorScheme.error,
-//                style = MaterialTheme.typography.bodySmall
-//            )
-//        }
-//    }
-//}
 
 
 @Composable
