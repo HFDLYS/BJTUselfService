@@ -788,11 +788,18 @@ private fun downloadCourseWareWithOKHttp(
                     val fileName = contentDisposition?.let {
                         it.split(";")[1].trim()
                     }?.split("=", limit = 2)?.last()
-
-                    val prefix = fileName?.split(".")?.first()
+                    val prefix = fileName?.substringBeforeLast(".")
                     val postfix = fileName?.split(".")?.last() ?: "pdf"
 
                     val cleanFileName = "${URLDecoder.decode(prefix, "UTF-8")}.$postfix"
+                    if(cleanFileName.contains("7.pdf")||
+                        cleanFileName.contains("8")||
+                        cleanFileName.contains("5.pdf")||
+                        cleanFileName.contains("0")
+                    ){
+                        println("pause")
+                    }
+
 
                     // Use the enhanced download utility with progress tracking
                     DownloadUtil.queueDownload(
