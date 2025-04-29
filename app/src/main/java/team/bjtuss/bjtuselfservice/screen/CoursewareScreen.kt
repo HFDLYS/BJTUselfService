@@ -234,11 +234,6 @@ fun DownloadProgressDialog(
     downloadStatusMap: Map<String, DownloadUtil.DownloadStatus>,
     onDismissRequest: () -> Unit
 ) {
-    // Check if any downloads are still in progress
-    val hasActiveDownloads = downloadStatusMap.any {
-        it.value.status == DownloadUtil.Status.DOWNLOADING ||
-                it.value.status == DownloadUtil.Status.PENDING
-    }
 
     // 对话框可以随时关闭，不再自动关闭
     AlertDialog(
@@ -308,8 +303,6 @@ fun DownloadProgressDialog(
             }
         },
         dismissButton = {
-//            if (downloadStatusMap.any { it.value.status == DownloadUtil.Status.COMPLETED || it.value.status == DownloadUtil.Status.FAILED }) {
-            // 提供清除已完成/失败下载的选项
             TextButton(
                 onClick = {
                     DownloadUtil.clearAllCompletedDownloads()
@@ -322,7 +315,6 @@ fun DownloadProgressDialog(
                     maxLines = 1
                 )
             }
-//            }
         }
     )
 }
@@ -792,17 +784,9 @@ private fun downloadCourseWareWithOKHttp(
                     val postfix = fileName?.split(".")?.last() ?: "pdf"
 
                     val cleanFileName = "${URLDecoder.decode(prefix, "UTF-8")}.$postfix"
-                    if(cleanFileName.contains("7.pdf")||
-                        cleanFileName.contains("8")||
-                        cleanFileName.contains("5.pdf")||
-                        cleanFileName.contains("0")
-                    ){
-                        println("pause")
-                    }
-
 
                     // Use the enhanced download utility with progress tracking
-                    DownloadUtil.queueDownload(
+                    DownloadUtil.downloadFileWithOkHttp(
                         url = content.rpUrl,
                         filename = cleanFileName,
                         relativePath = path

@@ -63,32 +63,9 @@ object DownloadUtil {
         PENDING, DOWNLOADING, COMPLETED, FAILED
     }
 
-    init {
-        // 启动下载队列处理器
-        downloadScope.launch {
-            processDownloadQueue()
-        }
-    }
 
-    private suspend fun processDownloadQueue() {
-        while (true) {
-            if (activeDownloads.get() < maxConcurrentDownloads && downloadQueue.isNotEmpty()) {
-                val request = downloadQueue.poll() ?: continue
-                activeDownloads.incrementAndGet()
 
-                downloadScope.launch {
-                    try {
-                        downloadFileWithOkHttp(request.url, request.filename, request.relativePath)
-                    } catch (e: Exception) {
-                        // 异常已在downloadFileWithOkHttp中处理
-                    } finally {
-                        activeDownloads.decrementAndGet()
-                    }
-                }
-            }
-            delay(100) // 避免CPU高占用
-        }
-    }
+
 
     fun downloadFile(
         url: String,
@@ -118,16 +95,6 @@ object DownloadUtil {
         downloadManager.enqueue(request)
     }
 
-    // 添加新方法来将下载请求加入队列
-    fun queueDownload(url: String, filename: String, relativePath: String = "") {
-        val downloadId = filename  // 使用文件名作为下载ID
-
-        // 立即添加到状态跟踪中，确保UI可见
-        updateDownloadStatus(downloadId, DownloadStatus(filename, 0f, Status.PENDING, relativePath))
-
-        // 将请求添加到队列
-        downloadQueue.add(DownloadRequest(url, filename, relativePath))
-    }
 
     suspend fun downloadFileWithOkHttp(
         url: String,
