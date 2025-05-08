@@ -1,0 +1,115 @@
+name: Release new version
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-and-package:
+    name: Build Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build Unsigned Release APK
+        run: ./gradlew assembleRelease
+
+      - name: Get Build Tool Version & Rename
+        shell: bash
+        run: |
+          BUILD_TOOL_VERSION=$(ls /usr/local/lib/android/sdk/build-tools/ | tail -n 1)
+          echo "BUILD_TOOL_VERSION=$BUILD_TOOL_VERSION" >> $GITHUB_ENV
+          mv app/build/outputs/apk/release/app-arm64-v8a-release-unsigned.apk app/build/outputs/apk/release/app-arm64-v8a-release.apk
+
+      - name: Sign APK
+        id: sign-apk
+        uses: tiann/zipalign-sign-android-release@v1.1.4
+        with:
+          releaseDirectory: app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+          zipAlign: true
+        env:
+          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: |
+            ${{ steps.sign-apk.outputs.signedReleaseFile }}
+
+  create-release:
+    name: Create Release
+    needs: build-and-package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+          
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: app-release-apk
+          path: ./release-artifacts
+          
+      - name: Get Commit Message for Release Notes
+        id: get_commit_message
+        run: |
+          COMMIT_MESSAGE_BODY=$(git log -1 --pretty=%b ${{ github.sha }})
+          if [ -z "$COMMIT_MESSAGE_BODY" ]; then
+            COMMIT_MESSAGE_BODY="该版本的详细更新日志请参见相关的 commit 历史。"
+          fi
+          echo "release_notes_body<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMIT_MESSAGE_BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        shell: bash
+        
+      - name: Extract Version from Tag
+        id: extract_version
+        run: |
+          TAG_NAME="${{ github.ref_name }}"
+          VERSION_NUMBER=$(echo "$TAG_NAME" | sed 's/^v//')
+          echo "version_number=$VERSION_NUMBER" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION_NUMBER from tag: $TAG_NAME"
+          echo "original_apk_path=./release-artifacts/app-arm64-v8a-release-signed.apk" >> $GITHUB_OUTPUT
+          
+      - name: Create Release
+        id: create_release_step
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: 交大自由行${{ github.ref_name }}
+          body: ${{ steps.get_commit_message.outputs.release_notes_body }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          
+      - name: Upload Release APK
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release_step.outputs.upload_url }}
+          asset_path: ${{ steps.extract_version.outputs.original_apk_path }}
+          asset_name: BJTUSelfService-${{ steps.extract_version.outputs.version_number }}_arm64-v8a.apk
+          asset_content_type: application/vnd.android.package-archive
