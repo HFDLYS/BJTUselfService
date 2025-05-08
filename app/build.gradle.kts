@@ -21,8 +21,30 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    val keystoreFileFromEnv = System.getenv("KEYSTORE_FILE")
+    val keystorePasswordFromEnv = System.getenv("KEYSTORE_PASSWORD")
+    val keyAliasFromEnv = System.getenv("KEY_ALIAS")
+    val keyPasswordFromEnv = System.getenv("KEY_PASSWORD")
+
+    signingConfigs {
+        create("release") {
+            if (keystoreFileFromEnv != null && keystoreFileFromEnv.isNotEmpty() &&
+                keystorePasswordFromEnv != null && keystorePasswordFromEnv.isNotEmpty() &&
+                keyAliasFromEnv != null && keyAliasFromEnv.isNotEmpty() &&
+                keyPasswordFromEnv != null && keyPasswordFromEnv.isNotEmpty()) {
+                storeFile = file(keystoreFileFromEnv)
+                storePassword = keystorePasswordFromEnv
+                keyAlias = keyAliasFromEnv
+                keyPassword = keyPasswordFromEnv
+            } else {
+                println("Warning: Release signing information not fully provided via environment variables. The release build might not be signed or might fail.")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
