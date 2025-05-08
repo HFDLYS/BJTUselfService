@@ -3,15 +3,13 @@ name: Release new version
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+*'
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   build-and-package:
     name: Build Release APK
     runs-on: ubuntu-latest
-    outputs:
-      apk_path: ${{ steps.build_release_apk.outputs.apk_path }}
-      apk_name: ${{ steps.build_release_apk.outputs.apk_name }}
 
     steps:
       - name: Checkout code
@@ -27,36 +25,35 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      - name: Decode Keystore
-        id: decode_keystore
-        env:
-          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
-          KEYSTORE_FILE_PATH: app/release.jks
-        run: |
-          echo "Decoding Keystore..."
-          echo $KEYSTORE_BASE64 | base64 --decode > $KEYSTORE_FILE_PATH
-          echo "Keystore decoded to $KEYSTORE_FILE_PATH"
+      - name: Build Unsigned Release APK
+        run: ./gradlew assembleRelease
 
-      - name: Build Release APK
-        id: build_release_apk
-        env:
-          KEYSTORE_FILE: release.jks
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      - name: Get Build Tool Version & Rename
+        shell: bash
         run: |
-          ./gradlew assembleRelease
-          APK_FILE="app/build/outputs/apk/release/app-arm64-v8a-release.apk"
-          echo "apk_path=${APK_FILE}" >> $GITHUB_OUTPUT
-          echo "apk_name=$(basename ${APK_FILE})" >> $GITHUB_OUTPUT
-          echo "Found APK: ${APK_FILE}"
+          BUILD_TOOL_VERSION=$(ls /usr/local/lib/android/sdk/build-tools/ | tail -n 1)
+          echo "BUILD_TOOL_VERSION=$BUILD_TOOL_VERSION" >> $GITHUB_ENV
+          mv app/build/outputs/apk/release/app-arm64-v8a-release-unsigned.apk app/build/outputs/apk/release/app-arm64-v8a-release.apk
+
+      - name: Sign APK
+        id: sign-apk
+        uses: tiann/zipalign-sign-android-release@v1.1.4
+        with:
+          releaseDirectory: app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+          zipAlign: true
+        env:
+          BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
           path: |
-            ${{ steps.build_release_apk.outputs.apk_path }}
+            ${{ steps.sign-apk.outputs.signedReleaseFile }}
 
   create-release:
     name: Create Release
@@ -93,7 +90,7 @@ jobs:
           VERSION_NUMBER=$(echo "$TAG_NAME" | sed 's/^v//')
           echo "version_number=$VERSION_NUMBER" >> $GITHUB_OUTPUT
           echo "Extracted version: $VERSION_NUMBER from tag: $TAG_NAME"
-          echo "original_apk_path=./release-artifacts/app-arm64-v8a-release.apk" >> $GITHUB_OUTPUT
+          echo "original_apk_path=./release-artifacts/app-arm64-v8a-release-signed.apk" >> $GITHUB_OUTPUT
           
       - name: Create Release
         id: create_release_step
