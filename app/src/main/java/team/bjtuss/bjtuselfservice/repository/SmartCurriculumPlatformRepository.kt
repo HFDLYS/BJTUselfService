@@ -78,7 +78,7 @@ object SmartCurriculumPlatformRepository {
         }
     }
 
-    private suspend fun getCourseTypeList(xqCode: String): CourseJsonType {
+    suspend fun getCourseTypeList(xqCode: String): CourseJsonType {
         val baseUrl =
             "http://123.121.147.7:88/ve/back/coursePlatform/course.shtml?method=getCourseList&pagesize=100&page=1&xqCode="
         val courseUrl = baseUrl + xqCode

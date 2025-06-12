@@ -77,7 +77,7 @@ fun GradeScreen(
 
 fun calculateGradeInfo(grades: List<GradeEntity>): GradeInfoResult {
     val (totalScore, totalCredit) = grades.fold(0.0 to 0.0) { (accScore, accCredit), GradeEntity ->
-        try {
+        try {1
             val scoreValue = GradeEntity.courseScore.split(",")[1].toDoubleOrNull() ?: 0.0
             val creditValue = GradeEntity.courseCredits.toDoubleOrNull() ?: 0.0
 

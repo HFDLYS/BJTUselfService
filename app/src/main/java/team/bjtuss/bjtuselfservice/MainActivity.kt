@@ -148,6 +148,7 @@ class MainActivity : ComponentActivity() {
             val appState by AppStateManager.appState.collectAsState()
             val credentials by AuthenticatorManager.credentials.collectAsState()
             val currentTheme by mainViewModel.settingViewModel.currentTheme.collectAsState()
+
             val checkUpdate by settingViewModel.checkUpdateEnable.collectAsState()
             AppTheme(currentTheme = currentTheme, dynamicColor = dynamicColorEnable) {
                 Surface {

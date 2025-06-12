@@ -33,6 +33,7 @@ import team.bjtuss.bjtuselfservice.StudentAccountManager;
 import team.bjtuss.bjtuselfservice.entity.CourseEntity;
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity;
 import team.bjtuss.bjtuselfservice.entity.GradeEntity;
+import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository;
 import team.bjtuss.bjtuselfservice.utils.ImageToTensorConverter;
 import team.bjtuss.bjtuselfservice.utils.Network.WebCallback;
 import team.bjtuss.bjtuselfservice.utils.Utils;
@@ -691,15 +692,24 @@ public class MisDataManager {
         rows.remove(0);
         rows.remove(0);
         Map<String, String> courseName2Teacher = new HashMap<>();
+
         for (Element row : rows) {
-            Elements cols = row.select("td");
-            String courseName = cols.get(0).text();
-            if (courseName.split(" ").length == 3){
-                courseName = courseName.split(" ")[0] + " " + courseName.split(" ")[1];
+            try {
+                Elements cols = row.select("td");
+                String courseName = cols.get(0).text();
+                if (courseName.split(" ").length == 3) {
+                    courseName = courseName.split(" ")[0] + " " + courseName.split(" ")[1];
+                }
+                String teacher = cols.get(1).text();
+                courseName2Teacher.put(courseName, teacher);
+            } catch (Exception e) {
+                courseName2Teacher.put("未知课程", "未知教师");
+
             }
-            String teacher = cols.get(1).text();
-            courseName2Teacher.put(courseName, teacher);
+
         }
+
+
         return courseName2Teacher;
     }
 }
