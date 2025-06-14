@@ -60,6 +60,9 @@ object SmartCurriculumPlatformRepository {
             .header(
                 "User-Agent", userAgent
             )
+            .header(
+                "Referer", "http://123.121.147.7:88"
+            )
             .build()
         val adapter = moshi.adapter(SemesterJsonType::class.java)
 
@@ -88,6 +91,9 @@ object SmartCurriculumPlatformRepository {
             .header(
                 "User-Agent", userAgent
             )
+            .header(
+                "Referer", "http://123.121.147.7:88"
+            )
             .build()
 
         val adapter = moshi.adapter<CourseJsonType>(CourseJsonType::class.java)
@@ -114,6 +120,9 @@ object SmartCurriculumPlatformRepository {
             .url(baseUrl)
             .header(
                 "User-Agent", userAgent
+            )
+            .header(
+                "Referer", "http://123.121.147.7:88"
             )
             .build()
 
@@ -196,6 +205,9 @@ object SmartCurriculumPlatformRepository {
             val request = Request.Builder()
                 .url(url)
                 .header("User-Agent", userAgent)
+                .header(
+                    "Referer", "http://123.121.147.7:88"
+                )
                 .build()
             val adapter = moshi.adapter(CourseResourceResponse::class.java)
             val courseWareNodeList = client.newCall(request).execute().use { response ->
