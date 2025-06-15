@@ -195,6 +195,7 @@ fun OtherFunctionScreen() {
                 }
 
                 // Email subscription card
+                /*
                 item {
                     FunctionCard(
                         title = "作业提醒订阅",
@@ -223,6 +224,7 @@ fun OtherFunctionScreen() {
                         }
                     )
                 }
+                */
             }
 
             // Overlays (loading and success messages)
