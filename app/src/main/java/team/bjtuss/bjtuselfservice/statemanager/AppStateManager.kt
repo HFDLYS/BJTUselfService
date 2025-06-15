@@ -160,22 +160,27 @@ object AuthenticatorManager {
     fun login(credentials: Credentials, onSuccess: () -> Unit) {
         // Validate credentials first
         CoroutineScope(Dispatchers.IO).launch {
-            try {
-                AuthenticatorManager.updateCredentials(credentials)
-                val result = AuthenticatorManager.login(credentials)
 
-                if (result.isSuccess) {
-                    // Only save credentials on successful login
-                    DataStoreRepository.setCredentials(credentials)
+            AuthenticatorManager.updateCredentials(credentials)
+            val result = AuthenticatorManager.login(credentials)
+
+            if (result.isSuccess) {
+                // Only save credentials on successful login
+                DataStoreRepository.setCredentials(credentials)
+
+                try {
                     SmartCurriculumPlatformRepository.initClient()
-                    onSuccess()
-                } else {
-                    AppEventManager.sendEvent(AppEvent.LoginFailed)
+                } catch (e: Exception) {
+                    println(
+                        "初始化 SmartCurriculumPlatformRepository 失败: ${e.message}"
+                    )
                 }
-            } catch (e: Exception) {
-                println("Login exception: ${e.message}") // Debug log
+
+                onSuccess()
+            } else {
                 AppEventManager.sendEvent(AppEvent.LoginFailed)
             }
+
         }
     }
 
