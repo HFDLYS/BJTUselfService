@@ -394,14 +394,14 @@ fun ClassroomViewDialog(
                             }
                         }
 
-                        val postData = "buildi=$buildingName&classrooms=$classroomName"
+                        val postData = "buildi=$buildingName&classrooms=$classroomName&token=BJTUSelfService"
                         val postDataBytes = postData.toByteArray(StandardCharsets.UTF_8)
 
                         postUrl(CLASSROOM_VIEW_URL, postDataBytes)
                     }
                 },
                 update = {
-                    val postData = "buildi=$buildingName&classrooms=$classroomName"
+                    val postData = "buildi=$buildingName&classrooms=$classroomName&token=BJTUSelfService"
                     val postDataBytes = postData.toByteArray(StandardCharsets.UTF_8)
 
                     it.postUrl(CLASSROOM_VIEW_URL, postDataBytes)
@@ -444,13 +444,15 @@ fun ClassroomCard(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 )
-                Text(
-                    text = "使用：${classroom.Used}/${classroom.Capacity}",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
+                if (classroom.Used < classroom.Capacity) {
+                    Text(
+                        text = "使用：${classroom.Used}/${classroom.Capacity}",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
                     )
-                )
+                }
             }
 
             val progress = if (classroom.Capacity > 0) {
