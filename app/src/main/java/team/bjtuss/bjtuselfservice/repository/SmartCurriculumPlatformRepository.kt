@@ -1,8 +1,10 @@
 package team.bjtuss.bjtuselfservice.repository
 
 
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.Headers
 import okhttp3.Request
 import okhttp3.ResponseBody.Companion.toResponseBody
 import team.bjtuss.bjtuselfservice.StudentAccountManager
@@ -14,6 +16,7 @@ import team.bjtuss.bjtuselfservice.jsonclass.CourseResourceResponse
 import team.bjtuss.bjtuselfservice.jsonclass.CoursewareNode
 import team.bjtuss.bjtuselfservice.jsonclass.HomeworkJsonType
 import team.bjtuss.bjtuselfservice.jsonclass.SemesterJsonType
+import team.bjtuss.bjtuselfservice.jsonclass.getArticleListJsonType
 import team.bjtuss.bjtuselfservice.statemanager.AppStateManager
 import team.bjtuss.bjtuselfservice.utils.KotlinUtils
 import java.io.IOException
@@ -29,25 +32,35 @@ object SmartCurriculumPlatformRepository {
 
     private var courseFromJson: CourseJsonType? = null
 
+    private var headersBuilder = Headers.Builder()
+        .add("User-Agent", userAgent)
+        .add("Accept", "application/json, text/javascript, */*; q=0.01")
+        .add("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+        .add("Referer", "http://123.121.147.7:88")
+        .add("X-Requested-With", "XMLHttpRequest")
 
     suspend fun initClient() {
 
+
         val request1 = Request.Builder()
             .url("https://mis.bjtu.edu.cn/module/module/104/")
-            .header("User-Agent", userAgent)
+            .headers(headersBuilder.build())
             .build()
 
         val request2 = Request.Builder()
             .url("https://bksycenter.bjtu.edu.cn/NoMasterJumpPage.aspx?URL=jwcZhjx&FPC=page:jwcZhjx")
-            .header("User-Agent", userAgent)
+            .headers(headersBuilder.build())
             .build()
 
+
+
+        println("9302190321")
         client.newCall(request1).execute()
         client.newCall(request2).execute()
+        getAndSetSessionIdInHeaders()
         val semesterFromJson = getSemesterTypeList()
         courseFromJson =
             semesterFromJson.result?.get(0)?.xqCode?.let { getCourseTypeList(xqCode = it) }
-
     }
 
     private suspend fun getSemesterTypeList(): SemesterJsonType {
@@ -57,17 +70,14 @@ object SmartCurriculumPlatformRepository {
 
         val semesterRequest = Request.Builder()
             .url(semesterUrl)
-            .header(
-                "User-Agent", userAgent
-            )
-            .header(
-                "Referer", "http://123.121.147.7:88"
+            .headers(
+                headersBuilder.build()
             )
             .build()
         val adapter = moshi.adapter(SemesterJsonType::class.java)
 
         return withContext(Dispatchers.IO) {
-            client.newCall(semesterRequest).execute().use{
+            client.newCall(semesterRequest).execute().use {
                 it.body?.source()?.let { source ->
                     try {
                         adapter.fromJson(source)
@@ -88,11 +98,8 @@ object SmartCurriculumPlatformRepository {
 
         val courseRequest = Request.Builder()
             .url(courseUrl)
-            .header(
-                "User-Agent", userAgent
-            )
-            .header(
-                "Referer", "http://123.121.147.7:88"
+            .headers(
+                headersBuilder.build()
             )
             .build()
 
@@ -118,11 +125,8 @@ object SmartCurriculumPlatformRepository {
 
         val homeworkRequest = Request.Builder()
             .url(baseUrl)
-            .header(
-                "User-Agent", userAgent
-            )
-            .header(
-                "Referer", "http://123.121.147.7:88"
+            .headers(
+                headersBuilder.build()
             )
             .build()
 
@@ -189,6 +193,34 @@ object SmartCurriculumPlatformRepository {
         return coursewareRootNode
     }
 
+    private suspend fun getAndSetSessionIdInHeaders() {
+        val url =
+            "http://123.121.147.7:88/ve/back/coursePlatform/message.shtml?method=getArticleList"
+        withContext(Dispatchers.IO) {
+
+
+            client.newCall(
+                Request.Builder()
+                    .url(url)
+                    .headers(headersBuilder.build())
+                    .build()
+            ).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw IOException("获取sessionId失败，状态码: ${response.code}")
+                }
+                println("89732198321")
+//                println(response.body!!.string())
+                response.body?.source()?.let { source ->
+                    moshi.adapter(getArticleListJsonType::class.java)
+                        .fromJson(source)
+                        ?.sessionId
+                        ?.also { headersBuilder.add("sessionid", it) }
+                        ?: throw IllegalStateException("SessionId not found in response")
+                } ?: throw IOException("Response body is null")
+            }
+        }
+    }
+
     private suspend fun generateChildrenNodeList(parentNode: CoursewareNode): List<CoursewareNode> {
         return withContext(Dispatchers.IO) {
             val course = parentNode.course
@@ -204,9 +236,8 @@ object SmartCurriculumPlatformRepository {
                         "&searchName="
             val request = Request.Builder()
                 .url(url)
-                .header("User-Agent", userAgent)
-                .header(
-                    "Referer", "http://123.121.147.7:88"
+                .headers(
+                    headersBuilder.build()
                 )
                 .build()
             val adapter = moshi.adapter(CourseResourceResponse::class.java)
