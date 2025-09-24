@@ -7,6 +7,8 @@ import kotlinx.coroutines.withContext
 import okhttp3.Headers
 import okhttp3.Request
 import okhttp3.ResponseBody.Companion.toResponseBody
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.controller.NetworkRequestQueue
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
@@ -327,4 +329,214 @@ object SmartCurriculumPlatformRepository {
         return processedList
 
     }
+
+
+    /**
+     * 根据课程名获取教师工号
+     */
+    private suspend fun getTeacherWorkNumByCourse(course: Course): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val url = "http://123.121.147.7:88/ve/back/coursePlatform/coursePlatform.shtml?" +
+                        "method=toCoursePlatform&courseId=${course.course_num}&" +
+                        "dataSource=1&" +
+                        "cId=${course.id}&" +
+                        "xkhId=${course.fz_id}&" +
+                        "xqCode=${course.xq_code}"
+                val request = Request.Builder()
+                    .url(
+                        url
+                    )
+                    .headers(headersBuilder.build())
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        Log.e("TeacherWorkNum", "Request failed: ${response.code}")
+                        return@withContext null
+                    }
+
+                    val html = response.body?.string()
+                    if (html.isNullOrEmpty()) {
+                        Log.e("TeacherWorkNum", "Empty response body")
+                        return@withContext null
+                    }
+
+                    // 使用 Jsoup 解析 HTML
+                    val document: Document = Jsoup.parse(html)
+                    val teacherIdInput = document.select("input#teacherId").first()
+
+                    if (teacherIdInput != null) {
+                        val teacherIdValue = teacherIdInput.attr("value")
+                        Log.d("TeacherWorkNum", "找到 teacherId, 其 value 为: $teacherIdValue")
+                        return@withContext teacherIdValue
+                    } else {
+                        Log.w("TeacherWorkNum", "未找到 id 为 'teacherId' 的 input 元素")
+                        return@withContext null
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("TeacherWorkNum", "获取教师工号失败", e)
+                null
+            }
+        }
+    }
+
+    /**
+     * 根据课程获取教学日历PDF下载URL
+     */
+    suspend fun getTeachingCalendarUrl(course: Course): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                AppStateManager.awaitLoginState()
+
+                // 首先获取教师工号
+                val teacherId = getTeacherWorkNumByCourse(course)
+                if (teacherId.isNullOrEmpty()) {
+                    Log.e("TeachingCalendar", "无法获取教师工号")
+                    return@withContext null
+                }
+
+                val url = "http://123.121.147.7:88/ve/back/coursePlatform/coursePlatform.shtml"
+
+                val request = Request.Builder()
+                    .url(
+                        "$url?" +
+                                "method=toCoursePlatform&" +
+                                "courseToPage=10436&" +
+                                "courseId=${course.course_num}&" +
+                                "dataSource=1&" +
+                                "cId=${course.id}&" +
+                                "xkhId=${course.fz_id}&" +
+                                "xqCode=${course.xq_code}&" +
+                                "teacherId=$teacherId"
+                    )
+                    .headers(headersBuilder.build())
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        Log.e("TeachingCalendar", "Request failed: ${response.code}")
+                        return@withContext null
+                    }
+
+                    val html = response.body?.string()
+                    if (html.isNullOrEmpty()) {
+                        Log.e("TeachingCalendar", "Empty response body")
+                        return@withContext null
+                    }
+
+                    // 使用 Jsoup 解析 HTML
+                    val document: Document = Jsoup.parse(html)
+                    val iframeElement = document.select("iframe#pdfIframe").first()
+
+                    if (iframeElement != null) {
+                        val iframeSrc = iframeElement.attr("src")
+                        if (iframeSrc.isNotEmpty()) {
+                            Log.d("TeachingCalendar", "提取到的iframe src地址为: $iframeSrc")
+
+                            // 提取最后5个路径段
+                            val pathSegments = iframeSrc.split("/")
+                            if (pathSegments.size < 5) {
+                                Log.e("TeachingCalendar", "URL路径段不足5个")
+                                return@withContext null
+                            }
+
+                            val key = pathSegments.takeLast(5)
+                            Log.d("TeachingCalendar", "提取到的key: $key")
+
+                            // 构建最终的PDF下载地址
+                            val pdfUrl = "http://123.121.147.7:1936/kk/rp/" + key.joinToString("/")
+                            Log.d("TeachingCalendar", "最终的pdf下载地址为: $pdfUrl")
+
+                            return@withContext pdfUrl
+                        } else {
+                            Log.w("TeachingCalendar", "找到了iframe元素，但没有src属性")
+                            return@withContext null
+                        }
+                    } else {
+                        Log.w("TeachingCalendar", "未找到指定的iframe元素")
+                        return@withContext null
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("TeachingCalendar", "获取教学日历URL失败", e)
+                null
+            }
+        }
+    }
+
+    /**
+     * 下载教学日历PDF文件
+     * @param course 课程信息
+     * @param outputFile 输出文件路径
+     * @return 是否下载成功
+     */
+    suspend fun downloadTeachingCalendarPdf(course: Course, outputFile: java.io.File): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val pdfUrl = getTeachingCalendarUrl(course)
+                if (pdfUrl.isNullOrEmpty()) {
+                    Log.e("DownloadPDF", "无法获取PDF下载地址")
+                    return@withContext false
+                }
+
+                val request = Request.Builder()
+                    .url(pdfUrl)
+                    .headers(headersBuilder.build())
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        Log.e("DownloadPDF", "下载失败: ${response.code}")
+                        return@withContext false
+                    }
+
+                    response.body?.byteStream()?.use { inputStream ->
+                        outputFile.outputStream().use { outputStream ->
+                            inputStream.copyTo(outputStream)
+                        }
+                    }
+
+                    Log.d("DownloadPDF", "PDF下载成功: ${outputFile.absolutePath}")
+                    true
+                }
+            } catch (e: Exception) {
+                Log.e("DownloadPDF", "下载PDF文件失败", e)
+                false
+            }
+        }
+    }
+
+    /**
+     * 根据课程名称获取教学日历PDF下载URL (便利方法)
+     */
+    suspend fun getTeachingCalendarUrlByName(courseName: String): String? {
+        val courseList = getCourseList()
+        val course = courseList.find { it.name == courseName }
+        return if (course != null) {
+            getTeachingCalendarUrl(course)
+        } else {
+            Log.e("TeachingCalendar", "未找到课程: $courseName")
+            null
+        }
+    }
+
+    /**
+     * 根据课程名称下载教学日历PDF (便利方法)
+     */
+    suspend fun downloadTeachingCalendarPdfByName(
+        courseName: String,
+        outputFile: java.io.File
+    ): Boolean {
+        val courseList = getCourseList()
+        val course = courseList.find { it.name == courseName }
+        return if (course != null) {
+            downloadTeachingCalendarPdf(course, outputFile)
+        } else {
+            Log.e("DownloadPDF", "未找到课程: $courseName")
+            false
+        }
+    }
+
 }

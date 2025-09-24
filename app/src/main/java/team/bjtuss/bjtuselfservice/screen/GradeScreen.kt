@@ -62,6 +62,7 @@ fun GradeScreen(
     val gradeViewModel = mainViewModel.gradeViewModel
     LaunchedEffect(Unit) {
         gradeViewModel.syncDataAndClearChange()
+
     }
     val gradeList by gradeViewModel.gradeList.collectAsState()
     val gradeChangeList: List<DataChange<GradeEntity>> by gradeViewModel.changeList.collectAsState()

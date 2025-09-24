@@ -35,12 +35,7 @@ class CoursewareViewModel() : ViewModel() {
             getCourseList().forEach { course ->
                 list.add(
                     generateCoursewareRootNode(
-                        Course(
-                            fz_id = course.fz_id,
-                            course_num = course.course_num,
-                            xq_code = course.xq_code,
-                            name = course.name
-                        )
+                        course
                     )
                 )
             }

@@ -1,5 +1,6 @@
 package team.bjtuss.bjtuselfservice.screen
 
+import android.R.attr.path
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -69,6 +70,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
@@ -88,6 +90,7 @@ import okhttp3.FormBody
 import okhttp3.Request
 import team.bjtuss.bjtuselfservice.R
 import team.bjtuss.bjtuselfservice.component.RotatingImageLoader
+import team.bjtuss.bjtuselfservice.jsonclass.Course
 import team.bjtuss.bjtuselfservice.jsonclass.CoursewareDownloadPostRequestResponse
 import team.bjtuss.bjtuselfservice.jsonclass.CoursewareNode
 import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
@@ -467,7 +470,7 @@ fun CoursewareTreeNode(
     level: Int = 0,
     path: String = "",
 ) {
-    var expanded by remember { mutableStateOf(level == -1) } // 默认展开顶级节点
+    var expanded by remember { mutableStateOf(level == -1) }
     val hasChildren = node.children.isNotEmpty()
     val appState by AppStateManager.appState.collectAsState()
 
@@ -662,27 +665,28 @@ fun CoursewareTreeNode(
                         )
                     }
                 }
+
+
                 if (hasChildren) {
                     FilledTonalIconButton(
                         onClick = {
-                            downloadCourseWareWithOKHttpRecursion(
-                                node = node,
-                                path = "$path/${nodeText}",
-                                level
-                            )
+                            downloadTeachingCalendarWithOKHttp(node.course)
                         },
                         enabled = appState.canDownloadCourseware(),
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
                             containerColor = Color.Transparent,
                             contentColor = MaterialTheme.colorScheme.primary,
                             disabledContainerColor = Color.Transparent,
-                            disabledContentColor = MaterialTheme.colorScheme.primary
+                            disabledContentColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.38f)
                         )
                     ) {
+                        val iconAlpha = if (appState.canDownloadCourseware()) 1f else 0.38f // 根据启用状态设置图标透明度
                         Icon(
                             imageVector = Icons.Default.Download,
-                            contentDescription = "下载",
-                            modifier = Modifier.size(16.dp)  // 稍微调小一点以适应按钮
+                            contentDescription = if (appState.canDownloadCourseware()) "下载" else "下载功能不可用", // 根据状态更新内容描述
+                            modifier = Modifier
+                                .size(16.dp)
+                                .alpha(iconAlpha) // 应用透明度修饰符
                         )
                     }
 
@@ -742,6 +746,30 @@ private fun downloadCourseWareWithOKHttpRecursion(node: CoursewareNode, path: St
     }
 }
 
+private fun downloadTeachingCalendarWithOKHttp(
+    course: Course
+) {
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+
+            val url = SmartCurriculumPlatformRepository.getTeachingCalendarUrl(course)
+            url?.let { url ->
+                // Use the enhanced download utility with progress tracking
+                DownloadUtil.downloadFileWithOkHttp(
+                    url = url,
+                    filename = "${course.name}_教学日历.pdf",
+                    relativePath = "交大自由行下载目录/${course.name}"
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("CoursewareDownload", "Download failed", e)
+        } finally {
+            withContext(Dispatchers.Main) {
+            }
+        }
+    }
+}
+
 
 private fun downloadCourseWareWithOKHttp(
     node: CoursewareNode,
@@ -761,7 +789,8 @@ private fun downloadCourseWareWithOKHttp(
                 CoursewareDownloadPostRequestResponse::class.java
             )
 
-            val response = SmartCurriculumPlatformRepository.client.newCall(request).execute()
+            val response =
+                SmartCurriculumPlatformRepository.client.newCall(request).execute()
 
             if (response.isSuccessful) {
                 val responseContent = response.use {
@@ -774,7 +803,8 @@ private fun downloadCourseWareWithOKHttp(
                     val headRequest = Request.Builder().url(content.rpUrl).build()
 
                     val headResponse =
-                        SmartCurriculumPlatformRepository.client.newCall(headRequest).execute()
+                        SmartCurriculumPlatformRepository.client.newCall(headRequest)
+                            .execute()
 
                     val contentDisposition = headResponse.header("Content-Disposition")
                     val fileName = contentDisposition?.let {
