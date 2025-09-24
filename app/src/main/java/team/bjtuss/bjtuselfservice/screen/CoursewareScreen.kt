@@ -575,7 +575,7 @@ fun CoursewareTreeNode(
                 hoveredElevation = elevation + 1.dp
             )
         ) {
-            // 注意：这里移除了Column的background修饰符，避免颜色分层
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -667,7 +667,7 @@ fun CoursewareTreeNode(
                 }
 
 
-                if (hasChildren) {
+                if (hasChildren && level == 0) {
                     FilledTonalIconButton(
                         onClick = {
                             downloadTeachingCalendarWithOKHttp(node.course)
@@ -680,7 +680,8 @@ fun CoursewareTreeNode(
                             disabledContentColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.38f)
                         )
                     ) {
-                        val iconAlpha = if (appState.canDownloadCourseware()) 1f else 0.38f // 根据启用状态设置图标透明度
+                        val iconAlpha =
+                            if (appState.canDownloadCourseware()) 1f else 0.38f // 根据启用状态设置图标透明度
                         Icon(
                             imageVector = Icons.Default.Download,
                             contentDescription = if (appState.canDownloadCourseware()) "下载" else "下载功能不可用", // 根据状态更新内容描述
