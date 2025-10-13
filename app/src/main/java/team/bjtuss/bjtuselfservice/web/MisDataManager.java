@@ -497,7 +497,7 @@ public class MisDataManager {
     }
 
     public static void getClassroom(OkHttpClient client, WebCallback<Map<String, List<Integer>>> ResCallback) {
-        String url = "https://aa.bjtu.edu.cn/classroom/timeholdresult/room_view/";
+        String url = "https://aa.bjtu.edu.cn/classroomtimeholdresult/room_view/";
         Request request = new Request.Builder()
                 .url(url)
                 .header("Host", "aa.bjtu.edu.cn")
@@ -511,7 +511,7 @@ public class MisDataManager {
             @Override
             public void onResponse(@NonNull Call call, @NonNull Response response) {
                 String url = response.request().url().toString();
-                if (url.contains("https://aa.bjtu.edu.cn/classroom/timeholdresult/room_view/?zc=")) {
+                if (url.contains("https://aa.bjtu.edu.cn/classroomtimeholdresult/room_view/?zc=")) {
                     int nowWeek = Integer.parseInt(url.split("zc=")[1].split("&")[0]);
                     url += "&page=1&perpage=500";
                     Request request = new Request.Builder()
