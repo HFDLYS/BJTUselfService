@@ -356,8 +356,8 @@ fun CourseCell(
     nowWeek: Int,
 ) {
     var showDetailedCourseInformationDialog by remember { mutableStateOf(false) }
-    var courses2: List<CourseEntity>? = null
-    courses2 = if (nowWeek != 0) {
+    var coursesFiltered: List<CourseEntity>? = null
+    coursesFiltered = if (nowWeek != 0) {
         courses?.filter { course ->
             val courseTimeList = parseCourseTime(course.courseTime)
             courseTimeList.contains(nowWeek)
@@ -373,26 +373,26 @@ fun CourseCell(
             )
             .background(
                 when {
-                    courses2 != null -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                    coursesFiltered != null -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
                     else -> Color.Transparent
                 }
             )
             .clickable(
                 onClick = {
-                    if (!courses2.isNullOrEmpty())
+                    if (!coursesFiltered.isNullOrEmpty())
                     showDetailedCourseInformationDialog = true
                 }
             ),
         contentAlignment = Alignment.Center
     ) {
 
-        courses2?.let {
-            var count = courses2.size
+        coursesFiltered?.let {
+            var count = coursesFiltered.size
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxSize()
             ) {
-                courses2.forEach {
+                coursesFiltered.forEach {
                     val backgroundColor = Color(
                         android.graphics.Color.parseColor(
                             Utils.generateRandomColor(
@@ -432,7 +432,7 @@ fun CourseCell(
         }
     }
     if (showDetailedCourseInformationDialog) {
-        courses?.let {
+        coursesFiltered?.let {
             DetailedCourseInformationDialog(courses = it, onDismissRequest = {
                 showDetailedCourseInformationDialog = false
             })
