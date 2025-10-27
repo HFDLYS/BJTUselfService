@@ -10,17 +10,20 @@ jobs:
   build-and-package:
     name: Build Release APK
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: 'gradle'
 
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
@@ -37,7 +40,7 @@ jobs:
 
       - name: Sign APK
         id: sign-apk
-        uses: tiann/zipalign-sign-android-release@v1.1.4
+        uses: tiann/zipalign-sign-android-release@e76990551f7797c24236f9d39e72b3c49851ea3c # v1.1.4
         with:
           releaseDirectory: app/build/outputs/apk/release
           signingKeyBase64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
@@ -64,6 +67,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
           
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -85,8 +90,9 @@ jobs:
         
       - name: Extract Version from Tag
         id: extract_version
+        env:
+          TAG_NAME: ${{ github.ref_name }}
         run: |
-          TAG_NAME="${{ github.ref_name }}"
           VERSION_NUMBER=$(echo "$TAG_NAME" | sed 's/^v//')
           echo "version_number=$VERSION_NUMBER" >> $GITHUB_OUTPUT
           echo "Extracted version: $VERSION_NUMBER from tag: $TAG_NAME"
