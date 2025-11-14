@@ -3,7 +3,9 @@ package team.bjtuss.bjtuselfservice.screen
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -550,6 +552,7 @@ fun launchWanMeiCampusApp(context: Context) {
         Toast.makeText(context, "未找到“完美校园”app", Toast.LENGTH_LONG).show()
     }
 }
+
 
 @Composable
 private fun HomeworkNoticeCard(
