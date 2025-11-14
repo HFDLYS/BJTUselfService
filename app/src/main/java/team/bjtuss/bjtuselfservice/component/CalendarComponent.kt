@@ -310,7 +310,7 @@ fun TaskDetailsDialog(
                             count = endHomeworkList.size
                         )
                     }
-                    items(endHomeworkList, key = { it.id }) { homework ->
+                    items(endHomeworkList, key = { it.title to it.id }) { homework ->
                         HomeworkItemCard(homework)
                         Spacer(modifier = Modifier.height(8.dp))
                     }
