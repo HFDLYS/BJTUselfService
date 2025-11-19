@@ -113,7 +113,7 @@ public class MisDataManager {
                                 String captcha = captchaModel.predict(tensor);
                                 String ans = Utils.calculate(captcha);
                                 if (ans == null) {
-                                    loginCallback.onFailure(1);
+                                    loginCallback.onFailure(0);
                                     return;
                                 }
                                 String nextUrl = url.substring("https://cas.bjtu.edu.cn/auth/login/?next=".length());

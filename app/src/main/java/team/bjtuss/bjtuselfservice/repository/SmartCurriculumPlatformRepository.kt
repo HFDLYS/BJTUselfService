@@ -45,7 +45,7 @@ object SmartCurriculumPlatformRepository {
 
 
         val request1 = Request.Builder()
-            .url("https://mis.bjtu.edu.cn/module/module/104/")
+            .url("https://mis.bjtu.edu.cn/module/module/28/")
             .headers(headersBuilder.build())
             .build()
 
@@ -58,7 +58,7 @@ object SmartCurriculumPlatformRepository {
 
         println("9302190321")
         client.newCall(request1).execute()
-        client.newCall(request2).execute()
+        // client.newCall(request2).execute()
         getAndSetSessionIdInHeaders()
         val semesterFromJson = getSemesterTypeList()
         courseFromJson =
