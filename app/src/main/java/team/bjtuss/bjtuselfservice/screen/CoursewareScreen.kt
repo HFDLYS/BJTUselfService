@@ -36,6 +36,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
@@ -667,6 +668,38 @@ fun CoursewareTreeNode(
                 }
 
 
+                // 按钮 1：下载课件（递归下载文件夹）
+                if (hasChildren) {
+                    FilledTonalIconButton(
+                        onClick = {
+                            downloadCourseWareWithOKHttpRecursion(
+                                node = node,
+                                path = "$path/${nodeText}",
+                                level
+                            )
+                        },
+                        enabled = appState.canDownloadCourseware(),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            disabledContainerColor = MaterialTheme.colorScheme.secondaryContainer.copy(
+                                alpha = 0.38f
+                            ),
+                            disabledContentColor = MaterialTheme.colorScheme.onSecondaryContainer.copy(
+                                alpha = 0.38f
+                            )
+                        ),
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            contentDescription = "下载课件",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+
                 if (hasChildren && level == 0) {
                     FilledTonalIconButton(
                         onClick = {
@@ -674,64 +707,64 @@ fun CoursewareTreeNode(
                         },
                         enabled = appState.canDownloadCourseware(),
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = Color.Transparent,
-                            contentColor = MaterialTheme.colorScheme.primary,
-                            disabledContainerColor = Color.Transparent,
-                            disabledContentColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.38f)
-                        )
+                            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                            disabledContainerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(
+                                alpha = 0.38f
+                            ),
+                            disabledContentColor = MaterialTheme.colorScheme.onTertiaryContainer.copy(
+                                alpha = 0.38f
+                            )
+                        ),
+                        modifier = Modifier.size(32.dp)
                     ) {
-                        val iconAlpha =
-                            if (appState.canDownloadCourseware()) 1f else 0.38f // 根据启用状态设置图标透明度
                         Icon(
-                            imageVector = Icons.Default.Download,
-                            contentDescription = if (appState.canDownloadCourseware()) "下载" else "下载功能不可用", // 根据状态更新内容描述
-                            modifier = Modifier
-                                .size(16.dp)
-                                .alpha(iconAlpha) // 应用透明度修饰符
+                            imageVector = Icons.Default.CalendarMonth, // 使用日历图标区分
+                            contentDescription = "下载教学日历",
+                            modifier = Modifier.size(18.dp)
                         )
                     }
-
                 }
             }
         }
+    }
 
-        // 子节点展开动画
-        AnimatedVisibility(
-            visible = expanded,
-            enter = expandVertically(
-                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
-            ) + fadeIn(
-                animationSpec = tween(durationMillis = 300)
-            ),
-            exit = shrinkVertically(
-                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
-            ) + fadeOut(
-                animationSpec = tween(durationMillis = 200)
-            )
+    // 子节点展开动画
+    AnimatedVisibility(
+        visible = expanded,
+        enter = expandVertically(
+            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+        ) + fadeIn(
+            animationSpec = tween(durationMillis = 300)
+        ),
+        exit = shrinkVertically(
+            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+        ) + fadeOut(
+            animationSpec = tween(durationMillis = 200)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(top = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(top = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                node.children.forEach { childNode ->
-                    CoursewareTreeNode(
-                        node = childNode,
-                        level = level + 1,
-                        path = "$path/${nodeText}"
-                    )
-                }
-            }
-        }
-
-        // 顶级项目后添加分隔线
-        if (level == 0) {
-            Spacer(modifier = Modifier.height(8.dp))
-            if (expanded) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    color = colorScheme.primary.copy(alpha = 0.1f)
+            node.children.forEach { childNode ->
+                CoursewareTreeNode(
+                    node = childNode,
+                    level = level + 1,
+                    path = "$path/${nodeText}"
                 )
             }
+        }
+    }
+
+    // 顶级项目后添加分隔线
+    if (level == 0) {
+        Spacer(modifier = Modifier.height(8.dp))
+        if (expanded) {
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 8.dp),
+                color = colorScheme.primary.copy(alpha = 0.1f)
+            )
         }
     }
 }

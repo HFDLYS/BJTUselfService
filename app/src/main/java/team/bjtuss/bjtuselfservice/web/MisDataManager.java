@@ -2,6 +2,8 @@ package team.bjtuss.bjtuselfservice.web;
 
 import static team.bjtuss.bjtuselfservice.utils.Utils.convertAndFormatGradeScore;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 
 import org.json.JSONArray;
@@ -15,6 +17,7 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +29,7 @@ import okhttp3.CookieJar;
 import okhttp3.FormBody;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
+import okhttp3.Protocol;
 import okhttp3.Request;
 import okhttp3.Response;
 import team.bjtuss.bjtuselfservice.CaptchaModel;
@@ -106,54 +110,58 @@ public class MisDataManager {
                                         .build();
                                 Request loginRequest = new Request.Builder()
                                         .url("https://cas.bjtu.edu.cn/auth/login/?next=" + nextUrl)
-                                        .header("Host", "cas.bjtu.edu.cn")
                                         .header("Referer", url)
                                         .header("Origin", "https://cas.bjtu.edu.cn")
-                                        .header("Content-Type", "application/x-www-form-urlencoded")
-                                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0")
                                         .post(formBody)
                                         .build();
+
+
                                 client.newCall(loginRequest).enqueue(new Callback() {
                                     @Override
                                     public void onFailure(Call call, IOException e) {
+                                        Log.e("LoginError", "Request failed", e);
+                                        Log.e("LoginError", "URL: " + call.request().url());
+                                        Log.e("LoginError", "Error type: " + e.getClass().getName());
+                                        Log.e("LoginError", "Error message: " + e.getMessage());
+
+                                        // 如果是 StreamResetException，打印更多信息
+                                        if (e instanceof okhttp3.internal.http2.StreamResetException) {
+                                            Log.e("LoginError", "HTTP/2 Stream Reset Error");
+                                        }
+
                                         loginCallback.onFailure(0);
                                     }
 
                                     @Override
                                     public void onResponse(Call call, Response response) throws IOException {
-                                        String misUrl = response.request().url().toString();
-                                        Request misRequest = new Request.Builder()
-                                                .url(misUrl)
-                                                .header("Host", "mis.bjtu.edu.cn")
-                                                .build();
-                                        client.newCall(misRequest).enqueue(new Callback() {
-                                            @Override
-                                            public void onFailure(Call call, IOException e) {
-                                                loginCallback.onFailure(0);
-                                            }
+                                        try {
+                                            // OkHttp 会自动跟随重定向到 mis.bjtu.edu.cn/home/
+                                            String finalUrl = response.request().url().toString();
+                                            String body = response.body().string();
 
-                                            @Override
-                                            public void onResponse(Call call, Response response) throws IOException {
+                                            Log.d("Login", "Final URL: " + finalUrl);
+                                            Log.d("Login", "Response code: " + response.code());
 
-                                                if (response.request().url().toString().equals("https://mis.bjtu.edu.cn/home/")) {
-                                                    Document doc = Jsoup.parse(response.body().string());
-                                                    Element name = doc.selectFirst(".name_right > h3 > a");
-                                                    if (name == null) {
-                                                        loginCallback.onFailure(1);
-                                                        return;
-                                                    }
-                                                    String nameStr = name.text().split("，")[0];
-                                                    Element id = doc.selectFirst(".name_right .nr_con span:contains(身份)");
-                                                    String idStr = id.text().replace("身份：", "");
-                                                    Element department = doc.selectFirst(".name_right .nr_con span:contains(部门)");
-                                                    String departmentStr = department.text().replace("部门：", "");
-                                                    loginCallback.onResponse(nameStr + ";" + idStr + ";" + departmentStr);
-                                                } else {
+                                            if (finalUrl.contains("mis.bjtu.edu.cn/home/")) {
+                                                Document doc = Jsoup.parse(body);
+                                                Element name = doc.selectFirst(".name_right > h3 > a");
+                                                if (name == null) {
                                                     loginCallback.onFailure(1);
+                                                    return;
                                                 }
+                                                String nameStr = name.text().split("，")[0];
+                                                Element id = doc.selectFirst(".name_right .nr_con span:contains(身份)");
+                                                String idStr = id.text().replace("身份：", "");
+                                                Element department = doc.selectFirst(".name_right .nr_con span:contains(部门)");
+                                                String departmentStr = department.text().replace("部门：", "");
+                                                loginCallback.onResponse(nameStr + ";" + idStr + ";" + departmentStr);
+                                            } else {
+                                                loginCallback.onFailure(1);
                                             }
-                                        });
-                                        response.close();
+                                        } finally {
+                                            response.close();
+                                        }
                                     }
                                 });
                                 response.close();
