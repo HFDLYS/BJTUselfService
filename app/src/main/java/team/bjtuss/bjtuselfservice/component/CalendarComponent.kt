@@ -64,6 +64,7 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAdjusters
@@ -168,10 +169,18 @@ fun Day(
 
     // Filter tasks for this date
     val endHomeworkList = homeworkList.filter {
-        date == LocalDateTime.parse(it.endTime, formatter).minusMinutes(1).toLocalDate()
+        try {
+            date == LocalDateTime.parse(it.endTime, formatter).minusMinutes(1).toLocalDate()
+        } catch (e: DateTimeParseException) {
+            false
+        }
     }
     val startHomeworkList = homeworkList.filter {
-        date == LocalDateTime.parse(it.openDate, formatter).toLocalDate()
+        try {
+            date == LocalDateTime.parse(it.openDate, formatter).toLocalDate()
+        } catch (e: DateTimeParseException) {
+            false
+        }
     }
     val currentDateExamList = examList.filter {
         try {
