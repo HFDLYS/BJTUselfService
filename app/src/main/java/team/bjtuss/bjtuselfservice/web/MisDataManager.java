@@ -58,6 +58,22 @@ public class MisDataManager {
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 String url = response.request().url().toString();
+                if ("https://mis.bjtu.edu.cn/home/".equals(url)) {
+                    String body = response.body().string();
+                    Document doc = Jsoup.parse(body);
+                    Element name = doc.selectFirst(".name_right > h3 > a");
+                    if (name == null) {
+                        loginCallback.onFailure(1);
+                        return;
+                    }
+                    String nameStr = name.text().split("，")[0];
+                    Element id = doc.selectFirst(".name_right .nr_con span:contains(身份)");
+                    String idStr = id.text().replace("身份：", "");
+                    Element department = doc.selectFirst(".name_right .nr_con span:contains(部门)");
+                    String departmentStr = department.text().replace("部门：", "");
+                    loginCallback.onResponse(nameStr + ";" + idStr + ";" + departmentStr);
+                    return;
+                }
                 Request ttRequest = new Request.Builder()
                         .url(url)
                         .header("Host", "cas.bjtu.edu.cn")
@@ -157,7 +173,7 @@ public class MisDataManager {
                                                 String departmentStr = department.text().replace("部门：", "");
                                                 loginCallback.onResponse(nameStr + ";" + idStr + ";" + departmentStr);
                                             } else {
-                                                loginCallback.onFailure(1);
+                                                loginCallback.onFailure(0);
                                             }
                                         } finally {
                                             response.close();

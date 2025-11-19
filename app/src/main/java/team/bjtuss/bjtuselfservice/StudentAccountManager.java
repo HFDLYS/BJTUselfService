@@ -137,7 +137,7 @@ public class StudentAccountManager {
             if (isLogin) {
                 return CompletableFuture.completedFuture(true);
             } else {
-                return attemptLoginWithRetry(stuId, password, 5);
+                return attemptLoginWithRetry(stuId, password, 3);
             }
         });
     }
