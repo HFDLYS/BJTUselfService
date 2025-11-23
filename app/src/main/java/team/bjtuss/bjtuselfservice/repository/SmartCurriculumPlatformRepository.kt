@@ -161,6 +161,8 @@ object SmartCurriculumPlatformRepository {
         }
     }
 
+
+
     suspend fun getHomework(): List<HomeworkEntity> {
 
         return NetworkRequestQueue.enqueueHighPriority("Homework") {
@@ -321,6 +323,7 @@ object SmartCurriculumPlatformRepository {
                     submitCount = homework.submitCount,
                     allCount = homework.allCount,
                     subStatus = homework.subStatus,
+                    scoreId = homework.scoreId  ?: 0,
                     homeworkType = 0
                 )
                 processedList.add(homeworkEntity)

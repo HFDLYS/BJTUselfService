@@ -37,9 +37,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Error
@@ -47,6 +49,7 @@ import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.DoNotDisturb
 import androidx.compose.material.icons.rounded.People
@@ -484,12 +487,20 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
                         showDivider = true
                     )
 
+                    InfoItem(
+                        icon = Icons.Rounded.Check,
+                        primaryText = "批改状态: ${if (homework.scoreId != 0) "已批改" else "未批改"}",
+                        showDivider = true
+                    )
                     // 分数
                     InfoItem(
                         icon = Icons.Rounded.Stars,
                         primaryText = "分数: ${homework.score}",
                         showDivider = true
                     )
+
+
+
                 }
             }
 
@@ -500,7 +511,7 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
                 isSubmit = isSubmit,
                 appState = appState,
                 onUploadClick = { showUploadHomeworkDialog = true },
-                )
+            )
         }
     }
 
@@ -798,7 +809,7 @@ fun UploadHomeDialog(homeworkEntity: HomeworkEntity, onDismiss: () -> Unit) {
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(8.dp),
 
-                ) {
+                    ) {
                     Text("取消")
                 }
 
@@ -931,6 +942,9 @@ fun BetterTextField(
         shape = RoundedCornerShape(12.dp)
     )
 }
+
+
+
 
 suspend fun downloadHomeworkFile(
     homework: HomeworkEntity,
@@ -1088,7 +1102,6 @@ suspend fun downloadHomeworkFile(
 }
 
 
-
 @Composable
 fun HomeworkActionButtons(
     homework: HomeworkEntity,
@@ -1136,9 +1149,7 @@ fun HomeworkActionButtons(
     }
 }
 
-/**
- * Material Design风格的下载按钮
- */
+
 @Composable
 fun MaterialHomeworkDownloadButton(
     homework: HomeworkEntity,

@@ -22,6 +22,7 @@ data class HomeworkEntity(
     val submitCount: Int,
     val allCount: Int,
     val subStatus: String,
+    val scoreId: Int,
     val homeworkType: Int,// 0: 作业 1: 课程设计 2: 实验报告
 ) : BaseEntity() {
     constructor(
@@ -40,6 +41,7 @@ data class HomeworkEntity(
         allCount: Int,
         subStatus: String,
         upId: Int,
+        scoreId: Int,
         homeworkType: Int
     ) : this(
         id = 0,
@@ -58,6 +60,7 @@ data class HomeworkEntity(
         submitCount = submitCount,
         allCount = allCount,
         subStatus = subStatus,
+        scoreId = scoreId,
         homeworkType = homeworkType
     )
 }
