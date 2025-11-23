@@ -23,9 +23,6 @@ object OtherFunctionNetworkRepository {
                 DownloadUtil.downloadFile(url = url, title = "校历")
 
             }
-
-
-
             }
         }
     }

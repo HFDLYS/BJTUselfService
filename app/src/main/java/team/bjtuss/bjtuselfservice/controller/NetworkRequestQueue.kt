@@ -17,79 +17,6 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.cancellation.CancellationException
 
-
-object NetworkRequestQueue123 {
-    const val MAX_CONCURRENT_JOBS = 2
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val queue = Channel<NetworkRequest>(Channel.UNLIMITED)
-
-    private val activeJobs = AtomicInteger(0)
-
-
-    init {
-        repeat(MAX_CONCURRENT_JOBS) {
-            scope.launch {
-                AppStateManager.awaitLoginState()
-                processQueue()
-            }
-        }
-    }
-
-    data class NetworkRequest(
-        val operation: suspend () -> Result<Any>,
-        val deferred: CompletableDeferred<Result<Any>>
-    )
-
-    private suspend fun processQueue() {
-        for (request in queue) {
-            processRequestAfterLogin(request)
-        }
-    }
-
-    private suspend fun processRequestAfterLogin(request: NetworkRequest) {
-        AppStateManager.awaitLoginState()
-
-        try {
-            activeJobs.incrementAndGet()
-//            if (activeJobs.get() > 0) {
-//                AppEventManager.sendEvent(AppEvent.DataSyncRequest)
-//            }
-            val result = request.operation()
-            request.deferred.complete(result)
-        } catch (e: Exception) {
-            Log.e("NetworkRequestQueue", "Error processing request", e)
-            request.deferred.complete(Result.failure(e))
-        } finally {
-            if (activeJobs.decrementAndGet() == 0) {
-                AppEventManager.sendEvent(AppEvent.DataSyncCompleted)
-
-            }
-        }
-    }
-
-    suspend fun <T> enqueue(
-        operation: suspend () -> T
-    ): Result<T> {
-        val deferred = CompletableDeferred<Result<Any>>()
-        val wrappedOperation = suspend {
-            try {
-                @Suppress("UNCHECKED_CAST")
-                Result.success(operation() as Any)
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
-        }
-        val request = NetworkRequest(wrappedOperation, deferred)
-        queue.send(request)
-        return deferred.await() as Result<T>
-    }
-
-
-    fun shutdown() {
-        queue.close()
-        scope.cancel()
-    }
-}
 //}object NetworkRequestQueue {
 //    const val MAX_CONCURRENT_JOBS = 2
 //    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -257,9 +184,9 @@ object NetworkRequestQueue {
         return enqueueInternal(name, operation, lowPriorityQueue)
     }
 
-    suspend fun <T> enqueueHighPriority(name: String, operation: suspend () -> T): Result<T> {
-        return enqueueInternal(name, operation, highPriorityQueue)
-    }
+//    suspend fun <T> enqueueHighPriorityQueue(name: String, operation: suspend () -> T): Result<T> {
+//        return enqueueInternal(name, operation, highPriorityQueue)
+//    }
 
     private suspend fun <T> enqueueInternal(
         name: String,

@@ -21,17 +21,17 @@ object NetworkRepository {
 
 
     suspend fun getClassroomMap(): Map<String, MutableList<Int>>? {
-        val result = requestQueue.enqueueHighPriority("ClassroomMap") {
 
-            val classroomMap = try {
-                studentAccountManager.getClassroom().await()
-            } catch (e: Exception) {
-                Log.e("NetworkRepository", "Error fetching classroom map: ${e.message}")
-                emptyMap()
-            }
-            classroomMap
+
+        val classroomMap = try {
+            studentAccountManager.getClassroom().await()
+        } catch (e: Exception) {
+            Log.e("NetworkRepository", "Error fetching classroom map: ${e.message}")
+            emptyMap()
         }
-        return result.getOrElse { emptyMap() }
+        return classroomMap
+
+
     }
 
 

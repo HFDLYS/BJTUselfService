@@ -9,7 +9,7 @@ data class HomeworkEntity(
     override var id: Int,
     val upId: Int,
     var idSnId: Int?,
-    val score: String,
+    var score: String,
     val userId: Int,
     val courseId: Int,
     val courseName: String,

@@ -10,6 +10,7 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import team.bjtuss.bjtuselfservice.StudentAccountManager
+import team.bjtuss.bjtuselfservice.api.RequestKotlin
 import team.bjtuss.bjtuselfservice.controller.NetworkRequestQueue
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
 import team.bjtuss.bjtuselfservice.jsonclass.Course
@@ -34,20 +35,18 @@ object SmartCurriculumPlatformRepository {
 
     private var courseFromJson: CourseJsonType? = null
 
-    private var headersBuilder = Headers.Builder()
+    var headersBuilder = Headers.Builder()
         .add("User-Agent", userAgent)
         .add("Accept", "application/json, text/javascript, */*; q=0.01")
         .add("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
         .add("Referer", "http://123.121.147.7:88")
         .add("X-Requested-With", "XMLHttpRequest")
 
+
     suspend fun initClient() {
 
+        val url1 = "https://mis.bjtu.edu.cn/module/module/28/"
 
-        val request1 = Request.Builder()
-            .url("https://mis.bjtu.edu.cn/module/module/28/")
-            .headers(headersBuilder.build())
-            .build()
 
         val request2 = Request.Builder()
             .url("https://bksycenter.bjtu.edu.cn/NoMasterJumpPage.aspx?URL=jwcZhjx&FPC=page:jwcZhjx")
@@ -57,7 +56,8 @@ object SmartCurriculumPlatformRepository {
 
 
         println("9302190321")
-        client.newCall(request1).execute()
+        RequestKotlin.get(url1, headersBuilder.build())
+
         // client.newCall(request2).execute()
         getAndSetSessionIdInHeaders()
         val semesterFromJson = getSemesterTypeList()
@@ -66,20 +66,14 @@ object SmartCurriculumPlatformRepository {
     }
 
     private suspend fun getSemesterTypeList(): SemesterJsonType {
-        // 2. Visit the course list
+
         val semesterUrl =
             "http://123.121.147.7:88/ve/back/rp/common/teachCalendar.shtml?method=queryCurrentXq"
 
-        val semesterRequest = Request.Builder()
-            .url(semesterUrl)
-            .headers(
-                headersBuilder.build()
-            )
-            .build()
         val adapter = moshi.adapter(SemesterJsonType::class.java)
 
         return withContext(Dispatchers.IO) {
-            client.newCall(semesterRequest).execute().use {
+            RequestKotlin.get(semesterUrl, headersBuilder.build()).use {
                 it.body?.source()?.let { source ->
                     try {
                         adapter.fromJson(source)
@@ -98,17 +92,11 @@ object SmartCurriculumPlatformRepository {
             "http://123.121.147.7:88/ve/back/coursePlatform/course.shtml?method=getCourseList&pagesize=100&page=1&xqCode="
         val courseUrl = baseUrl + xqCode
 
-        val courseRequest = Request.Builder()
-            .url(courseUrl)
-            .headers(
-                headersBuilder.build()
-            )
-            .build()
 
         val adapter = moshi.adapter<CourseJsonType>(CourseJsonType::class.java)
 
         return withContext(Dispatchers.IO) {
-            client.newCall(courseRequest).execute().use {
+            RequestKotlin.get(courseUrl, headersBuilder.build()).use {
                 it.body?.source()?.let { source ->
                     try {
                         adapter.fromJson(source)
@@ -125,16 +113,10 @@ object SmartCurriculumPlatformRepository {
         val baseUrl =
             "http://123.121.147.7:88/ve/back/coursePlatform/homeWork.shtml?method=getHomeWorkList&cId=${cId}&subType=${subType}&page=1&pagesize=100"
 
-        val homeworkRequest = Request.Builder()
-            .url(baseUrl)
-            .headers(
-                headersBuilder.build()
-            )
-            .build()
 
         val adapter = moshi.adapter(HomeworkJsonType::class.java)
         return withContext(Dispatchers.IO) {
-            client.newCall(homeworkRequest).execute().use { originalResponse ->
+            RequestKotlin.get(baseUrl, headersBuilder.build()).use { originalResponse ->
                 // 1. 缓存响应体字节（自动关闭原始流）
                 val cachedBytes = originalResponse.body?.bytes() ?: throw IOException("Empty body")
 
@@ -162,24 +144,21 @@ object SmartCurriculumPlatformRepository {
     }
 
 
-
     suspend fun getHomework(): List<HomeworkEntity> {
 
-        return NetworkRequestQueue.enqueueHighPriority("Homework") {
-            getHomeWorkListByHomeworkType(0)
-        }.getOrElse { emptyList() }
+//        return NetworkRequestQueue.enqueueHighPriorityQueue("Homework") {
+//            getHomeWorkListByHomeworkType(0)
+//        }.getOrElse { emptyList() }
+        return getHomeWorkListByHomeworkType(0)
     }
 
     suspend fun getCourseDesign(): List<HomeworkEntity> {
-        return NetworkRequestQueue.enqueueHighPriority("CourseDesign") {
-            getHomeWorkListByHomeworkType(1)
-        }.getOrElse { emptyList() }
+        return  getHomeWorkListByHomeworkType(1)
+
     }
 
     suspend fun getExperimentReport(): List<HomeworkEntity> {
-        return NetworkRequestQueue.enqueueHighPriority("ExperimentReport") {
-            getHomeWorkListByHomeworkType(2)
-        }.getOrElse { emptyList() }
+        return getHomeWorkListByHomeworkType(2)
     }
 
 
@@ -203,17 +182,11 @@ object SmartCurriculumPlatformRepository {
         withContext(Dispatchers.IO) {
 
 
-            client.newCall(
-                Request.Builder()
-                    .url(url)
-                    .headers(headersBuilder.build())
-                    .build()
-            ).execute().use { response ->
+            RequestKotlin.get(url, headersBuilder.build()).use { response ->
                 if (!response.isSuccessful) {
                     throw IOException("获取sessionId失败，状态码: ${response.code}")
                 }
-                println("89732198321")
-//                println(response.body!!.string())
+
                 response.body?.source()?.let { source ->
                     moshi.adapter(getArticleListJsonType::class.java)
                         .fromJson(source)
@@ -238,14 +211,9 @@ object SmartCurriculumPlatformRepository {
                         "&docType=1" +
                         "&up_id=${parentNode.id}" +
                         "&searchName="
-            val request = Request.Builder()
-                .url(url)
-                .headers(
-                    headersBuilder.build()
-                )
-                .build()
+
             val adapter = moshi.adapter(CourseResourceResponse::class.java)
-            val courseWareNodeList = client.newCall(request).execute().use { response ->
+            val courseWareNodeList = RequestKotlin.get(url,headersBuilder.build()).use { response ->
                 val responseContent = response.body?.string()
                 responseContent?.let { str ->
                     try {
@@ -303,7 +271,7 @@ object SmartCurriculumPlatformRepository {
         }
 
 
-        val processedList = mutableListOf<HomeworkEntity>()
+        val homeworkList = mutableListOf<HomeworkEntity>()
 
         listFromJson.forEach {
             it.courseNoteList?.forEach { homework ->
@@ -323,13 +291,13 @@ object SmartCurriculumPlatformRepository {
                     submitCount = homework.submitCount,
                     allCount = homework.allCount,
                     subStatus = homework.subStatus,
-                    scoreId = homework.scoreId  ?: 0,
+                    scoreId = homework.scoreId ?: 0,
                     homeworkType = 0
                 )
-                processedList.add(homeworkEntity)
+                homeworkList.add(homeworkEntity)
             }
         }
-        return processedList
+        return homeworkList
 
     }
 
@@ -346,14 +314,7 @@ object SmartCurriculumPlatformRepository {
                         "cId=${course.id}&" +
                         "xkhId=${course.fz_id}&" +
                         "xqCode=${course.xq_code}"
-                val request = Request.Builder()
-                    .url(
-                        url
-                    )
-                    .headers(headersBuilder.build())
-                    .build()
-
-                client.newCall(request).execute().use { response ->
+                RequestKotlin.get(url,headersBuilder.build()).use { response ->
                     if (!response.isSuccessful) {
                         Log.e("TeacherWorkNum", "Request failed: ${response.code}")
                         return@withContext null
@@ -402,22 +363,8 @@ object SmartCurriculumPlatformRepository {
 
                 val url = "http://123.121.147.7:88/ve/back/coursePlatform/coursePlatform.shtml"
 
-                val request = Request.Builder()
-                    .url(
-                        "$url?" +
-                                "method=toCoursePlatform&" +
-                                "courseToPage=10436&" +
-                                "courseId=${course.course_num}&" +
-                                "dataSource=1&" +
-                                "cId=${course.id}&" +
-                                "xkhId=${course.fz_id}&" +
-                                "xqCode=${course.xq_code}&" +
-                                "teacherId=$teacherId"
-                    )
-                    .headers(headersBuilder.build())
-                    .build()
 
-                client.newCall(request).execute().use { response ->
+                RequestKotlin.get(url,headersBuilder.build()).use { response ->
                     if (!response.isSuccessful) {
                         Log.e("TeachingCalendar", "Request failed: ${response.code}")
                         return@withContext null
@@ -484,12 +431,7 @@ object SmartCurriculumPlatformRepository {
                     return@withContext false
                 }
 
-                val request = Request.Builder()
-                    .url(pdfUrl)
-                    .headers(headersBuilder.build())
-                    .build()
-
-                client.newCall(request).execute().use { response ->
+                RequestKotlin.get(pdfUrl,headersBuilder.build()).use { response ->
                     if (!response.isSuccessful) {
                         Log.e("DownloadPDF", "下载失败: ${response.code}")
                         return@withContext false

@@ -1,6 +1,5 @@
 package team.bjtuss.bjtuselfservice.screen
 
-import android.R.attr.path
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -46,7 +45,6 @@ import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FloatingActionButton
@@ -62,7 +60,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -71,25 +68,22 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.Request
 import team.bjtuss.bjtuselfservice.R
+import team.bjtuss.bjtuselfservice.api.RequestKotlin
 import team.bjtuss.bjtuselfservice.component.RotatingImageLoader
 import team.bjtuss.bjtuselfservice.jsonclass.Course
 import team.bjtuss.bjtuselfservice.jsonclass.CoursewareDownloadPostRequestResponse
@@ -824,7 +818,11 @@ private fun downloadCourseWareWithOKHttp(
             )
 
             val response =
-                SmartCurriculumPlatformRepository.client.newCall(request).execute()
+                RequestKotlin.post(
+                    url = url,
+                    headers = mapOf(),
+                    data = emptyMap()
+                )
 
             if (response.isSuccessful) {
                 val responseContent = response.use {
@@ -834,11 +832,9 @@ private fun downloadCourseWareWithOKHttp(
                 }
 
                 responseContent?.let { content ->
-                    val headRequest = Request.Builder().url(content.rpUrl).build()
 
                     val headResponse =
-                        SmartCurriculumPlatformRepository.client.newCall(headRequest)
-                            .execute()
+                        RequestKotlin.get(content.rpUrl)
 
                     val contentDisposition = headResponse.header("Content-Disposition")
                     val fileName = contentDisposition?.let {

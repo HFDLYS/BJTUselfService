@@ -3,7 +3,6 @@ package team.bjtuss.bjtuselfservice.screen
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
-import android.util.Log
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
@@ -14,7 +13,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -37,11 +35,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Error
@@ -70,7 +66,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -91,6 +86,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -101,31 +97,25 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import okhttp3.Request
-import okhttp3.Response
-import org.jsoup.Jsoup
 import team.bjtuss.bjtuselfservice.component.HomeworkUploader
+import team.bjtuss.bjtuselfservice.component.downloadHomeworkFile
+import team.bjtuss.bjtuselfservice.component.getHomeworkGrade
+import team.bjtuss.bjtuselfservice.database.AppDatabase
 import team.bjtuss.bjtuselfservice.entity.HomeworkEntity
 import team.bjtuss.bjtuselfservice.error
 import team.bjtuss.bjtuselfservice.primary
 import team.bjtuss.bjtuselfservice.primaryContainer
-import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository
+import team.bjtuss.bjtuselfservice.repository.DatabaseRepository
 import team.bjtuss.bjtuselfservice.statemanager.AppState
 import team.bjtuss.bjtuselfservice.statemanager.AppStateManager
-import team.bjtuss.bjtuselfservice.utils.DownloadUtil
-import team.bjtuss.bjtuselfservice.utils.KotlinUtils
 import team.bjtuss.bjtuselfservice.viewmodel.DataChange
 import team.bjtuss.bjtuselfservice.viewmodel.HomeworkViewModel
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
-import java.io.IOException
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
-import java.util.concurrent.TimeUnit
 
 @Composable
 fun HomeworkScreen(mainViewModel: MainViewModel) {
@@ -358,6 +348,28 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
     val appState by AppStateManager.appState.collectAsState()
 
 
+    val canGetGrade = remember {
+        homework.scoreId != 0
+    }
+
+//    LaunchedEffect(homework.upId, homework.idSnId, canGetGrade) {
+//        if (canGetGrade) {
+//            // 在协程中安全地调用 suspend 函数
+//            val result = try {
+//                getHomeworkGrade(homework)
+//            } catch (e: Exception) {
+//                "加载失败: ${e.message}"
+//            }
+//            AppDatabase.getInstance().homeworkEntityDao().update(
+//                homework.copy(
+//                    score = result
+//                )
+//            )
+//
+//        }
+//    }
+
+
     // 计算截止时间是否临近
     val isDDLSoon = remember(homework.endTime) {
         try {
@@ -487,18 +499,21 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
                         showDivider = true
                     )
 
+
+
                     InfoItem(
                         icon = Icons.Rounded.Check,
                         primaryText = "批改状态: ${if (homework.scoreId != 0) "已批改" else "未批改"}",
                         showDivider = true
                     )
-                    // 分数
-                    InfoItem(
-                        icon = Icons.Rounded.Stars,
-                        primaryText = "分数: ${homework.score}",
-                        showDivider = true
-                    )
 
+                    if (homework.scoreId != 0) {
+                        InfoItem(
+                            icon = Icons.Rounded.Stars,
+                            primaryText = "分数: ${homework.score}",
+                            showDivider = true
+                        )
+                    }
 
 
                 }
@@ -822,7 +837,7 @@ fun UploadHomeDialog(homeworkEntity: HomeworkEntity, onDismiss: () -> Unit) {
                             CoroutineScope(Dispatchers.IO).launch {
                                 val responseBody = uploader.uploadHomework(
                                     selectedFiles,
-                                    content = content.ifEmpty { "你好" }
+                                    content = content.ifEmpty { "" }
                                 )
 
                                 withContext(Dispatchers.Main) {
@@ -944,208 +959,58 @@ fun BetterTextField(
 }
 
 
-
-
-suspend fun downloadHomeworkFile(
-    homework: HomeworkEntity,
-    onProgress: (Float) -> Unit = {},
-    onSuccess: (String) -> Unit = {},
-    onError: (Exception) -> Unit = {}
-) = withContext(Dispatchers.IO) {
-    try {
-        // Show initial progress
-        withContext(Dispatchers.Main) {
-            onProgress(0.1f)
-        }
-
-        // Create OkHttp client with timeout settings
-        val client = SmartCurriculumPlatformRepository.client.newBuilder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
-            .build()
-
-        // Build URL for getting homework content
-        val courseWorkUrl = "http://123.121.147.7:88/ve/back/course/courseWorkInfo.shtml"
-            .toHttpUrlOrNull()
-            ?.newBuilder()
-            ?.addQueryParameter("method", "piGaiDiv")
-            ?.addQueryParameter("upId", homework.upId.toString())
-            ?.addQueryParameter("id", homework.idSnId.toString())
-            ?.addQueryParameter("score", homework.score)
-            ?.addQueryParameter("uLevel", "1")
-            ?.addQueryParameter("type", "1")
-            ?.addQueryParameter("username", "null")
-            ?.addQueryParameter("userId", homework.userId.toString())
-            ?.build() ?: throw IllegalStateException("Failed to build URL")
-
-        // Update progress
-        withContext(Dispatchers.Main) {
-            onProgress(0.2f)
-        }
-
-        // Create request for homework page with retry mechanism
-        val courseWorkRequest = Request.Builder()
-            .url(courseWorkUrl)
-            .header("User-Agent", "Mozilla/5.0")
-            .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6")
-            .build()
-
-        // Execute the request with retry
-        var retries = 0
-        var response: Response? = null
-        var exception: Exception? = null
-
-        while (retries < 3 && response == null) {
-            try {
-                response = client.newCall(courseWorkRequest).execute()
-                if (!response.isSuccessful) {
-                    throw IOException("Failed to fetch homework info: ${response.code}")
-                }
-            } catch (e: Exception) {
-                exception = e
-                retries++
-                delay(1000L * retries) // Exponential backoff
-            }
-        }
-
-        if (response == null) {
-            throw exception ?: IOException("Failed to fetch homework after retries")
-        }
-
-        // Update progress
-        withContext(Dispatchers.Main) {
-            onProgress(0.4f)
-        }
-
-        val responseBody = response.body?.string() ?: ""
-
-        // Check for server error
-        if (responseBody.contains("系统发生了未处理的异常")) {
-            throw Exception("服务器返回错误，请检查参数和登录状态")
-        }
-
-        // Parse HTML
-        val document = Jsoup.parse(responseBody)
-        val homeworkContents = document.select("div.homeworkContent")
-
-        if (homeworkContents.isEmpty()) {
-            throw Exception("未找到作业内容")
-        }
-
-        // Update progress
-        withContext(Dispatchers.Main) {
-            onProgress(0.6f)
-        }
-
-        // Find file download info
-        var fileDownloaded = false
-
-        for (item in homeworkContents) {
-            val onClickAttribute = item.attr("onclick")
-            if (onClickAttribute.isNotEmpty()) {
-                // Parse the onclick attribute with improved regex
-                val regex = """\('([^']*)',\s*'([^']*)',\s*'([^']*)'\)""".toRegex()
-                val matchResult = regex.find(onClickAttribute)
-
-                if (matchResult != null) {
-                    val (path, filename, id) = matchResult.destructured
-
-                    // Build URL for file download
-                    val downloadUrl = "http://123.121.147.7:88/ve//downloadZyFj.shtml"
-                        .toHttpUrlOrNull()
-                        ?.newBuilder()
-                        ?.addQueryParameter("path", path)
-                        ?.addQueryParameter("filename", filename)
-                        ?.addQueryParameter("id", id)
-                        ?.build()
-                        ?.toString() ?: throw IllegalStateException("Failed to build download URL")
-
-                    // Get file extension
-                    val fileExtension = filename.substringAfterLast('.', "pdf")
-
-                    // Update progress
-                    withContext(Dispatchers.Main) {
-                        onProgress(0.8f)
-                    }
-
-                    // Download the file
-                    DownloadUtil.downloadFile(
-                        downloadUrl,
-                        filename,
-                        KotlinUtils.getCookieByUrl(downloadUrl),
-                        fileExtension
-                    )
-
-                    fileDownloaded = true
-
-                    // Notify success
-                    withContext(Dispatchers.Main) {
-                        onProgress(1.0f)
-                        onSuccess("作业 '$filename' 下载成功")
-                    }
-                }
-            }
-        }
-
-        if (!fileDownloaded) {
-            throw Exception("未找到可下载的作业文件")
-        }
-
-    } catch (e: Exception) {
-        Log.e("HomeworkDownloader", "Download failed", e)
-        withContext(Dispatchers.Main) {
-            onError(e)
-        }
-        throw e
-    }
-}
-
-
 @Composable
+
 fun HomeworkActionButtons(
     homework: HomeworkEntity,
     isSubmit: Boolean,
     appState: AppState,
     onUploadClick: () -> Unit
+
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp) // 更宽的按钮间距，符合Material Design规范
-    ) {
-        // 上传作业按钮
-        FilledTonalButton(
-            onClick = onUploadClick,
-            enabled = appState.canDownloadAndUpload(),
-            modifier = Modifier.weight(1f),
-            elevation = ButtonDefaults.buttonElevation(
-                defaultElevation = 3.dp,
-            ),
-            shape = RoundedCornerShape(24.dp), // 胶囊形状
-            colors = ButtonDefaults.filledTonalButtonColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                disabledContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.38f),
-                disabledContentColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.38f)
-            )
+
+
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                "上传作业",
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(vertical = 2.dp)
+            // 上传作业按钮
+            FilledTonalButton(
+                onClick = onUploadClick,
+                enabled = appState.canDownloadAndUpload(),
+                modifier = Modifier.weight(1f),
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 3.dp,
+                ),
+                shape = RoundedCornerShape(24.dp),
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    disabledContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.38f),
+                    disabledContentColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.38f)
+                )
+            ) {
+                Text(
+                    "上传作业",
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(vertical = 2.dp)
+                )
+            }
+
+            // 下载作业按钮（使用美化后的组件）
+            MaterialHomeworkDownloadButton(
+                homework = homework,
+                enabled = appState.canDownloadAndUpload() && isSubmit,
+                modifier = Modifier.weight(1f)
             )
         }
 
-        // 下载作业按钮（使用美化后的组件）
-        MaterialHomeworkDownloadButton(
-            homework = homework,
-            enabled = appState.canDownloadAndUpload() && isSubmit,
-            modifier = Modifier.weight(1f)
-        )
+
     }
 }
 
@@ -1260,3 +1125,6 @@ fun MaterialHomeworkDownloadButton(
         }
     }
 }
+
+
+
