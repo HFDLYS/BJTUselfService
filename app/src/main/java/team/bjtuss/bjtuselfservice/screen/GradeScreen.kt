@@ -78,11 +78,19 @@ fun GradeScreen(
 
 fun calculateGradeInfo(grades: List<GradeEntity>): GradeInfoResult {
     val (totalScore, totalCredit) = grades.fold(0.0 to 0.0) { (accScore, accCredit), GradeEntity ->
-        try {1
-            val scoreValue = GradeEntity.courseScore.split(",")[1].toDoubleOrNull() ?: 0.0
-            val creditValue = GradeEntity.courseCredits.toDoubleOrNull() ?: 0.0
+        try {
+            if (GradeEntity.detail.contains("缓考")) {
+                accScore to accCredit
+            } else {
+                val scoreValue = GradeEntity.courseScore.split(",").getOrNull(1)?.toDoubleOrNull()
+                val creditValue = GradeEntity.courseCredits.toDoubleOrNull()
 
-            accScore + (scoreValue * creditValue) to accCredit + creditValue
+                if (scoreValue != null && creditValue != null) {
+                    accScore + (scoreValue * creditValue) to accCredit + creditValue
+                } else {
+                    accScore to accCredit
+                }
+            }
         } catch (e: Exception) {
             accScore to accCredit
         }
