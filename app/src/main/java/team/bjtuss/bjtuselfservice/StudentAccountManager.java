@@ -250,39 +250,6 @@ public class StudentAccountManager {
                 });
     }
 
-    public CompletableFuture<Boolean> loginXsMis() {
-        return checkIsLogin()
-                .thenCompose(isLogin -> isLogin
-                        ? attemptXsMisLogin()
-                        : attemptInitAndLogin()
-                        .thenCompose(isLoginMis -> isLoginMis
-                                ? attemptXsMisLogin()
-                                : CompletableFuture.completedFuture(false)
-                        )
-                )
-                .exceptionally(ex -> {
-                    System.err.println("Error during login process: " + ex.getMessage());
-                    return false;
-                });
-    }
-
-    private CompletableFuture<Boolean> attemptXsMisLogin() {
-        CompletableFuture<Boolean> loginFuture = new CompletableFuture<>();
-        MisDataManager.xsmislogin(client, new WebCallback<String>() {
-            @Override
-            public void onResponse(String code) {
-                setXsmisLogin(true);
-                loginFuture.complete(true);
-            }
-
-            @Override
-            public void onFailure(int code) {
-                loginFuture.complete(false);
-            }
-        });
-        return loginFuture;
-    }
-
     private CompletableFuture<Boolean> attemptInitAndLogin() {
         if (stuId == null || password == null) {
             return CompletableFuture.completedFuture(false);
@@ -355,23 +322,19 @@ public class StudentAccountManager {
     // 获得基础状态
     public CompletableFuture<Status> getStatus() {
         CompletableFuture<Status> statusFuture = new CompletableFuture<>();
-        checkIsLogin().thenAccept(isLogin -> {
-            if (isXsmisLogin) {
-                MisDataManager.getStatus(client, new WebCallback<Status>() {
-                    @Override
-                    public void onResponse(Status resp) {
-                        statusFuture.complete(resp);
-                    }
+        checkIsLogin().thenAccept(isLogin ->
+            MisDataManager.getStatus(client, new WebCallback<Status>() {
+                @Override
+                public void onResponse(Status resp) {
+                    statusFuture.complete(resp);
+                }
 
-                    @Override
-                    public void onFailure(int code) {
-                        statusFuture.complete(new Status("0", "0", "0"));
-                    }
-                });
-            } else {
-                statusFuture.complete(new Status("0", "0", "0"));
-            }
-        });
+                @Override
+                public void onFailure(int code) {
+                    statusFuture.complete(new Status("0", "0", "0"));
+                }
+            })
+        );
         return statusFuture;
     }
 

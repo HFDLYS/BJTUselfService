@@ -13,9 +13,6 @@ import team.bjtuss.bjtuselfservice.repository.NetworkRepository
 class StatusViewModel : ViewModel() {
     private val _status: MutableStateFlow<Status> = MutableStateFlow(Status())
     val status = _status.asStateFlow()
-    init {
-        loadData()
-    }
 
     fun loadData() {
         viewModelScope.launch(Dispatchers.IO) {

@@ -203,11 +203,6 @@ object AuthenticatorManager {
             Log.d("Authenticator", "初始登录结果：$isInitialLoginSuccessful")
 
             if (isInitialLoginSuccessful) {
-                val isXsMisLoginSuccessful = studentAccountManager.loginXsMis()
-                isXsMisLoginSuccessful.thenAccept({
-                    Log.d("Authenticator", "XSMIS登录结果：$it")
-                })
-
                 val isAaLoginSuccessful = studentAccountManager.loginAa().await()
                 Log.d("Authenticator", "AA登录结果：$isAaLoginSuccessful")
 
