@@ -2,6 +2,11 @@ package team.bjtuss.bjtuselfservice.screen
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -14,10 +19,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.BasicAlertDialog
@@ -29,6 +36,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +49,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +60,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.launch
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
 import team.bjtuss.bjtuselfservice.utils.Utils
 import team.bjtuss.bjtuselfservice.viewmodel.DataChange
@@ -124,83 +135,88 @@ fun GradeList(
     var filterExpanded by remember { mutableStateOf(false) }
     var selectedFilters by remember { mutableStateOf(setOf<String>()) }
     var sortOrder by remember { mutableStateOf(SortOrder.ORIGINAL) }
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         modifier = Modifier.fillMaxSize()
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp),
         ) {
-            GpaCard(gradeList, selectedFilters)
-            Row(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
             ) {
-                Button(
-                    onClick = {
-                        filterExpanded = true
+                GpaCard(gradeList, selectedFilters)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Button(
+                        onClick = {
+                            filterExpanded = true
+                        }
+                    ) {
+                        Text(
+                            text = if (selectedFilters.isEmpty()) "请选择学期" else "已选：${selectedFilters.size}",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
                     }
-                ) {
-                    Text(
-                        text = if (selectedFilters.isEmpty()) "请选择学期" else "已选：${selectedFilters.size}",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                // 筛选条件
-                DropdownMenu(
-                    expanded = filterExpanded,
-                    onDismissRequest = { filterExpanded = false },
-                    modifier = Modifier.background(MaterialTheme.colorScheme.background)
-                ) {
-                    val filterOptions = gradeList.mapNotNull { it.tag }.distinct()
-                    if (filterOptions.isEmpty()) {
-                        DropdownMenuItem(
-                            onClick = { filterExpanded = false },
-                            text = {
-                                Text(
-                                    text = "暂无可用筛选条件",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    // 筛选条件
+                    DropdownMenu(
+                        expanded = filterExpanded,
+                        onDismissRequest = { filterExpanded = false }
+                    ) {
+                        val filterOptions = gradeList.mapNotNull { it.tag }.distinct()
+                        if (filterOptions.isEmpty()) {
+                            DropdownMenuItem(
+                                onClick = { filterExpanded = false },
+                                text = {
+                                    Text(
+                                        text = "暂无可用筛选条件",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                            }
+                            )
+                        } else {
+                            filterOptions.forEach { option ->
+                                val isChecked = selectedFilters.contains(option)
+                                DropdownMenuItem(
+                                    onClick = {
+                                        selectedFilters = if (isChecked) selectedFilters - option else selectedFilters + option
+                                    },
+                                    text = {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = option,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Checkbox(
+                                                checked = isChecked,
+                                                onCheckedChange = { checked ->
+                                                    selectedFilters = if (checked) selectedFilters + option else selectedFilters - option
+                                                }
+                                            )
+                                        }
+                                    }
                                 )
                             }
-                        )
-                    } else {
-                        filterOptions.forEach { option ->
-                            val isChecked = selectedFilters.contains(option)
                             DropdownMenuItem(
                                 onClick = {
-                                    selectedFilters = if (isChecked) selectedFilters - option else selectedFilters + option
-                                },
-                                text = {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = option,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Checkbox(
-                                            checked = isChecked,
-                                            onCheckedChange = { checked ->
-                                                selectedFilters = if (checked) selectedFilters + option else selectedFilters - option
-                                            }
-                                        )
-                                    }
-                                }
-                            )
-                        }
-                        DropdownMenuItem(
-                            onClick = {
-                                selectedFilters = emptySet()
-                                filterExpanded = false
+                                    selectedFilters = emptySet()
+                                    filterExpanded = false
                             },
                             text = {
                                 Text(
@@ -209,48 +225,75 @@ fun GradeList(
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }
+                            )
+                        }
+                    }
+
+                    IconButton(
+                        onClick = {
+                            sortOrder = when (sortOrder) {
+                                SortOrder.ORIGINAL -> SortOrder.ASCENDING
+                                SortOrder.ASCENDING -> SortOrder.DESCENDING
+                                SortOrder.DESCENDING -> SortOrder.ORIGINAL
+                            }
+                        },
+                        modifier = Modifier.align(Alignment.CenterVertically)
+                    ) {
+                        Icon(
+                            imageVector = when (sortOrder) {
+                                SortOrder.ORIGINAL -> Icons.Default.Sort
+                                SortOrder.ASCENDING -> Icons.Default.ArrowUpward
+                                SortOrder.DESCENDING -> Icons.Default.ArrowDownward
+                            },
+                            contentDescription = "Sort Order"
                         )
                     }
                 }
-
-                IconButton(
-                    onClick = {
-                        sortOrder = when (sortOrder) {
-                            SortOrder.ORIGINAL -> SortOrder.ASCENDING
-                            SortOrder.ASCENDING -> SortOrder.DESCENDING
-                            SortOrder.DESCENDING -> SortOrder.ORIGINAL
-                        }
-                    },
-                    modifier = Modifier.align(Alignment.CenterVertically)
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 16.dp),
+                    state = listState
                 ) {
-                    Icon(
-                        imageVector = when (sortOrder) {
-                            SortOrder.ORIGINAL -> Icons.Default.Sort
-                            SortOrder.ASCENDING -> Icons.Default.ArrowUpward
-                            SortOrder.DESCENDING -> Icons.Default.ArrowDownward
-                        },
-                        contentDescription = "Sort Order"
-                    )
+                    val filteredGradeList = if (selectedFilters.isEmpty()) {
+                        gradeList
+                    } else {
+                        gradeList.filter { it.tag != null && selectedFilters.contains(it.tag) }
+                    }
+                    val sortedGradeList = when (sortOrder) {
+                        SortOrder.ORIGINAL -> filteredGradeList
+                        SortOrder.ASCENDING -> filteredGradeList.sortedBy { getScoreGrade(it.courseScore) }
+                        SortOrder.DESCENDING -> filteredGradeList.sortedByDescending { getScoreGrade(it.courseScore) }
+                    }
+                    items(sortedGradeList.size) { index ->
+                        val gradeEntity = sortedGradeList[index]
+                        GradeItemCard(
+                            GradeEntity = gradeEntity,
+                        )
+                    }
                 }
             }
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 16.dp)
+
+            AnimatedVisibility(
+                visible = listState.firstVisibleItemScrollOffset > 300 || listState.firstVisibleItemIndex > 0,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
+                enter = fadeIn() + scaleIn(),
+                exit = fadeOut() + scaleOut()
             ) {
-                val filteredGradeList = if (selectedFilters.isEmpty()) {
-                    gradeList
-                } else {
-                    gradeList.filter { it.tag != null && selectedFilters.contains(it.tag) }
-                }
-                val sortedGradeList = when (sortOrder) {
-                    SortOrder.ORIGINAL -> filteredGradeList
-                    SortOrder.ASCENDING -> filteredGradeList.sortedBy { getScoreGrade(it.courseScore) }
-                    SortOrder.DESCENDING -> filteredGradeList.sortedByDescending { getScoreGrade(it.courseScore) }
-                }
-                items(sortedGradeList.size) { index ->
-                    val gradeEntity = sortedGradeList[index]
-                    GradeItemCard(
-                        GradeEntity = gradeEntity,
+                FloatingActionButton(
+                    onClick = {
+                        coroutineScope.launch {
+                            listState.animateScrollToItem(0)
+                        }
+                    },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    elevation = FloatingActionButtonDefaults.elevation(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.KeyboardArrowUp,
+                        contentDescription = "滚动到顶部",
+                        tint = MaterialTheme.colorScheme.onPrimary
                     )
                 }
             }
