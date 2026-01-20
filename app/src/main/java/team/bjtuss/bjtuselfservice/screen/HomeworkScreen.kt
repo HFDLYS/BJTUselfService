@@ -12,6 +12,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -31,6 +33,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -42,6 +45,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.Timer
@@ -56,11 +60,14 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -135,125 +142,188 @@ fun HomeworkScreen(mainViewModel: MainViewModel) {
 @Composable
 fun HomeworkList(homeworkList: List<HomeworkEntity>) {
     var filterExpanded by remember { mutableStateOf(false) }
-    var selectedFilter by remember { mutableStateOf("所有课程") }
+    var selectedFilters by remember { mutableStateOf(setOf<String>()) }
     var isFilterOutOfDate by remember { mutableStateOf(false) }
-    var sortOrder by remember { mutableStateOf(SortOrder.DESCENDING) }
-    var filteredList by remember { mutableStateOf(homeworkList) }
+    var sortOrder by remember { mutableStateOf(SortOrder.ORIGINAL) }
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    val formatter = remember { DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm") }
 
-    filteredList = homeworkList.filter { homework ->
-        val isValidDate = try {
-            LocalDateTime.parse(homework.endTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
-                .isAfter(LocalDateTime.now())
-        } catch (_: Exception) {
-            true
-        }
+    fun parseEndTime(endTime: String): LocalDateTime? = try {
+        LocalDateTime.parse(endTime, formatter)
+    } catch (_: Exception) {
+        null
+    }
 
+    val filteredList = homeworkList.filter { homework ->
+        val isValidDate = parseEndTime(homework.endTime)?.isAfter(LocalDateTime.now()) ?: true
         val dateCondition = !isFilterOutOfDate || isValidDate
-        val courseCondition = selectedFilter == "所有课程" || homework.courseName == selectedFilter
-
+        val courseCondition = selectedFilters.isEmpty() || selectedFilters.contains(homework.courseName)
         dateCondition && courseCondition
     }
-    filteredList = if (sortOrder == SortOrder.ASCENDING) {
-        filteredList.sortedBy { it.endTime }
-    } else {
-        filteredList.sortedByDescending { it.endTime }
+
+    val sortedList = when (sortOrder) {
+        SortOrder.ORIGINAL -> filteredList
+        SortOrder.ASCENDING -> filteredList.sortedBy { parseEndTime(it.endTime) ?: LocalDateTime.MAX }
+        SortOrder.DESCENDING -> filteredList.sortedByDescending { parseEndTime(it.endTime) ?: LocalDateTime.MIN }
     }
 
 
     Scaffold(
         modifier = Modifier.fillMaxSize()
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp),
         ) {
-            HomeworkSummaryCard(filteredList)
-            Row(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
             ) {
-                Button(
-                    onClick = {
-                        filterExpanded = true
-                    },
+                HomeworkSummaryCard(filteredList)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    val transText = if (selectedFilter.length > 5) {
-                        selectedFilter.take(4) + "..."
-                    } else {
-                        selectedFilter
-                    }
-                    Text(
-                        text = transText,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-
-                DropdownMenu(
-                    expanded = filterExpanded,
-                    onDismissRequest = { filterExpanded = false }
-                ) {
-                    val filterOptions = mutableListOf("所有课程")
-                    filterOptions.addAll(homeworkList.map { it.courseName }.distinct())
-                    filterOptions.forEach { option ->
-                        DropdownMenuItem(
-                            onClick = {
-                                selectedFilter = option
-                                filterExpanded = false
-                            },
-                            text = {
-                                Text(
-                                    text = option,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        )
-                    }
-                }
-
-                Row {
                     Button(
-                        onClick = {
-                            isFilterOutOfDate = !isFilterOutOfDate
-                        }
+                        onClick = { filterExpanded = true },
                     ) {
                         Text(
-                            text = if (isFilterOutOfDate) "悟已往之不谏" else "展示全部",
+                            text = if (selectedFilters.isEmpty()) "请选择课程" else "已选：${selectedFilters.size}",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
 
-                    IconButton(
-                        onClick = {
-                            sortOrder = if (sortOrder == SortOrder.ASCENDING) {
-                                SortOrder.DESCENDING
-                            } else {
-                                SortOrder.ASCENDING
-                            }
-                        }
+                    DropdownMenu(
+                        expanded = filterExpanded,
+                        onDismissRequest = { filterExpanded = false }
                     ) {
-                        Icon(
-                            imageVector = when (sortOrder) {
-                                SortOrder.ASCENDING -> Icons.Default.ArrowUpward
-                                SortOrder.DESCENDING -> Icons.Default.ArrowDownward
-                                SortOrder.ORIGINAL -> Icons.Default.Sort
-                            },
-                            contentDescription = "Sort Order"
-                        )
+                        val filterOptions = homeworkList.map { it.courseName }.distinct()
+                        if (filterOptions.isEmpty()) {
+                            DropdownMenuItem(
+                                onClick = { filterExpanded = false },
+                                text = {
+                                    Text(
+                                        text = "暂无可用筛选条件",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            )
+                        } else {
+                            filterOptions.forEach { option ->
+                                val isChecked = selectedFilters.contains(option)
+                                DropdownMenuItem(
+                                    onClick = {
+                                        selectedFilters = if (isChecked) selectedFilters - option else selectedFilters + option
+                                    },
+                                    text = {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = option,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Checkbox(
+                                                checked = isChecked,
+                                                onCheckedChange = { checked ->
+                                                    selectedFilters = if (checked) selectedFilters + option else selectedFilters - option
+                                                }
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+                            DropdownMenuItem(
+                                onClick = {
+                                    selectedFilters = emptySet()
+                                    filterExpanded = false
+                                },
+                                text = {
+                                    Text(
+                                        text = "清空选择",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            )
+                        }
+                    }
+
+                    Row {
+                        Button(
+                            onClick = {
+                                isFilterOutOfDate = !isFilterOutOfDate
+                            }
+                        ) {
+                            Text(
+                                text = if (isFilterOutOfDate) "悟已往之不谏" else "展示全部",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+
+                        IconButton(
+                            onClick = {
+                                sortOrder = when (sortOrder) {
+                                    SortOrder.ORIGINAL -> SortOrder.ASCENDING
+                                    SortOrder.ASCENDING -> SortOrder.DESCENDING
+                                    SortOrder.DESCENDING -> SortOrder.ORIGINAL
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = when (sortOrder) {
+                                    SortOrder.ORIGINAL -> Icons.Default.Sort
+                                    SortOrder.ASCENDING -> Icons.Default.ArrowUpward
+                                    SortOrder.DESCENDING -> Icons.Default.ArrowDownward
+                                },
+                                contentDescription = "Sort Order"
+                            )
+                        }
+                    }
+                }
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 16.dp),
+                    state = listState
+                ) {
+                    items(sortedList.size) { index ->
+                        val homework = sortedList[index]
+                        HomeworkItemCard(homework)
                     }
                 }
             }
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 16.dp)
+
+            AnimatedVisibility(
+                visible = listState.firstVisibleItemScrollOffset > 300 || listState.firstVisibleItemIndex > 0,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
+                enter = fadeIn() + scaleIn(),
+                exit = fadeOut() + scaleOut()
             ) {
-                items(filteredList.size) { index ->
-                    val homework = filteredList[index]
-                    HomeworkItemCard(homework)
+                FloatingActionButton(
+                    onClick = {
+                        coroutineScope.launch {
+                            listState.animateScrollToItem(0)
+                        }
+                    },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    elevation = FloatingActionButtonDefaults.elevation(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.KeyboardArrowUp,
+                        contentDescription = "滚动到顶部",
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
                 }
             }
         }
@@ -1125,6 +1195,5 @@ fun MaterialHomeworkDownloadButton(
         }
     }
 }
-
 
 
