@@ -24,6 +24,7 @@ import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
@@ -121,7 +122,7 @@ fun GradeList(
     gradeList: List<GradeEntity>
 ) {
     var filterExpanded by remember { mutableStateOf(false) }
-    var selectedFilter by remember { mutableStateOf("全部") }
+    var selectedFilters by remember { mutableStateOf(setOf<String>()) }
     var sortOrder by remember { mutableStateOf(SortOrder.ORIGINAL) }
 
     Scaffold(
@@ -133,7 +134,7 @@ fun GradeList(
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp),
         ) {
-            GpaCard(gradeList, selectedFilter)
+            GpaCard(gradeList, selectedFilters)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -146,7 +147,7 @@ fun GradeList(
                     }
                 ) {
                     Text(
-                        text = selectedFilter,
+                        text = if (selectedFilters.isEmpty()) "请选择学期" else "已选：${selectedFilters.size}",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -156,19 +157,56 @@ fun GradeList(
                     onDismissRequest = { filterExpanded = false },
                     modifier = Modifier.background(MaterialTheme.colorScheme.background)
                 ) {
-                    val filterOptions = mutableListOf("全部")
-                    filterOptions += gradeList.map { it.tag }.filterNotNull().distinct()
-                    filterOptions.forEach { option ->
+                    val filterOptions = gradeList.mapNotNull { it.tag }.distinct()
+                    if (filterOptions.isEmpty()) {
+                        DropdownMenuItem(
+                            onClick = { filterExpanded = false },
+                            text = {
+                                Text(
+                                    text = "暂无可用筛选条件",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        )
+                    } else {
+                        filterOptions.forEach { option ->
+                            val isChecked = selectedFilters.contains(option)
+                            DropdownMenuItem(
+                                onClick = {
+                                    selectedFilters = if (isChecked) selectedFilters - option else selectedFilters + option
+                                },
+                                text = {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = option,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Checkbox(
+                                            checked = isChecked,
+                                            onCheckedChange = { checked ->
+                                                selectedFilters = if (checked) selectedFilters + option else selectedFilters - option
+                                            }
+                                        )
+                                    }
+                                }
+                            )
+                        }
                         DropdownMenuItem(
                             onClick = {
-                                selectedFilter = option
+                                selectedFilters = emptySet()
                                 filterExpanded = false
                             },
                             text = {
                                 Text(
-                                    text = option,
+                                    text = "清空选择",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
                         )
@@ -199,11 +237,10 @@ fun GradeList(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
-                val filteredGradeList = gradeList.filter {
-                    when (selectedFilter) {
-                        "全部" -> true
-                        else -> it.tag == selectedFilter
-                    }
+                val filteredGradeList = if (selectedFilters.isEmpty()) {
+                    gradeList
+                } else {
+                    gradeList.filter { it.tag != null && selectedFilters.contains(it.tag) }
                 }
                 val sortedGradeList = when (sortOrder) {
                     SortOrder.ORIGINAL -> filteredGradeList
@@ -233,21 +270,11 @@ fun getScoreGrade(scoreStr: String): Int {
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
-fun GpaCard(gradeList: List<GradeEntity>, selectedFilter: String) {
-//    val infiniteTransition = rememberInfiniteTransition()
-//    val scale by infiniteTransition.animateFloat(
-//        initialValue = 1f,
-//        targetValue = 1.05f,
-//        animationSpec = infiniteRepeatable(
-//            animation = tween(500, easing = FastOutSlowInEasing),
-//            repeatMode = RepeatMode.Reverse
-//        ), label = ""
-//    )
-    val filteredGradeList = gradeList.filter {
-        when (selectedFilter) {
-            "全部" -> true
-            else -> it.tag == selectedFilter
-        }
+fun GpaCard(gradeList: List<GradeEntity>, selectedFilters: Set<String>) {
+    val filteredGradeList = if (selectedFilters.isEmpty()) {
+        gradeList
+    } else {
+        gradeList.filter { it.tag != null && selectedFilters.contains(it.tag) }
     }
     val gradeInfo = calculateGradeInfo(filteredGradeList)
     ElevatedCard(
