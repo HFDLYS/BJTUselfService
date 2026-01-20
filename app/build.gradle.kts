@@ -15,8 +15,8 @@ android {
         applicationId = "team.bjtuss.bjtuselfservice"
         minSdk = 28
         targetSdk = 34
-        versionCode = 6
-        versionName = "v1.6.0"
+        versionCode = 7
+        versionName = "v1.6.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
