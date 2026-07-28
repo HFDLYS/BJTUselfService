@@ -12,6 +12,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -50,10 +52,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -61,6 +66,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.launch
+import team.bjtuss.bjtuselfservice.entity.DualGradeEligibility
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
 import team.bjtuss.bjtuselfservice.utils.Utils
 import team.bjtuss.bjtuselfservice.viewmodel.DataChange
@@ -77,6 +83,10 @@ fun GradeScreen(
 
     }
     val gradeList by gradeViewModel.gradeList.collectAsState()
+    val dualGradeEligibility by gradeViewModel.dualGradeEligibility.collectAsState()
+    val selectedGradeIds by gradeViewModel.selectedGradeIds.collectAsState()
+    val selectionUiResetGeneration by
+        gradeViewModel.selectionUiResetGeneration.collectAsState()
     val gradeChangeList: List<DataChange<GradeEntity>> by gradeViewModel.changeList.collectAsState()
 //    gradeViewModel.syncDataAndClearChange()
     LaunchedEffect(gradeChangeList) {
@@ -85,6 +95,13 @@ fun GradeScreen(
 
     GradeList(
         gradeList = gradeList,
+        dualGradeEligibility = dualGradeEligibility,
+        selectionUiResetGeneration = selectionUiResetGeneration,
+        selectedGradeIds = selectedGradeIds,
+        onGradeSelectedChange = gradeViewModel::setGradeSelected,
+        onSelectGrades = gradeViewModel::selectGrades,
+        onDeselectGradeSemesters = gradeViewModel::deselectGradesInSemesters,
+        onClearSelectedGrades = gradeViewModel::clearSelectedGrades,
     )
 }
 
@@ -128,15 +145,176 @@ enum class SortOrder {
     ORIGINAL, ASCENDING, DESCENDING
 }
 
+private val semesterFilterSaver = Saver<Set<String>, ArrayList<String>>(
+    save = { ArrayList(it) },
+    restore = { it.toSet() },
+)
+
+private val sortOrderSaver = Saver<SortOrder, String>(
+    save = { it.name },
+    restore = { SortOrder.valueOf(it) },
+)
+
+internal fun shouldResetCourseSelectionUi(
+    dualGradeEligibility: DualGradeEligibility,
+    handledResetGeneration: Long,
+    currentResetGeneration: Long,
+): Boolean {
+    return dualGradeEligibility == DualGradeEligibility.NOT_ELIGIBLE ||
+            handledResetGeneration != currentResetGeneration
+}
+
+internal fun isCourseSelectionModeActive(
+    savedCourseSelectionMode: Boolean,
+    dualGradeEligibility: DualGradeEligibility,
+): Boolean {
+    return savedCourseSelectionMode &&
+            dualGradeEligibility == DualGradeEligibility.ELIGIBLE
+}
+
+@Composable
+private fun ResponsiveTopActionRow(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Layout(
+        modifier = modifier,
+        content = content,
+    ) { measurables, constraints ->
+        val spacing = 8.dp.roundToPx()
+        val childConstraints = constraints.copy(minWidth = 0, minHeight = 0)
+        val placeables = measurables.map { it.measure(childConstraints) }
+        val availableWidth = if (constraints.hasBoundedWidth) {
+            constraints.maxWidth
+        } else {
+            placeables.sumOf { it.width } +
+                    spacing * (placeables.size - 1).coerceAtLeast(0)
+        }
+
+        val rows = mutableListOf<MutableList<Int>>()
+        val rowWidths = mutableListOf<Int>()
+        placeables.forEachIndexed { index, placeable ->
+            val currentRow = rows.lastOrNull()
+            val currentWidth = rowWidths.lastOrNull() ?: 0
+            val requiredWidth =
+                placeable.width + if (currentRow.isNullOrEmpty()) 0 else spacing
+            if (currentRow != null && currentWidth + requiredWidth <= availableWidth) {
+                currentRow += index
+                rowWidths[rowWidths.lastIndex] = currentWidth + requiredWidth
+            } else {
+                rows += mutableListOf(index)
+                rowWidths += placeable.width
+            }
+        }
+
+        val rowHeights = rows.map { row ->
+            row.maxOfOrNull { placeables[it].height } ?: 0
+        }
+        val contentHeight =
+            rowHeights.sum() + spacing * (rowHeights.size - 1).coerceAtLeast(0)
+        val layoutWidth = availableWidth.coerceIn(
+            minimumValue = constraints.minWidth,
+            maximumValue = constraints.maxWidth,
+        )
+        val layoutHeight = contentHeight.coerceIn(
+            minimumValue = constraints.minHeight,
+            maximumValue = constraints.maxHeight,
+        )
+
+        layout(layoutWidth, layoutHeight) {
+            var y = 0
+            rows.forEachIndexed { rowIndex, row ->
+                val rowHeight = rowHeights[rowIndex]
+                var x = 0
+                row.forEachIndexed { itemIndex, placeableIndex ->
+                    val placeable = placeables[placeableIndex]
+                    val isSortButton = placeableIndex == placeables.lastIndex
+                    val itemX = if (isSortButton) {
+                        layoutWidth - placeable.width
+                    } else {
+                        x
+                    }
+                    placeable.placeRelative(
+                        x = itemX,
+                        y = y + (rowHeight - placeable.height) / 2,
+                    )
+                    if (!isSortButton) {
+                        x += placeable.width
+                        if (itemIndex < row.lastIndex) {
+                            x += spacing
+                        }
+                    }
+                }
+                y += rowHeight + spacing
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun GradeList(
-    gradeList: List<GradeEntity>
+    gradeList: List<GradeEntity>,
+    dualGradeEligibility: DualGradeEligibility,
+    selectionUiResetGeneration: Long,
+    selectedGradeIds: Set<Int>,
+    onGradeSelectedChange: (Int, Boolean) -> Unit,
+    onSelectGrades: (Set<Int>) -> Unit,
+    onDeselectGradeSemesters: (Set<String>) -> Unit,
+    onClearSelectedGrades: (() -> Unit) -> Unit,
 ) {
     var filterExpanded by remember { mutableStateOf(false) }
-    var selectedFilters by remember { mutableStateOf(setOf<String>()) }
-    var sortOrder by remember { mutableStateOf(SortOrder.ORIGINAL) }
+    var selectedFilters by rememberSaveable(stateSaver = semesterFilterSaver) {
+        mutableStateOf(emptySet())
+    }
+    var sortOrder by rememberSaveable(stateSaver = sortOrderSaver) {
+        mutableStateOf(SortOrder.ORIGINAL)
+    }
+    var isCourseSelectionMode by rememberSaveable { mutableStateOf(false) }
+    var handledSelectionUiResetGeneration by rememberSaveable {
+        mutableStateOf(selectionUiResetGeneration)
+    }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val canSelectCourses =
+        dualGradeEligibility == DualGradeEligibility.ELIGIBLE
+    val activeCourseSelectionMode = isCourseSelectionModeActive(
+        savedCourseSelectionMode = isCourseSelectionMode,
+        dualGradeEligibility = dualGradeEligibility,
+    )
+
+    LaunchedEffect(
+        dualGradeEligibility,
+        selectionUiResetGeneration,
+    ) {
+        if (shouldResetCourseSelectionUi(
+                dualGradeEligibility = dualGradeEligibility,
+                handledResetGeneration = handledSelectionUiResetGeneration,
+                currentResetGeneration = selectionUiResetGeneration,
+            )
+        ) {
+            isCourseSelectionMode = false
+            filterExpanded = false
+            selectedFilters = emptySet()
+            sortOrder = SortOrder.ORIGINAL
+        }
+        handledSelectionUiResetGeneration = selectionUiResetGeneration
+    }
+
+    val filteredGradeList = filterGradesBySemester(gradeList, selectedFilters)
+    val sortedGradeList = when (sortOrder) {
+        SortOrder.ORIGINAL -> filteredGradeList
+        SortOrder.ASCENDING -> filteredGradeList.sortedBy { getScoreGrade(it.courseScore) }
+        SortOrder.DESCENDING -> filteredGradeList.sortedByDescending {
+            getScoreGrade(it.courseScore)
+        }
+    }
+    val gradesForCalculation = gradesForCalculation(
+        gradeList = gradeList,
+        selectedFilters = selectedFilters,
+        isCourseSelectionMode = activeCourseSelectionMode,
+        selectedGradeIds = selectedGradeIds,
+    )
 
     Scaffold(
         modifier = Modifier.fillMaxSize()
@@ -151,12 +329,14 @@ fun GradeList(
                     .fillMaxSize()
                     .padding(horizontal = 16.dp),
             ) {
-                GpaCard(gradeList, selectedFilters)
-                Row(
+                GpaCard(
+                    grades = gradesForCalculation,
+                    isCourseSelectionMode = activeCourseSelectionMode,
+                )
+                ResponsiveTopActionRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Button(
                         onClick = {
@@ -164,16 +344,66 @@ fun GradeList(
                         }
                     ) {
                         Text(
-                            text = if (selectedFilters.isEmpty()) "请选择学期" else "已选：${selectedFilters.size}",
+                            text = if (selectedFilters.isEmpty()) {
+                                "请选择学期"
+                            } else {
+                                "已选：${selectedFilters.size}"
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
-                    // 筛选条件
+
+                    if (canSelectCourses) {
+                        Button(
+                            onClick = {
+                                if (activeCourseSelectionMode) {
+                                    isCourseSelectionMode = false
+                                    filterExpanded = false
+                                    selectedFilters = emptySet()
+                                    sortOrder = SortOrder.ORIGINAL
+                                } else {
+                                    isCourseSelectionMode = true
+                                    sortOrder = SortOrder.ORIGINAL
+                                }
+                            }
+                        ) {
+                            Text(
+                                text = if (activeCourseSelectionMode) {
+                                    "退出自选课程"
+                                } else {
+                                    "自选课程计算"
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                    }
+
+                    IconButton(
+                        onClick = {
+                            sortOrder = when (sortOrder) {
+                                SortOrder.ORIGINAL -> SortOrder.ASCENDING
+                                SortOrder.ASCENDING -> SortOrder.DESCENDING
+                                SortOrder.DESCENDING -> SortOrder.ORIGINAL
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = when (sortOrder) {
+                                SortOrder.ORIGINAL -> Icons.Default.Sort
+                                SortOrder.ASCENDING -> Icons.Default.ArrowUpward
+                                SortOrder.DESCENDING -> Icons.Default.ArrowDownward
+                            },
+                            contentDescription = "Sort Order"
+                        )
+                    }
+                }
+
+                Box {
                     DropdownMenu(
                         expanded = filterExpanded,
                         onDismissRequest = { filterExpanded = false }
                     ) {
-                        val filterOptions = gradeList.mapNotNull { it.tag }.distinct()
+                        val filterOptions = gradeList.map { it.tag }.distinct()
                         if (filterOptions.isEmpty()) {
                             DropdownMenuItem(
                                 onClick = { filterExpanded = false },
@@ -183,14 +413,18 @@ fun GradeList(
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                            }
+                                }
                             )
                         } else {
                             filterOptions.forEach { option ->
-                                val isChecked = selectedFilters.contains(option)
+                                val isChecked = option in selectedFilters
                                 DropdownMenuItem(
                                     onClick = {
-                                        selectedFilters = if (isChecked) selectedFilters - option else selectedFilters + option
+                                        selectedFilters = if (isChecked) {
+                                            selectedFilters - option
+                                        } else {
+                                            selectedFilters + option
+                                        }
                                     },
                                     text = {
                                         Row(
@@ -206,7 +440,11 @@ fun GradeList(
                                             Checkbox(
                                                 checked = isChecked,
                                                 onCheckedChange = { checked ->
-                                                    selectedFilters = if (checked) selectedFilters + option else selectedFilters - option
+                                                    selectedFilters = if (checked) {
+                                                        selectedFilters + option
+                                                    } else {
+                                                        selectedFilters - option
+                                                    }
                                                 }
                                             )
                                         }
@@ -217,57 +455,82 @@ fun GradeList(
                                 onClick = {
                                     selectedFilters = emptySet()
                                     filterExpanded = false
-                            },
-                            text = {
-                                Text(
-                                    text = "清空选择",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
+                                },
+                                text = {
+                                    Text(
+                                        text = "清空选择",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             )
                         }
                     }
+                }
 
-                    IconButton(
-                        onClick = {
-                            sortOrder = when (sortOrder) {
-                                SortOrder.ORIGINAL -> SortOrder.ASCENDING
-                                SortOrder.ASCENDING -> SortOrder.DESCENDING
-                                SortOrder.DESCENDING -> SortOrder.ORIGINAL
-                            }
-                        },
-                        modifier = Modifier.align(Alignment.CenterVertically)
+                if (activeCourseSelectionMode) {
+                    FlowRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Icon(
-                            imageVector = when (sortOrder) {
-                                SortOrder.ORIGINAL -> Icons.Default.Sort
-                                SortOrder.ASCENDING -> Icons.Default.ArrowUpward
-                                SortOrder.DESCENDING -> Icons.Default.ArrowDownward
-                            },
-                            contentDescription = "Sort Order"
-                        )
+                        Button(
+                            onClick = {
+                                onSelectGrades(filteredGradeList.map { it.id }.toSet())
+                            }
+                        ) {
+                            Text(
+                                text = "全选",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+
+                        if (selectedFilters.isNotEmpty()) {
+                            Button(
+                                onClick = {
+                                    onDeselectGradeSemesters(selectedFilters)
+                                }
+                            ) {
+                                Text(
+                                    text = "清空本学期",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = {
+                                onClearSelectedGrades {
+                                    filterExpanded = false
+                                    selectedFilters = emptySet()
+                                    sortOrder = SortOrder.ORIGINAL
+                                }
+                            }
+                        ) {
+                            Text(
+                                text = "全部清空",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
                     }
                 }
+
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 16.dp),
                     state = listState
                 ) {
-                    val filteredGradeList = if (selectedFilters.isEmpty()) {
-                        gradeList
-                    } else {
-                        gradeList.filter { it.tag != null && selectedFilters.contains(it.tag) }
-                    }
-                    val sortedGradeList = when (sortOrder) {
-                        SortOrder.ORIGINAL -> filteredGradeList
-                        SortOrder.ASCENDING -> filteredGradeList.sortedBy { getScoreGrade(it.courseScore) }
-                        SortOrder.DESCENDING -> filteredGradeList.sortedByDescending { getScoreGrade(it.courseScore) }
-                    }
                     items(sortedGradeList.size) { index ->
                         val gradeEntity = sortedGradeList[index]
                         GradeItemCard(
                             GradeEntity = gradeEntity,
+                            isCourseSelectionMode = activeCourseSelectionMode,
+                            isSelected = gradeEntity.id in selectedGradeIds,
+                            onSelectedChange = { selected ->
+                                onGradeSelectedChange(gradeEntity.id, selected)
+                            },
                         )
                     }
                 }
@@ -301,6 +564,30 @@ fun GradeList(
     }
 }
 
+fun filterGradesBySemester(
+    gradeList: List<GradeEntity>,
+    selectedFilters: Set<String>,
+): List<GradeEntity> {
+    return if (selectedFilters.isEmpty()) {
+        gradeList
+    } else {
+        gradeList.filter { it.tag in selectedFilters }
+    }
+}
+
+fun gradesForCalculation(
+    gradeList: List<GradeEntity>,
+    selectedFilters: Set<String>,
+    isCourseSelectionMode: Boolean,
+    selectedGradeIds: Set<Int>,
+): List<GradeEntity> {
+    return if (isCourseSelectionMode) {
+        gradeList.filter { it.id in selectedGradeIds }
+    } else {
+        filterGradesBySemester(gradeList, selectedFilters)
+    }
+}
+
 fun getScoreGrade(scoreStr: String): Int {
     val cleanScore = scoreStr.replace(",", "").replace("[^0-9.]".toRegex(), "")
     return try {
@@ -313,13 +600,11 @@ fun getScoreGrade(scoreStr: String): Int {
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
-fun GpaCard(gradeList: List<GradeEntity>, selectedFilters: Set<String>) {
-    val filteredGradeList = if (selectedFilters.isEmpty()) {
-        gradeList
-    } else {
-        gradeList.filter { it.tag != null && selectedFilters.contains(it.tag) }
-    }
-    val gradeInfo = calculateGradeInfo(filteredGradeList)
+fun GpaCard(
+    grades: List<GradeEntity>,
+    isCourseSelectionMode: Boolean,
+) {
+    val gradeInfo = calculateGradeInfo(grades)
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -339,9 +624,22 @@ fun GpaCard(gradeList: List<GradeEntity>, selectedFilters: Set<String>) {
             when (gradeInfo) {
                 is GradeInfoResult.NoGrades -> {
                     Text(
-                        text = "成绩好像都没出来哦~",
+                        text = if (isCourseSelectionMode) {
+                            "你的加权平均分是 -"
+                        } else {
+                            "成绩好像都没出来哦~"
+                        },
                         style = MaterialTheme.typography.headlineSmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (isCourseSelectionMode) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            fontWeight = if (isCourseSelectionMode) {
+                                FontWeight.Bold
+                            } else {
+                                FontWeight.Normal
+                            },
                         )
                     )
                 }
@@ -382,6 +680,9 @@ fun GpaCard(gradeList: List<GradeEntity>, selectedFilters: Set<String>) {
 @Composable
 fun GradeItemCard(
     GradeEntity: GradeEntity,
+    isCourseSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onSelectedChange: (Boolean) -> Unit = {},
 ) {
     var showDetailedInformationDialog by remember { mutableStateOf(false) }
     val score = getScoreGrade(GradeEntity.courseScore)
@@ -403,7 +704,9 @@ fun GradeItemCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(
-                modifier = Modifier.weight(0.7f),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
@@ -430,8 +733,11 @@ fun GradeItemCard(
                     )
                     Text(
                         text = GradeEntity.courseTeacher,
+                        modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 Row(
@@ -452,23 +758,26 @@ fun GradeItemCard(
                 }
             }
 
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.Center
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = GradeEntity.courseScore,
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
                         color = cardColor
-                    )
+                    ),
+                    maxLines = 1,
+                    softWrap = false,
                 )
-//                Text(
-//                    text = scoreGrade,
-//                    style = MaterialTheme.typography.bodySmall.copy(
-//                        color = cardColor.copy(alpha = 0.7f)
-//                    )
-//                )
+                if (isCourseSelectionMode) {
+                    Checkbox(
+                        checked = isSelected,
+                        onCheckedChange = onSelectedChange,
+                        modifier = Modifier.size(48.dp),
+                    )
+                }
             }
         }
     }

@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import team.bjtuss.bjtuselfservice.statemanager.AppEvent
 import team.bjtuss.bjtuselfservice.statemanager.AppEventManager
+import team.bjtuss.bjtuselfservice.statemanager.AuthenticatorManager
 
 
 class MainViewModel(
@@ -26,7 +27,21 @@ class MainViewModel(
                 when (it) {
                     is AppEvent.DataSyncRequest -> {
                         println("这里执行了一次")
+                        gradeViewModel.activateStudentSelections(
+                            AuthenticatorManager.credentials.value.username
+                        )
+                        gradeViewModel.refreshDualGradeEligibility()
                         loadDataAndDetectChanges()
+                    }
+
+                    is AppEvent.LoginRequest -> {
+                        gradeViewModel.resetDualGradeEligibility()
+                    }
+
+                    is AppEvent.LogoutRequest,
+                    is AppEvent.LoginFailed -> {
+                        gradeViewModel.resetDualGradeEligibility()
+                        gradeViewModel.deactivateStudentSelections()
                     }
 
                     else -> {}

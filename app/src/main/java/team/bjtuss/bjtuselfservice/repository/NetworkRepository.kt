@@ -8,6 +8,7 @@ import kotlinx.coroutines.withContext
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.controller.NetworkRequestQueue
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
+import team.bjtuss.bjtuselfservice.entity.DualGradeEligibility
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
 import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository.client
@@ -126,6 +127,41 @@ object NetworkRepository {
         return result.getOrElse { emptyList() }
     }
 
+    suspend fun getDualGradeEligibility(): DualGradeEligibility {
+        val mainProgramYear = try {
+            studentAccountManager.getMainTrainingProgramGradeYear().await()
+        } catch (e: Exception) {
+            Log.w(
+                "NetworkRepository",
+                "Unable to determine eligibility from main training program: ${e.message}"
+            )
+            null
+        }
+        if (mainProgramYear != null) {
+            return eligibilityForYear(mainProgramYear)
+        }
+
+        val classEnrollmentYear = try {
+            studentAccountManager.getClassEnrollmentYear().await()
+        } catch (e: Exception) {
+            Log.w(
+                "NetworkRepository",
+                "Unable to determine eligibility from class information: ${e.message}"
+            )
+            null
+        }
+        return classEnrollmentYear?.let(::eligibilityForYear)
+            ?: DualGradeEligibility.UNKNOWN
+    }
+
+    private fun eligibilityForYear(year: Int): DualGradeEligibility {
+        return if (year >= 2025) {
+            DualGradeEligibility.ELIGIBLE
+        } else {
+            DualGradeEligibility.NOT_ELIGIBLE
+        }
+    }
+
     suspend fun loadCurrentWeek(): Int {
         val url = "http://123.121.147.7:88/ve/back/coursePlatform/course.shtml?method=getTimeList"
         val type = Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
@@ -156,5 +192,4 @@ object NetworkRepository {
 
 
 }
-
 
