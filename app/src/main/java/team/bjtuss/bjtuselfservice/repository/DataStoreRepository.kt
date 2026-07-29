@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import team.bjtuss.bjtuselfservice.MainApplication.Companion.appContext
-import team.bjtuss.bjtuselfservice.entity.DualGradeEligibility
 import team.bjtuss.bjtuselfservice.entity.GradeSelectionRecord
 import team.bjtuss.bjtuselfservice.statemanager.Credentials
 
@@ -35,13 +34,9 @@ object DataStoreRepository {
     private val COURSEWARE_JSON = stringPreferencesKey("courseware_json")
     private val GRADE_SELECTIONS_BY_STUDENT_KEY =
         stringPreferencesKey("grade_selections_by_student")
-    private val DUAL_GRADE_ELIGIBILITY_BY_STUDENT_KEY =
-        stringPreferencesKey("dual_grade_eligibility_by_student")
     private val gson = Gson()
     private val gradeSelectionsMapType =
         object : TypeToken<Map<String, List<GradeSelectionRecord>>>() {}.type
-    private val dualGradeEligibilityMapType =
-        object : TypeToken<Map<String, String>>() {}.type
 
 
     suspend fun setCredentials(credentials: Credentials) {
@@ -175,47 +170,10 @@ object DataStoreRepository {
     suspend fun clearAllGradeSelections() {
         appContext.dataStore.edit { preferences ->
             preferences.remove(GRADE_SELECTIONS_BY_STUDENT_KEY)
-        }
-    }
-
-    suspend fun getDualGradeEligibility(
-        studentId: String,
-    ): DualGradeEligibility? {
-        if (studentId.isBlank()) {
-            return null
-        }
-        val storedValue = readDualGradeEligibilityMap(
-            appContext.dataStore.data.first()
-        )[studentId] ?: return null
-        return runCatching {
-            DualGradeEligibility.valueOf(storedValue)
-        }.getOrNull()?.takeIf {
-            it != DualGradeEligibility.UNKNOWN
-        }
-    }
-
-    suspend fun setDualGradeEligibility(
-        studentId: String,
-        eligibility: DualGradeEligibility,
-    ) {
-        if (
-            studentId.isBlank() ||
-            eligibility == DualGradeEligibility.UNKNOWN
-        ) {
-            return
-        }
-        appContext.dataStore.edit { preferences ->
-            val eligibilityByStudent =
-                readDualGradeEligibilityMap(preferences).toMutableMap()
-            eligibilityByStudent[studentId] = eligibility.name
-            preferences[DUAL_GRADE_ELIGIBILITY_BY_STUDENT_KEY] =
-                gson.toJson(eligibilityByStudent, dualGradeEligibilityMapType)
-        }
-    }
-
-    suspend fun clearAllDualGradeEligibility() {
-        appContext.dataStore.edit { preferences ->
-            preferences.remove(DUAL_GRADE_ELIGIBILITY_BY_STUDENT_KEY)
+            // Remove the account-scoped eligibility cache written by earlier test builds.
+            preferences.remove(
+                stringPreferencesKey("dual_grade_eligibility_by_student")
+            )
         }
     }
 
@@ -227,21 +185,6 @@ object DataStoreRepository {
             gson.fromJson<Map<String, List<GradeSelectionRecord>>>(
                 json,
                 gradeSelectionsMapType,
-            ).orEmpty()
-        } catch (_: Exception) {
-            emptyMap()
-        }
-    }
-
-    private fun readDualGradeEligibilityMap(
-        preferences: Preferences,
-    ): Map<String, String> {
-        val json = preferences[DUAL_GRADE_ELIGIBILITY_BY_STUDENT_KEY]
-            ?: return emptyMap()
-        return try {
-            gson.fromJson<Map<String, String>>(
-                json,
-                dualGradeEligibilityMapType,
             ).orEmpty()
         } catch (_: Exception) {
             emptyMap()

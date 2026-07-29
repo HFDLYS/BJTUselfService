@@ -66,7 +66,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.launch
-import team.bjtuss.bjtuselfservice.entity.DualGradeEligibility
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
 import team.bjtuss.bjtuselfservice.utils.Utils
 import team.bjtuss.bjtuselfservice.viewmodel.DataChange
@@ -83,7 +82,6 @@ fun GradeScreen(
 
     }
     val gradeList by gradeViewModel.gradeList.collectAsState()
-    val dualGradeEligibility by gradeViewModel.dualGradeEligibility.collectAsState()
     val selectedGradeIds by gradeViewModel.selectedGradeIds.collectAsState()
     val selectionUiResetGeneration by
         gradeViewModel.selectionUiResetGeneration.collectAsState()
@@ -95,7 +93,6 @@ fun GradeScreen(
 
     GradeList(
         gradeList = gradeList,
-        dualGradeEligibility = dualGradeEligibility,
         selectionUiResetGeneration = selectionUiResetGeneration,
         selectedGradeIds = selectedGradeIds,
         onGradeSelectedChange = gradeViewModel::setGradeSelected,
@@ -156,20 +153,10 @@ private val sortOrderSaver = Saver<SortOrder, String>(
 )
 
 internal fun shouldResetCourseSelectionUi(
-    dualGradeEligibility: DualGradeEligibility,
     handledResetGeneration: Long,
     currentResetGeneration: Long,
 ): Boolean {
-    return dualGradeEligibility == DualGradeEligibility.NOT_ELIGIBLE ||
-            handledResetGeneration != currentResetGeneration
-}
-
-internal fun isCourseSelectionModeActive(
-    savedCourseSelectionMode: Boolean,
-    dualGradeEligibility: DualGradeEligibility,
-): Boolean {
-    return savedCourseSelectionMode &&
-            dualGradeEligibility == DualGradeEligibility.ELIGIBLE
+    return handledResetGeneration != currentResetGeneration
 }
 
 @Composable
@@ -255,7 +242,6 @@ private fun ResponsiveTopActionRow(
 @Composable
 fun GradeList(
     gradeList: List<GradeEntity>,
-    dualGradeEligibility: DualGradeEligibility,
     selectionUiResetGeneration: Long,
     selectedGradeIds: Set<Int>,
     onGradeSelectedChange: (Int, Boolean) -> Unit,
@@ -276,19 +262,9 @@ fun GradeList(
     }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
-    val canSelectCourses =
-        dualGradeEligibility == DualGradeEligibility.ELIGIBLE
-    val activeCourseSelectionMode = isCourseSelectionModeActive(
-        savedCourseSelectionMode = isCourseSelectionMode,
-        dualGradeEligibility = dualGradeEligibility,
-    )
 
-    LaunchedEffect(
-        dualGradeEligibility,
-        selectionUiResetGeneration,
-    ) {
+    LaunchedEffect(selectionUiResetGeneration) {
         if (shouldResetCourseSelectionUi(
-                dualGradeEligibility = dualGradeEligibility,
                 handledResetGeneration = handledSelectionUiResetGeneration,
                 currentResetGeneration = selectionUiResetGeneration,
             )
@@ -312,7 +288,7 @@ fun GradeList(
     val gradesForCalculation = gradesForCalculation(
         gradeList = gradeList,
         selectedFilters = selectedFilters,
-        isCourseSelectionMode = activeCourseSelectionMode,
+        isCourseSelectionMode = isCourseSelectionMode,
         selectedGradeIds = selectedGradeIds,
     )
 
@@ -331,7 +307,7 @@ fun GradeList(
             ) {
                 GpaCard(
                     grades = gradesForCalculation,
-                    isCourseSelectionMode = activeCourseSelectionMode,
+                    isCourseSelectionMode = isCourseSelectionMode,
                 )
                 ResponsiveTopActionRow(
                     modifier = Modifier
@@ -353,29 +329,27 @@ fun GradeList(
                         )
                     }
 
-                    if (canSelectCourses) {
-                        Button(
-                            onClick = {
-                                if (activeCourseSelectionMode) {
-                                    isCourseSelectionMode = false
-                                    filterExpanded = false
-                                    selectedFilters = emptySet()
-                                    sortOrder = SortOrder.ORIGINAL
-                                } else {
-                                    isCourseSelectionMode = true
-                                    sortOrder = SortOrder.ORIGINAL
-                                }
+                    Button(
+                        onClick = {
+                            if (isCourseSelectionMode) {
+                                isCourseSelectionMode = false
+                                filterExpanded = false
+                                selectedFilters = emptySet()
+                                sortOrder = SortOrder.ORIGINAL
+                            } else {
+                                isCourseSelectionMode = true
+                                sortOrder = SortOrder.ORIGINAL
                             }
-                        ) {
-                            Text(
-                                text = if (activeCourseSelectionMode) {
-                                    "退出自选课程"
-                                } else {
-                                    "自选课程计算"
-                                },
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
                         }
+                    ) {
+                        Text(
+                            text = if (isCourseSelectionMode) {
+                                "退出自选课程"
+                            } else {
+                                "自选课程计算"
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
                     }
 
                     IconButton(
@@ -468,7 +442,7 @@ fun GradeList(
                     }
                 }
 
-                if (activeCourseSelectionMode) {
+                if (isCourseSelectionMode) {
                     FlowRow(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -526,7 +500,7 @@ fun GradeList(
                         val gradeEntity = sortedGradeList[index]
                         GradeItemCard(
                             GradeEntity = gradeEntity,
-                            isCourseSelectionMode = activeCourseSelectionMode,
+                            isCourseSelectionMode = isCourseSelectionMode,
                             isSelected = gradeEntity.id in selectedGradeIds,
                             onSelectedChange = { selected ->
                                 onGradeSelectedChange(gradeEntity.id, selected)

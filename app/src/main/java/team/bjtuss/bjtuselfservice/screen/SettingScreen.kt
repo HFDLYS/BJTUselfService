@@ -61,7 +61,6 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.jeziellago.compose.markdowntext.MarkdownText
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import team.bjtuss.bjtuselfservice.MainApplication.Companion.appContext
 import team.bjtuss.bjtuselfservice.R
@@ -77,37 +76,6 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-
-
-internal suspend fun clearGradeCachesIndependently(
-    clearGradeSelections: suspend () -> Unit,
-    clearGradeEligibility: suspend () -> Unit,
-    refreshGradeEligibility: () -> Unit,
-) {
-    var clearFailure: Exception? = null
-    try {
-        clearGradeSelections()
-    } catch (exception: CancellationException) {
-        throw exception
-    } catch (exception: Exception) {
-        clearFailure = exception
-    }
-
-    try {
-        clearGradeEligibility()
-    } catch (exception: CancellationException) {
-        throw exception
-    } catch (exception: Exception) {
-        if (clearFailure == null) {
-            clearFailure = exception
-        } else {
-            clearFailure.addSuppressed(exception)
-        }
-    }
-
-    refreshGradeEligibility()
-    clearFailure?.let { throw it }
-}
 
 
 @Composable
@@ -346,20 +314,8 @@ fun ClearLocalCacheItem(mainViewModel: MainViewModel) {
                                     courseEntityDao().deleteAll()
                                     homeworkEntityDao().deleteAll()
                                 }
-                                clearGradeCachesIndependently(
-                                    clearGradeSelections = {
-                                        mainViewModel.gradeViewModel
-                                            .clearAllPersistedGradeSelections()
-                                    },
-                                    clearGradeEligibility = {
-                                        mainViewModel.gradeViewModel
-                                            .clearAllPersistedDualGradeEligibility()
-                                    },
-                                    refreshGradeEligibility = {
-                                        mainViewModel.gradeViewModel
-                                            .refreshDualGradeEligibility()
-                                    },
-                                )
+                                mainViewModel.gradeViewModel
+                                    .clearAllPersistedGradeSelections()
                                 mainViewModel.clearChange()
                             } catch (e: Exception) {
                                 e.printStackTrace()

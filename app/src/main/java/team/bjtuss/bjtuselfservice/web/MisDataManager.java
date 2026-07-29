@@ -21,8 +21,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -42,11 +40,6 @@ import team.bjtuss.bjtuselfservice.utils.Network.WebCallback;
 import team.bjtuss.bjtuselfservice.utils.Utils;
 
 public class MisDataManager {
-    private static final Pattern MAIN_PROGRAM_GRADE_PATTERN =
-            Pattern.compile("-\\s*主修\\s*-\\s*(\\d{4})\\s*级");
-    private static final Pattern CLASS_GRADE_PATTERN =
-            Pattern.compile("(\\d{2})\\d{2}$");
-
     public static void login(OkHttpClient client, String stuId, String stuPasswd, WebCallback loginCallback) {
 
         Request request = new Request.Builder()
@@ -361,116 +354,6 @@ public class MisDataManager {
                 }
             }
         });
-    }
-
-    public static void getMainTrainingProgramGradeYear(
-            OkHttpClient client,
-            WebCallback<Integer> resCallback
-    ) {
-        Request request = new Request.Builder()
-                .url("https://aa.bjtu.edu.cn/training/training/program/")
-                .header("Host", "aa.bjtu.edu.cn")
-                .build();
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                resCallback.onFailure(0);
-            }
-
-            @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) {
-                try {
-                    if (!response.isSuccessful() || response.body() == null) {
-                        resCallback.onFailure(1);
-                        return;
-                    }
-                    resCallback.onResponse(
-                            parseMainTrainingProgramGradeYear(response.body().string())
-                    );
-                } catch (Exception e) {
-                    resCallback.onFailure(1);
-                } finally {
-                    response.close();
-                }
-            }
-        });
-    }
-
-    static int parseMainTrainingProgramGradeYear(String html) {
-        Document document = Jsoup.parse(html);
-        Elements programLinks =
-                document.select("a[href*=\"/training/training/program/stuview/\"]");
-        for (Element programLink : programLinks) {
-            Matcher matcher = MAIN_PROGRAM_GRADE_PATTERN.matcher(programLink.text());
-            if (matcher.find()) {
-                return Integer.parseInt(matcher.group(1));
-            }
-        }
-        throw new IllegalArgumentException("Unable to find the main training program grade");
-    }
-
-    public static void getClassEnrollmentYear(
-            OkHttpClient client,
-            WebCallback<Integer> resCallback
-    ) {
-        Request request = new Request.Builder()
-                .url("https://aa.bjtu.edu.cn/school_census/schoolcensus/stuview/")
-                .header("Host", "aa.bjtu.edu.cn")
-                .build();
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(@NonNull Call call, @NonNull IOException e) {
-                resCallback.onFailure(0);
-            }
-
-            @Override
-            public void onResponse(@NonNull Call call, @NonNull Response response) {
-                try {
-                    if (!response.isSuccessful() || response.body() == null) {
-                        resCallback.onFailure(1);
-                        return;
-                    }
-                    resCallback.onResponse(parseClassEnrollmentYear(response.body().string()));
-                } catch (Exception e) {
-                    resCallback.onFailure(1);
-                } finally {
-                    response.close();
-                }
-            }
-        });
-    }
-
-    static int parseClassEnrollmentYear(String html) {
-        Document document = Jsoup.parse(html);
-        for (Element tableBody : document.select("tbody")) {
-            boolean isTrainingInformation = false;
-            for (Element header : tableBody.select("th")) {
-                if ("培养信息".equals(header.text().trim())) {
-                    isTrainingInformation = true;
-                    break;
-                }
-            }
-            if (!isTrainingInformation) {
-                continue;
-            }
-
-            for (Element header : tableBody.select("th")) {
-                if (!"班级".equals(header.text().trim())) {
-                    continue;
-                }
-                Element classCell = header.nextElementSibling();
-                if (classCell == null || !"td".equals(classCell.tagName())) {
-                    break;
-                }
-                String className = classCell.text().replaceAll("\\s+", "");
-                Matcher matcher = CLASS_GRADE_PATTERN.matcher(className);
-                if (matcher.find()) {
-                    return 2000 + Integer.parseInt(matcher.group(1));
-                }
-                break;
-            }
-        }
-        throw new IllegalArgumentException("Unable to find the class enrollment year");
     }
 
     public static void getExamSchedule(OkHttpClient client, WebCallback<List<ExamScheduleEntity>> ResCallback) {

@@ -4,7 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import team.bjtuss.bjtuselfservice.entity.DualGradeEligibility
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
 
 class GradeSelectionLogicTest {
@@ -76,50 +75,9 @@ class GradeSelectionLogicTest {
     }
 
     @Test
-    fun unknownEligibilityPausesSelectionModeWithoutRequestingReset() {
-        assertFalse(
-            isCourseSelectionModeActive(
-                savedCourseSelectionMode = true,
-                dualGradeEligibility = DualGradeEligibility.UNKNOWN,
-            )
-        )
+    fun matchingResetGenerationPreservesRestoredSelectionUi() {
         assertFalse(
             shouldResetCourseSelectionUi(
-                dualGradeEligibility = DualGradeEligibility.UNKNOWN,
-                handledResetGeneration = 4L,
-                currentResetGeneration = 4L,
-            )
-        )
-    }
-
-    @Test
-    fun eligibleStateRestoresSavedSelectionMode() {
-        assertTrue(
-            isCourseSelectionModeActive(
-                savedCourseSelectionMode = true,
-                dualGradeEligibility = DualGradeEligibility.ELIGIBLE,
-            )
-        )
-        assertFalse(
-            shouldResetCourseSelectionUi(
-                dualGradeEligibility = DualGradeEligibility.ELIGIBLE,
-                handledResetGeneration = 4L,
-                currentResetGeneration = 4L,
-            )
-        )
-    }
-
-    @Test
-    fun notEligibleStateRequestsSelectionUiReset() {
-        assertFalse(
-            isCourseSelectionModeActive(
-                savedCourseSelectionMode = true,
-                dualGradeEligibility = DualGradeEligibility.NOT_ELIGIBLE,
-            )
-        )
-        assertTrue(
-            shouldResetCourseSelectionUi(
-                dualGradeEligibility = DualGradeEligibility.NOT_ELIGIBLE,
                 handledResetGeneration = 4L,
                 currentResetGeneration = 4L,
             )
@@ -130,7 +88,6 @@ class GradeSelectionLogicTest {
     fun accountResetGenerationClearsRestoredSelectionUi() {
         assertTrue(
             shouldResetCourseSelectionUi(
-                dualGradeEligibility = DualGradeEligibility.UNKNOWN,
                 handledResetGeneration = 4L,
                 currentResetGeneration = 5L,
             )

@@ -292,54 +292,6 @@ public class StudentAccountManager {
         return gradeFuture;
     }
 
-    public CompletableFuture<Integer> getMainTrainingProgramGradeYear() {
-        CompletableFuture<Integer> future = new CompletableFuture<>();
-        if (!isAaLogin) {
-            future.completeExceptionally(new Exception("Not loginAa"));
-            return future;
-        }
-        MisDataManager.getMainTrainingProgramGradeYear(client, new WebCallback<Integer>() {
-            @Override
-            public void onResponse(Integer gradeYear) {
-                future.complete(gradeYear);
-            }
-
-            @Override
-            public void onFailure(int code) {
-                future.completeExceptionally(
-                        new Exception(code == 0
-                                ? "No connection"
-                                : "Unable to parse main training program")
-                );
-            }
-        });
-        return future;
-    }
-
-    public CompletableFuture<Integer> getClassEnrollmentYear() {
-        CompletableFuture<Integer> future = new CompletableFuture<>();
-        if (!isAaLogin) {
-            future.completeExceptionally(new Exception("Not loginAa"));
-            return future;
-        }
-        MisDataManager.getClassEnrollmentYear(client, new WebCallback<Integer>() {
-            @Override
-            public void onResponse(Integer gradeYear) {
-                future.complete(gradeYear);
-            }
-
-            @Override
-            public void onFailure(int code) {
-                future.completeExceptionally(
-                        new Exception(code == 0
-                                ? "No connection"
-                                : "Unable to parse class enrollment year")
-                );
-            }
-        });
-        return future;
-    }
-
     public List<ExamScheduleEntity> examScheduleList;
 
     public CompletableFuture<List<ExamScheduleEntity>> getExamSchedule() {
@@ -610,4 +562,5 @@ class LoggedInUserView {
         return displayName;
     }
 }
+
 

@@ -13,10 +13,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import team.bjtuss.bjtuselfservice.database.AppDatabase
-import team.bjtuss.bjtuselfservice.entity.DualGradeEligibility
 import team.bjtuss.bjtuselfservice.entity.GradeEntity
 import team.bjtuss.bjtuselfservice.entity.GradeSelectionRecord
-import team.bjtuss.bjtuselfservice.entity.resolveDualGradeEligibility
 import team.bjtuss.bjtuselfservice.repository.DatabaseRepository
 import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 import team.bjtuss.bjtuselfservice.repository.NetworkRepository
@@ -63,18 +61,11 @@ class GradeViewModel(
 ) {
 
     val gradeList: StateFlow<List<GradeEntity>> = DatabaseRepository.gradeList
-    private val _dualGradeEligibility =
-        MutableStateFlow(DualGradeEligibility.UNKNOWN)
-    val dualGradeEligibility: StateFlow<DualGradeEligibility> =
-        _dualGradeEligibility.asStateFlow()
     private val _selectedGradeIds = MutableStateFlow<Set<Int>>(emptySet())
     val selectedGradeIds: StateFlow<Set<Int>> = _selectedGradeIds.asStateFlow()
     val selectionUiResetGeneration: StateFlow<Long> =
         savedStateHandle.getStateFlow(SELECTION_UI_RESET_GENERATION_KEY, 0L)
 
-    private var eligibilityJob: Job? = null
-    private val eligibilityPersistenceMutex = Mutex()
-    private val eligibilityPersistenceGeneration = AtomicLong(0)
     private var selectionLoadJob: Job? = null
     private val selectionPersistenceMutex = Mutex()
     private val selectionPersistenceGeneration = AtomicLong(0)
@@ -126,93 +117,6 @@ class GradeViewModel(
 
     override suspend fun fetchLocalData(): List<GradeEntity> {
         return DatabaseRepository.getGradeList()
-    }
-
-    fun refreshDualGradeEligibility() {
-        eligibilityJob?.cancel()
-        val studentId = activeStudentId ?: return
-        val refreshGeneration = eligibilityPersistenceGeneration.incrementAndGet()
-        eligibilityJob = viewModelScope.launch {
-            val cachedEligibility = try {
-                DataStoreRepository.getDualGradeEligibility(studentId)
-            } catch (exception: CancellationException) {
-                throw exception
-            } catch (exception: Exception) {
-                Log.e(
-                    "GradeViewModel",
-                    "Unable to load cached eligibility for $studentId",
-                    exception,
-                )
-                null
-            }
-            if (!isCurrentEligibilityRequest(studentId, refreshGeneration)) {
-                return@launch
-            }
-            _dualGradeEligibility.value = resolveDualGradeEligibility(
-                current = _dualGradeEligibility.value,
-                cached = cachedEligibility,
-                queried = DualGradeEligibility.UNKNOWN,
-            )
-
-            val queriedEligibility = NetworkRepository.getDualGradeEligibility()
-            if (!isCurrentEligibilityRequest(studentId, refreshGeneration)) {
-                return@launch
-            }
-            if (queriedEligibility != DualGradeEligibility.UNKNOWN) {
-                eligibilityPersistenceMutex.withLock {
-                    if (!isCurrentEligibilityRequest(studentId, refreshGeneration)) {
-                        return@withLock
-                    }
-                    try {
-                        DataStoreRepository.setDualGradeEligibility(
-                            studentId,
-                            queriedEligibility,
-                        )
-                    } catch (exception: CancellationException) {
-                        throw exception
-                    } catch (exception: Exception) {
-                        Log.e(
-                            "GradeViewModel",
-                            "Unable to cache eligibility for $studentId",
-                            exception,
-                        )
-                    }
-                }
-            }
-            if (!isCurrentEligibilityRequest(studentId, refreshGeneration)) {
-                return@launch
-            }
-            _dualGradeEligibility.value = resolveDualGradeEligibility(
-                current = _dualGradeEligibility.value,
-                cached = cachedEligibility,
-                queried = queriedEligibility,
-            )
-        }
-    }
-
-    fun resetDualGradeEligibility() {
-        eligibilityPersistenceGeneration.incrementAndGet()
-        eligibilityJob?.cancel()
-        eligibilityJob = null
-        _dualGradeEligibility.value = DualGradeEligibility.UNKNOWN
-    }
-
-    suspend fun clearAllPersistedDualGradeEligibility() {
-        eligibilityPersistenceGeneration.incrementAndGet()
-        eligibilityJob?.cancel()
-        eligibilityJob = null
-        eligibilityPersistenceMutex.withLock {
-            DataStoreRepository.clearAllDualGradeEligibility()
-            _dualGradeEligibility.value = DualGradeEligibility.UNKNOWN
-        }
-    }
-
-    private fun isCurrentEligibilityRequest(
-        studentId: String,
-        generation: Long,
-    ): Boolean {
-        return activeStudentId == studentId &&
-                eligibilityPersistenceGeneration.get() == generation
     }
 
     fun setGradeSelected(gradeId: Int, selected: Boolean) {

@@ -227,14 +227,12 @@ object AuthenticatorManager {
     fun clearAllData(mainViewModel: MainViewModel) {
         StudentAccountManager.getInstance().clearCookie()
         // 清理数据
-        mainViewModel.gradeViewModel.resetDualGradeEligibility()
         mainViewModel.gradeViewModel.deactivateStudentSelections()
         AuthenticatorManager.updateCredentials(Credentials("", ""))
         mainViewModel.clearChange()
         CoroutineScope(Dispatchers.IO).launch {
             // 清除登录状态
             mainViewModel.gradeViewModel.clearAllPersistedGradeSelections()
-            mainViewModel.gradeViewModel.clearAllPersistedDualGradeEligibility()
             with(AppDatabase.getInstance()) {
                 examScheduleEntityDao().deleteAll()
                 gradeEntityDao().deleteAll()

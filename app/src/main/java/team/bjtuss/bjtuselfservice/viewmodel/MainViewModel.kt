@@ -30,17 +30,11 @@ class MainViewModel(
                         gradeViewModel.activateStudentSelections(
                             AuthenticatorManager.credentials.value.username
                         )
-                        gradeViewModel.refreshDualGradeEligibility()
                         loadDataAndDetectChanges()
-                    }
-
-                    is AppEvent.LoginRequest -> {
-                        gradeViewModel.resetDualGradeEligibility()
                     }
 
                     is AppEvent.LogoutRequest,
                     is AppEvent.LoginFailed -> {
-                        gradeViewModel.resetDualGradeEligibility()
                         gradeViewModel.deactivateStudentSelections()
                     }
 
