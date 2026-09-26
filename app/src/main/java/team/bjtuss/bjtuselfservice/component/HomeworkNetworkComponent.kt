@@ -47,7 +47,7 @@ class HomeworkUploader(val homeworkEntity: HomeworkEntity) {
         }
 
     // Upload a single file and return the response as JSON
-    private suspend fun uploadFile(file: File): JSONObject = withContext(Dispatchers.IO) {
+    private suspend fun uploadFile(file: File, noteId: Int): JSONObject = withContext(Dispatchers.IO) {
 
         val requestBody = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
@@ -59,7 +59,7 @@ class HomeworkUploader(val homeworkEntity: HomeworkEntity) {
             .build()
 
         val request = Request.Builder()
-            .url("http://123.121.147.7:88/ve/back/rp/common/rpUpload.shtml")
+            .url("http://123.121.147.7:88/ve/back/rp/common/homeworkUpload.shtml?noteId=$noteId")
 
             .post(requestBody)
             .build()
@@ -84,7 +84,7 @@ class HomeworkUploader(val homeworkEntity: HomeworkEntity) {
                 val tempFile = uriToTempFile(uri, fileName)
 
                 try {
-                    val uploadResponse = uploadFile(tempFile)
+                    val uploadResponse = uploadFile(tempFile, homeworkEntity.upId)
 //                    Log.d("HomeworkUploader", "文件上传成功: ${uploadResponse.toString()}")
 
                     val fileInfo = JSONObject().apply {
@@ -121,6 +121,8 @@ class HomeworkUploader(val homeworkEntity: HomeworkEntity) {
                 .add("upId", homeworkEntity.upId.toString())
                 .add("return_num", "")
                 .add("isTeacher", "0")
+                .add("stuId", "")
+                .add("currentStuId", "")
 
             val submitRequest = Request.Builder()
                 .url("http://123.121.147.7:88/ve/back/course/courseWorkInfo.shtml?method=sendStuHomeWorks")
