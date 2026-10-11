@@ -221,6 +221,8 @@ internal fun rememberAuthenticatedSession(
                 val labAccounts = (cacheStore.metadataAccountScopes("physicslab.configured") + profile.studentId).distinct()
                 val labCredentialsPurged = runCatching {
                     labAccounts.forEach { securityCoordinator.physicsLabVault(it)?.clear() }
+                    (cacheStore.metadataAccountScopes("phydemo.configured") + profile.studentId).distinct()
+                        .forEach { securityCoordinator.physicsDemoVault(it)?.clear() }
                     (cacheStore.metadataAccountScopes("citel.username") + profile.studentId).distinct()
                         .forEach { securityCoordinator.citelVault(it)?.clear() }
                 }.isSuccess
@@ -289,6 +291,12 @@ internal fun rememberAuthenticatedSession(
             team.bjtuss.bjtuselfservice.shared.feature.physicslab.PhysicsLabRemote(transport),
         )
     }
+    val physicsDemoModel = remember(profile.studentId, cacheStore, securityCoordinator, transport) {
+        team.bjtuss.bjtuselfservice.shared.feature.phydemo.PhysicsDemoModel(
+            profile.studentId, cacheStore, securityCoordinator.physicsDemoVault(profile.studentId),
+            team.bjtuss.bjtuselfservice.shared.feature.phydemo.PhysicsDemoRemote(transport),
+        )
+    }
     val homeStatusRepository = remember(profile.studentId, cacheStore) {
         DefaultHomeStatusRepository(
             accountScope = profile.studentId,
@@ -315,6 +323,7 @@ internal fun rememberAuthenticatedSession(
         appPreferences,
         mailboxModel,
         phyVlabModel,
+        physicsDemoModel,
         homeModel,
         homeChangeFeed,
         homeworkFileGateway,
@@ -338,6 +347,7 @@ internal fun rememberAuthenticatedSession(
             mailboxModel = mailboxModel,
             phyVlabModel = phyVlabModel,
             physicsLabModel = physicsLabModel,
+            physicsDemoModel = physicsDemoModel,
             citelModel = citelModel,
             aggregateFilterStore = team.bjtuss.bjtuselfservice.shared.feature.assignment.AggregateAssignmentFilterStore(cacheStore, profile.studentId),
             homeModel = homeModel,

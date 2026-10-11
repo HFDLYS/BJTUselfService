@@ -169,6 +169,7 @@ data class CourseScheduleUiState(
     val courses: List<Course> = emptyList(),
     val supplementalCourses: List<Course> = emptyList(),
     val physicsLabs: List<PhysicsLab> = emptyList(),
+    val physicsDemoBookings: List<team.bjtuss.bjtuselfservice.shared.feature.phydemo.PhysicsDemoBooking> = emptyList(),
     val currentWeek: Int = 0,
     /**
      * 当前 [currentWeek] 是否已经由本学期校历确认过。

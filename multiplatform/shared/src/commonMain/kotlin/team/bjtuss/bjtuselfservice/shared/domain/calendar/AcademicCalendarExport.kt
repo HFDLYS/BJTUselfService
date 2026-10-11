@@ -23,6 +23,7 @@ data class CalendarExportResult(
     val skippedExamCount: Int,
     val events: List<AcademicCalendarEvent>,
     val physicsLabEventCount: Int = 0,
+    val physicsDemoEventCount: Int = 0,
 )
 
 /** Beijing-local date window covering every natural week in an academic calendar. */
@@ -50,6 +51,7 @@ enum class AcademicCalendarEventKind {
     COURSE,
     EXAM,
     PHYSICS_LAB,
+    PHYSICS_DEMO,
 }
 
 data class AcademicCalendarEvent(
@@ -100,6 +102,7 @@ fun generateAcademicCalendarIcs(
     generatedAt: Instant,
     calendarName: String = "北京交通大学日程",
     physicsLabs: List<team.bjtuss.bjtuselfservice.shared.feature.physicslab.PhysicsLab> = emptyList(),
+    physicsDemos: List<team.bjtuss.bjtuselfservice.shared.feature.phydemo.PhysicsDemoBooking> = emptyList(),
 ): CalendarExportResult {
     val stamp = generatedAt.toLocalDateTime(TimeZone.UTC).let { dateTime ->
         "${dateTime.date.compact()}T${dateTime.hour.twoDigits()}${dateTime.minute.twoDigits()}${dateTime.second.twoDigits()}Z"
@@ -239,6 +242,21 @@ fun generateAcademicCalendarIcs(
             physicsLabCount += 1
         }
     }
+    var physicsDemoCount = 0
+    physicsDemos.distinct().forEach { demo ->
+        val time = demo.timeRange.parseTimeRange() ?: return@forEach
+        if (datesInRange.isEmpty() || demo.date < datesInRange.min() || demo.date > datesInRange.max().plus(6, DateTimeUnit.DAY)) return@forEach
+        events += AcademicCalendarEvent(
+            stableId = "course-phydemo-${demo.date}-${demo.period}-${demo.name.safeUidPart()}",
+            kind = AcademicCalendarEventKind.PHYSICS_DEMO,
+            title = "${demo.name}（演示实验）",
+            startLocal = demo.date.isoLocalTime(time.startHour, time.startMinute),
+            endLocal = demo.date.isoLocalTime(time.endHour, time.endMinute),
+            location = "第七教学楼 ${demo.location}",
+            notes = listOf("大学物理演示实验", demo.teacher.takeIf { it.isNotBlank() }?.let { "助教：$it" }).filterNotNull().joinToString("；"),
+        )
+        physicsDemoCount += 1
+    }
     val ics = buildString {
         append("BEGIN:VCALENDAR\r\n")
         append("VERSION:2.0\r\n")
@@ -251,7 +269,7 @@ fun generateAcademicCalendarIcs(
         events.forEach { event -> append(calendarEvent(event, stamp)) }
         append("END:VCALENDAR\r\n")
     }
-    return CalendarExportResult(ics, courseCount, examCount, skippedExamCount, events, physicsLabCount)
+    return CalendarExportResult(ics, courseCount, examCount, skippedExamCount, events, physicsLabCount, physicsDemoCount)
 }
 
 /**

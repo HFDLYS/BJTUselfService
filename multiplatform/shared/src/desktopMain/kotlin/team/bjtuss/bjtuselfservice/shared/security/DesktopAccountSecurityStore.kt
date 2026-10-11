@@ -10,6 +10,14 @@ fun createDesktopAccountSecurityStore(): AccountSecurityStore = AccountSecurityS
         legacyAccount = LEGACY_PRIMARY_ACCOUNT,
     ),
     preferences = DesktopAccountPreferences(),
+    physicsDemoVault = { accountScope ->
+        MacOsBagBackedCredentialVault(
+            bag = productionMacOsSecretBag,
+            key = "phydemo:$accountScope",
+            legacyService = "team.bjtuss.bjtuselfservice.kmp.credentials.phydemo",
+            legacyAccount = accountScope,
+        )
+    },
     physicsLabVault = { accountScope ->
         MacOsBagBackedCredentialVault(
             bag = productionMacOsSecretBag,

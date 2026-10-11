@@ -157,6 +157,8 @@ interface SchoolHttpTransport {
 
     suspend fun sessionCookiesFor(url: String): List<SchoolSessionCookie> = emptyList()
     fun clearSession()
+    /** Clear only the independent demo-lab login, without touching CAS or physics labs. */
+    fun clearPhysicsDemoSession() {}
 }
 
 /** 只用于把当前内存会话桥接给受信任网页容器；字符串化永不包含值。 */

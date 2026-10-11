@@ -64,6 +64,7 @@ fun nativeRouteTitle(routeId: String): String {
     return when (route) {
         MailboxComposeRoute -> ""
         PhysicsLabSettingsRoute -> "物理实验账号设置"
+        PhysicsDemoRoute -> "演示实验查询"
         ClassroomDetailRoute -> AppSection.CLASSROOMS.title
         ClassroomOccupancyDetailRoute -> AppSection.CLASSROOM_OCCUPANCY.title
         HomeworkDetailRoute -> "作业详情"

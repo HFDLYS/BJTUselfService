@@ -40,6 +40,7 @@ internal fun MoreWorkspace(
     showPhysicsLabTile: Boolean = physicsLabModel != null,
     platformFamily: PlatformFamily = currentPlatform().family,
     onOpenExternalUrl: ((String) -> Unit)? = null,
+    onOpenPhysicsDemo: (() -> Unit)? = null,
 ) {
     val scroll = rememberLazyListState()
     val topClearance = LocalTopBarClearance.current
@@ -68,6 +69,9 @@ internal fun MoreWorkspace(
             if (section == AppSection.MAILBOX) addCampusAccountTiles()
         }
         if (AppSection.MAILBOX !in sections) addCampusAccountTiles()
+        onOpenPhysicsDemo?.let { open ->
+            add(ApplicationTile("演示实验", section = AppSection.PHYSICS_LAB, onClick = open))
+        }
     }
     activeAccountEntry?.let { entry ->
         CampusAccountEntryDialog(

@@ -1832,6 +1832,7 @@ internal fun CourseDetailContent(course: Course, modifier: Modifier) {
             "类型",
             when (course.scheduleEventKind) {
                 "physicslab" -> course.scheduleEventTypeLabel ?: "物理实验"
+                "phydemo" -> "演示实验"
                 "exam" -> "考试"
                 else -> if (course.isCurrentSemester) "选课课表" else "本学期课表"
             },
@@ -1892,7 +1893,7 @@ private fun CourseEmptyState(type: CourseScheduleType, onRefresh: () -> Unit) = 
 @Composable
 private fun scheduleEventColors(kind: String): team.bjtuss.bjtuselfservice.shared.feature.grade.GradeTypeColors {
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    return if (kind == "physicslab") {
+    return if (kind == "physicslab" || kind == "phydemo") {
         if (dark) team.bjtuss.bjtuselfservice.shared.feature.grade.GradeTypeColors(Color(0xFF3B2858), Color(0xFFDEC6F6))
         else team.bjtuss.bjtuselfservice.shared.feature.grade.GradeTypeColors(Color(0xFFEADBFA), Color(0xFF64368E))
     } else {

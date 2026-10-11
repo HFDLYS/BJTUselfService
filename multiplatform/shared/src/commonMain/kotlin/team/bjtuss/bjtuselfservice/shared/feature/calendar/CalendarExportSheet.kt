@@ -61,6 +61,7 @@ fun CourseCalendarExportSheet(
         "选课课表"
     }
     var includePhysicsLabs by remember { mutableStateOf(true) }
+    var includePhysicsDemos by remember { mutableStateOf(true) }
     var startWeek by remember { mutableStateOf(1) }
     var endWeek by remember(maxWeek) { mutableStateOf(maxWeek) }
     var working by remember { mutableStateOf(false) }
@@ -99,6 +100,10 @@ fun CourseCalendarExportSheet(
             Text("包含物理实验", Modifier.weight(1f))
             androidx.compose.material3.Switch(includePhysicsLabs, { includePhysicsLabs = it }, enabled = !working)
         }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("包含演示实验", Modifier.weight(1f))
+            androidx.compose.material3.Switch(includePhysicsDemos, { includePhysicsDemos = it }, enabled = !working)
+        }
         if (hasCalendar) {
             ExportHint(
                 "校历学期：${courseState.calendarSemesterLabel ?: "未标注"}" +
@@ -126,7 +131,7 @@ fun CourseCalendarExportSheet(
                         feedback = null
                         working = true
                         job = scope.launch {
-                            val generated = courseState.generateCourseExport(startWeek..endWeek, calendarName, includePhysicsLabs)
+                            val generated = courseState.generateCourseExport(startWeek..endWeek, calendarName, includePhysicsLabs, includePhysicsDemos)
                             feedback = saveIcs(fileGateway, "$calendarName.ics", generated)
                             working = false
                         }
@@ -140,7 +145,7 @@ fun CourseCalendarExportSheet(
                         feedback = null
                         working = true
                         job = scope.launch {
-                            val generated = courseState.generateCourseExport(startWeek..endWeek, calendarName, includePhysicsLabs)
+                            val generated = courseState.generateCourseExport(startWeek..endWeek, calendarName, includePhysicsLabs, includePhysicsDemos)
                             feedback = installSystemCalendar(
                                 gateway = systemCalendarGateway,
                                 name = calendarName,
@@ -282,9 +287,11 @@ private fun CourseScheduleUiState.generateCourseExport(
     range: IntRange,
     calendarName: String,
     includePhysicsLabs: Boolean,
+    includePhysicsDemos: Boolean,
 ): CalendarExportResult = generateAcademicCalendarIcs(
     courses = scheduleCourses.filter { it.scheduleEventKind == null },
     physicsLabs = if (includePhysicsLabs) physicsLabs else emptyList(),
+    physicsDemos = if (includePhysicsDemos) physicsDemoBookings else emptyList(),
     exams = emptyList(),
     academicWeeks = academicWeeks,
     weekRange = range,
@@ -306,7 +313,7 @@ private suspend fun saveIcs(
     )
 ) {
     HomeworkFileSaveResult.Saved -> if (generated.courseEventCount > 0) {
-        "已保存 ${generated.courseEventCount} 个课次、${generated.physicsLabEventCount} 次物理实验，共 ${generated.events.size} 个日程。"
+        "已保存 ${generated.courseEventCount} 个课次、${generated.physicsLabEventCount} 次物理实验、${generated.physicsDemoEventCount} 次演示实验，共 ${generated.events.size} 个日程。"
     } else {
         "已保存 ${generated.events.size} 个日程。"
     }

@@ -85,12 +85,15 @@ internal fun FeatureSwitchesCard(
     physicsLabConfigured: Boolean, citelConfigured: Boolean,
     onPhyVlabEnabled: (Boolean) -> Unit, onPhysicsLabEnabled: (Boolean) -> Unit, onCitelEnabled: (Boolean) -> Unit,
     onPhysicsLabSettings: () -> Unit, onCitelSettings: () -> Unit,
+    physicsDemoEnabled: Boolean = false, physicsDemoConfigured: Boolean = false,
+    onPhysicsDemoEnabled: (Boolean) -> Unit = {}, onPhysicsDemoSettings: () -> Unit = {},
 ) {
     ElevatedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("功能开关", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             FeatureSwitchRow("启用物理在线", phyVlabEnabled, false, onPhyVlabEnabled)
             FeatureSwitchRow("启用物理实验", physicsLabEnabled, physicsLabConfigured, onPhysicsLabEnabled, onPhysicsLabSettings)
+            FeatureSwitchRow("启用演示实验", physicsDemoEnabled, physicsDemoConfigured, onPhysicsDemoEnabled, onPhysicsDemoSettings)
             FeatureSwitchRow("启用 CITEL", citelEnabled, citelConfigured, onCitelEnabled, onCitelSettings)
         }
     }
@@ -131,6 +134,10 @@ fun SettingsWorkspace(
     citelConfigured: Boolean = false,
     onPhysicsLabSettings: () -> Unit = {},
     onCitelSettings: () -> Unit = {},
+    physicsDemoEnabled: Boolean = false,
+    physicsDemoConfigured: Boolean = false,
+    onPhysicsDemoEnabled: (Boolean) -> Unit = {},
+    onPhysicsDemoSettings: () -> Unit = {},
 ) {
     val state by model.state.collectAsState()
     val scope = rememberCoroutineScope()
@@ -193,7 +200,7 @@ fun SettingsWorkspace(
         FeatureSwitchesCard(state.preferences.isPhyVlabEnabled, state.preferences.isPhysicsLabEnabled,
             state.preferences.isCitelEnabled, physicsLabConfigured, citelConfigured,
             model::setPhyVlabEnabled, model::setPhysicsLabEnabled, model::setCitelEnabled,
-            onPhysicsLabSettings, onCitelSettings)
+            onPhysicsLabSettings, onCitelSettings, physicsDemoEnabled, physicsDemoConfigured, onPhysicsDemoEnabled, onPhysicsDemoSettings)
         ElevatedCard(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("底栏显示", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)

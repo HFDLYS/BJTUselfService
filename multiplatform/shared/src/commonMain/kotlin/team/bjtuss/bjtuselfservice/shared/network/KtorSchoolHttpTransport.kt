@@ -53,6 +53,7 @@ class KtorSchoolHttpTransport(
     private val gateRegistry = Mutex()
     private val serviceGates = mutableMapOf<String, HostRequestGate>()
     private val physicsLabRequests = HostRequestGate(HostRequestPolicy(maxConcurrent = 2))
+    private val physicsDemoRequests = HostRequestGate(HostRequestPolicy(maxConcurrent = 1))
     private suspend fun gateFor(request: SchoolHttpRequest): HostRequestGate {
         val host = Url(request.url).host
         return gateRegistry.withLock {
@@ -60,6 +61,7 @@ class KtorSchoolHttpTransport(
         }
     }
     private var physicsLabClient = newClient(AcceptAllCookiesStorage(), sessionScoped = true, followRedirects = false)
+    private var physicsDemoClient = newClient(AcceptAllCookiesStorage(), sessionScoped = true, followRedirects = false)
 
     companion object {
         /**
@@ -80,6 +82,10 @@ class KtorSchoolHttpTransport(
                 "http://wlsy.bjtu.edu.cn/", "http://wlsy.bjtu.edu.cn/Student/Teach/Course/CourseResult.aspx",
             ))
             executeTimed(request, "physics-lab", physicsLabRequests) { physicsLabClient }
+        } else if (Url(request.url).host == "physpace.bjtu.edu.cn") {
+            require(request.url in setOf("https://physpace.bjtu.edu.cn:8089/phydemo/login", "https://physpace.bjtu.edu.cn:8089/phydemo/appointment/"))
+            require(request.method == SchoolHttpMethod.GET || request.url.endsWith("/login"))
+            executeTimed(request, "physics-demo", physicsDemoRequests) { physicsDemoClient }
         } else executeTimed(request, "school-no-redirect", gateFor(request)) { rawClient }
 
     override suspend fun executePublic(request: SchoolHttpRequest): SchoolHttpResponse =
@@ -115,14 +121,21 @@ class KtorSchoolHttpTransport(
         client.close()
         rawClient.close()
         physicsLabClient.close()
+        physicsDemoClient.close()
         publicClient.close()
+    }
+    override fun clearPhysicsDemoSession() {
+        physicsDemoClient.close()
+        physicsDemoClient = newClient(AcceptAllCookiesStorage(), sessionScoped = true, followRedirects = false)
     }
 
     override fun clearSession() {
         client.close()
         rawClient.close()
         physicsLabClient.close()
+        physicsDemoClient.close()
         physicsLabClient = newClient(AcceptAllCookiesStorage(), sessionScoped = true, followRedirects = false)
+        physicsDemoClient = newClient(AcceptAllCookiesStorage(), sessionScoped = true, followRedirects = false)
         cookieStorage = AcceptAllCookiesStorage()
         client = newClient(cookieStorage, sessionScoped = true)
         rawClient = newClient(cookieStorage, sessionScoped = true, followRedirects = false)

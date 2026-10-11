@@ -13,7 +13,8 @@ import team.bjtuss.bjtuselfservice.shared.domain.calendar.parseExamCalendarTime
 import team.bjtuss.bjtuselfservice.shared.feature.physicslab.PhysicsLab
 
 /** 只在展示边界生成网格片段；原始课表与日历导出保持独立的数据模型。 */
-fun scheduleEventCourses(exams: List<ExamSchedule>, labs: List<PhysicsLab>, weeks: List<OccupancyWeekDate>): List<Course> {
+fun scheduleEventCourses(exams: List<ExamSchedule>, labs: List<PhysicsLab>, weeks: List<OccupancyWeekDate>,
+    demos: List<team.bjtuss.bjtuselfservice.shared.feature.phydemo.PhysicsDemoBooking> = emptyList()): List<Course> {
     val first = weeks.mapNotNull { it.startDate }.minOrNull() ?: return emptyList()
     val last = weeks.mapNotNull { it.startDate }.maxOrNull()?.plus(6, DateTimeUnit.DAY) ?: return emptyList()
     val result = mutableListOf<Course>()
@@ -49,6 +50,10 @@ fun scheduleEventCourses(exams: List<ExamSchedule>, labs: List<PhysicsLab>, week
             val suffix = if (lab.type.weekCount == 2) lab.type.label else "实验"
             add(lab.dates, range, "${lab.name}（$suffix）", lab.teacher, lab.location, "physicslab", lab.type.label)
         }
+    }
+    demos.distinct().forEach { demo ->
+        add(listOf(demo.date), demo.timeRange, "${demo.name}（演示实验）", demo.teacher,
+            "第七教学楼 ${demo.location}", "phydemo", "演示实验")
     }
     return result
 }

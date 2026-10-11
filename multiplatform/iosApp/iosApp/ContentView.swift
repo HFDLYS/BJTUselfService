@@ -299,8 +299,8 @@ private final class NativeChromeBinding {
         return item
     }
 
-    private func todayBarItem(onClick: @escaping () -> Void) -> UIBarButtonItem {
-        if usesSystemBars {
+    private func todayBarItem(vertical: Bool, onClick: @escaping () -> Void) -> UIBarButtonItem {
+        if usesSystemBars && vertical {
             let target = makeActionTarget(role: .extra, onInvoke: onClick)
             let item = UIBarButtonItem(title: "今", style: .plain, target: target, action: #selector(NativeBarActionTarget.invoke(_:)))
             item.accessibilityLabel = "回到今天"
@@ -484,7 +484,7 @@ private final class NativeChromeBinding {
         }
         if let extraLabel = action.extraLabel, let onExtraClick = action.onExtraClick {
             if extraLabel == "今" {
-                leftItems.append(todayBarItem(onClick: onExtraClick))
+                leftItems.append(todayBarItem(vertical: vertical, onClick: onExtraClick))
             } else {
                 leftItems.append(
                     iconBarItem(
@@ -497,12 +497,12 @@ private final class NativeChromeBinding {
             }
         }
         if usesSystemBars {
-            // In a horizontal bar, export has its own leading placement so the
+            // In a horizontal bar, Today and export have their own leading placement so the
             // status/refresh group leaves a readable gap around the centered title.
             // Duo's vertical layout keeps all three in the same side group.
-            let leadingExport = !vertical && (action.extraLabel?.contains("导出") == true ||
+            let leadingExtra = !vertical && (action.extraLabel == "今" || action.extraLabel?.contains("导出") == true ||
                 action.extraLabel?.contains("添加到日历") == true)
-            if !leadingExport {
+            if !leadingExtra {
                 items.append(contentsOf: leftItems)
                 leftItems.removeAll()
             }
@@ -513,7 +513,7 @@ private final class NativeChromeBinding {
             controller.navigationItem.rightBarButtonItems = items.isEmpty ? nil : items
             if usesSystemBars {
                 let ordered = Array(items.reversed())
-                if action.extraLabel == "今", let today = ordered.first {
+                if vertical && action.extraLabel == "今", let today = ordered.first {
                     // Separate groups give Today its own system glass circle.
                     controller.navigationItem.trailingItemGroups = [
                         UIBarButtonItemGroup(barButtonItems: [today], representativeItem: nil),

@@ -276,18 +276,26 @@ fun AuthenticatedAppShell(
     val citelEnabled = settingsState.preferences.isCitelEnabled
     val physicsLabFlow = remember(session) { session.physicsLabModel?.state ?: MutableStateFlow(PhysicsLabState()) }
     val physicsLabState by physicsLabFlow.collectAsState()
+    val physicsDemoFlow = remember(session) { session.physicsDemoModel?.state ?: MutableStateFlow(team.bjtuss.bjtuselfservice.shared.feature.phydemo.PhysicsDemoState()) }
+    val physicsDemoState by physicsDemoFlow.collectAsState()
     val citelFlow = remember(session) { session.citelModel?.state ?: MutableStateFlow(team.bjtuss.bjtuselfservice.shared.feature.citel.CitelState()) }
     val citelState by citelFlow.collectAsState()
     val citelEvents = remember(citelState.tasks, citelEnabled) {
         if (citelEnabled) team.bjtuss.bjtuselfservice.shared.feature.citel.citelAgendaEvents(citelState.tasks) else emptyList()
     }
-    val scheduleEvents = remember(courseState.academicWeeks, examState.exams, physicsLabState.labs, physicsLabEnabled) {
-        scheduleEventCourses(examState.exams, if (physicsLabEnabled) physicsLabState.labs else emptyList(), courseState.academicWeeks)
+    val scheduleEvents = remember(courseState.academicWeeks, examState.exams, physicsLabState.labs, physicsLabEnabled, physicsDemoState.bookings, physicsDemoState.enabled) {
+        scheduleEventCourses(examState.exams, if (physicsLabEnabled) physicsLabState.labs else emptyList(), courseState.academicWeeks, if (physicsDemoState.enabled) physicsDemoState.bookings else emptyList())
     }
     val scheduleStateWithEvents = courseState.copy(
         supplementalCourses = scheduleEvents,
         physicsLabs = if (physicsLabEnabled) physicsLabState.labs else emptyList(),
+        physicsDemoBookings = if (physicsDemoState.enabled) physicsDemoState.bookings else emptyList(),
     )
+    val homeScheduleEvents = remember(courseState.homeAcademicWeeks, examState.exams, physicsLabState.labs,
+        physicsLabEnabled, physicsDemoState.bookings, physicsDemoState.enabled) {
+        scheduleEventCourses(examState.exams, if (physicsLabEnabled) physicsLabState.labs else emptyList(),
+            courseState.homeAcademicWeeks, if (physicsDemoState.enabled) physicsDemoState.bookings else emptyList())
+    }
     val homeState by homeModel.state.collectAsState()
     val phyVlabEnabled = settingsState.preferences.isPhyVlabEnabled
     val aggregatedAssignments = aggregateAssignments(homeworkState.homework,
@@ -340,6 +348,10 @@ fun AuthenticatedAppShell(
         physicsLabBusy = physicsLabState.refreshing,
         physicsLabFailed = physicsLabState.failed,
         physicsLabReady = physicsLabState.synced,
+        physicsDemoEnabled = physicsDemoState.enabled,
+        physicsDemoBusy = physicsDemoState.refreshing,
+        physicsDemoFailed = physicsDemoState.failed,
+        physicsDemoReady = physicsDemoState.synced,
         citelEnabled = citelEnabled,
         citelBusy = citelState.refreshing,
         citelFailed = citelState.failed,
@@ -435,6 +447,7 @@ fun AuthenticatedAppShell(
         MailboxDetailRoute -> AppSection.MAILBOX
         MailboxComposeRoute -> AppSection.MAILBOX
         PhysicsLabSettingsRoute -> AppSection.PHYSICS_LAB
+        PhysicsDemoRoute -> AppSection.MORE
         is AppSection -> currentRoute
     }
     val popBackStack: () -> Unit = if (forcedRouteId != null) {
@@ -566,6 +579,7 @@ fun AuthenticatedAppShell(
                 )
             }
             if (physicsLabEnabled) launch { session.physicsLabModel?.refresh() }
+            launch { session.physicsDemoModel?.refresh() }
             if (citelEnabled) launch { session.citelModel?.refresh() }
             // 用户主动刷新或后台超过阈值后的全局刷新；关闭的模块不访问网络。
             if (phyVlabEnabled) {
@@ -624,6 +638,7 @@ fun AuthenticatedAppShell(
                 )
                 AppSection.SCHEDULE -> coroutineScope {
                     launch { session.physicsLabModel?.refresh() }
+                    launch { session.physicsDemoModel?.refresh() }
                     launch {
                         refreshModule(
                             operation = examScheduleModel::refresh,
@@ -738,6 +753,7 @@ fun AuthenticatedAppShell(
                         )
                     }
                     launch { session.physicsLabModel?.refresh() }
+                    launch { session.physicsDemoModel?.refresh() }
                     if (phyVlabEnabled) {
                         launch {
                             retryIfExpired(
@@ -932,6 +948,11 @@ fun AuthenticatedAppShell(
         }
         // Only initial App entry triggers this; foreground/focus changes are not keys.
         // Reads/submissions recover the session only after confirmed expiry.
+    }
+    LaunchedEffect(session.physicsDemoModel, entryLoggingIn, forcedRouteId) {
+        val demo = session.physicsDemoModel ?: return@LaunchedEffect
+        demo.initialize()
+        if (!entryLoggingIn && forcedRouteId == null) demo.refresh()
     }
     LaunchedEffect(session.physicsLabModel, physicsLabEnabled, entryLoggingIn, forcedRouteId, nativeTabBarEnabled) {
         val labModel = session.physicsLabModel ?: return@LaunchedEffect
@@ -1340,7 +1361,7 @@ fun AuthenticatedAppShell(
                     courseFailed = courseState.failure != null,
                     phyVlabFailed = (phyVlabEnabled &&
                         (phyVlabState.failure != null || phyVlabState.casLoginRequired)) ||
-                        (physicsLabEnabled && physicsLabState.failed) || (citelState.enabled && citelState.failed),
+                        (physicsLabEnabled && physicsLabState.failed) || (physicsDemoState.enabled && physicsDemoState.failed) || (citelState.enabled && citelState.failed),
                     hasAnySource = homeworkState.source != null ||
                         examState.source != null ||
                         courseState.source != null ||
@@ -1358,7 +1379,7 @@ fun AuthenticatedAppShell(
                     team.bjtuss.bjtuselfservice.shared.feature.home.LocalHomeSchedule provides
                         team.bjtuss.bjtuselfservice.shared.feature.home.HomeSchedulePresentation(
                             courses = courseState.courses,
-                            supplementalCourses = scheduleEvents,
+                            supplementalCourses = homeScheduleEvents,
                             academicWeeks = courseState.homeAcademicWeeks,
                             currentWeek = courseState.currentWeek,
                             today = homeworkState.now.date,
@@ -1458,7 +1479,7 @@ fun AuthenticatedAppShell(
                 title = AppSection.SCHEDULE.title,
                 expanded = expanded,
                 refreshable = true,
-                isRefreshing = courseState.isRefreshing || examState.isRefreshing || physicsLabState.refreshing,
+                isRefreshing = courseState.isRefreshing || examState.isRefreshing || physicsLabState.refreshing || physicsDemoState.refreshing,
                 showBack = isPushedHostDestination || route !in compactBottomNavSections,
                 modifier = modifier,
                 // 同步状态放在顶栏右上；有失败横幅时不要仍显示「已同步」。
@@ -1809,6 +1830,13 @@ fun AuthenticatedAppShell(
                     onLogout = onLogout,
                     modifier = Modifier.fillMaxSize(),
                     physicsLabConfigured = physicsLabState.configured,
+                    physicsDemoConfigured = physicsDemoState.configured,
+                    physicsDemoEnabled = physicsDemoState.enabled,
+                    onPhysicsDemoEnabled = { enabled -> scope.launch { session.physicsDemoModel?.setEnabled(enabled) } },
+                    onPhysicsDemoSettings = {
+                        if (useNativeSecondaryRoutes) onOpenNativeRoute(PHYSICS_DEMO_ROUTE_ID)
+                        else backStack.add(PhysicsDemoRoute)
+                    },
                     citelConfigured = citelState.configured,
                     onPhysicsLabSettings = {
                         if (useNativeSecondaryRoutes) onOpenNativeRoute(PHYSICS_LAB_SETTINGS_ROUTE_ID)
@@ -1952,6 +1980,15 @@ fun AuthenticatedAppShell(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
+            PhysicsDemoRoute -> DestinationPage(
+                title = "演示实验查询", expanded = expanded, refreshable = false,
+                isRefreshing = physicsDemoState.refreshing, showBack = true,
+                modifier = modifier, scrollUnderTopBar = true,
+            ) {
+                session.physicsDemoModel?.let {
+                    team.bjtuss.bjtuselfservice.shared.feature.phydemo.PhysicsDemoScreen(it, Modifier.fillMaxSize())
+                }
+            }
             AppSection.PHYSICS_LAB, PhysicsLabSettingsRoute -> DestinationPage(
                 title = if (route == PhysicsLabSettingsRoute) "物理实验账号设置" else "物理实验同步",
                 expanded = expanded,
@@ -2030,6 +2067,10 @@ fun AuthenticatedAppShell(
                 MoreWorkspace(
                     preferences = settingsState.preferences,
                     physicsLabModel = session.physicsLabModel,
+                    onOpenPhysicsDemo = session.physicsDemoModel?.let { {
+                        if (useNativeSecondaryRoutes) onOpenNativeRoute(PHYSICS_DEMO_ROUTE_ID)
+                        else backStack.add(PhysicsDemoRoute)
+                    } },
                     onOpenSection = { target -> navigateToSection(target) },
                     modifier = Modifier.fillMaxSize(),
                     platformFamily = platform.family,
@@ -2150,6 +2191,10 @@ fun AuthenticatedAppShell(
                             modifier = Modifier.fillMaxSize(),
                             usesLegacySmartTransport = usesLegacySmartTransportFor(platform.family),
                         )
+                    }
+                    entry<PhysicsDemoRoute> {
+                        SectionDestination(route = PhysicsDemoRoute, expanded = false, modifier = Modifier.fillMaxSize(),
+                            usesLegacySmartTransport = usesLegacySmartTransportFor(platform.family))
                     }
                     entry<PhysicsLabSettingsRoute> {
                         SectionDestination(
@@ -2371,6 +2416,10 @@ fun AuthenticatedAppShell(
                             modifier = Modifier.fillMaxSize(),
                             usesLegacySmartTransport = false,
                         )
+                    }
+                    entry<PhysicsDemoRoute> {
+                        SectionDestination(route = PhysicsDemoRoute, expanded = false, modifier = Modifier.fillMaxSize(),
+                            usesLegacySmartTransport = usesLegacySmartTransportFor(platform.family))
                     }
                     entry<PhysicsLabSettingsRoute> {
                         SectionDestination(
