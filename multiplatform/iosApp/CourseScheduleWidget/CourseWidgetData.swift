@@ -30,13 +30,61 @@ struct CourseWidgetSession: Codable, Hashable {
 }
 
 enum CourseWidgetStore {
-    static func load() -> CourseWidgetSnapshot? {
-        guard let container = FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier: courseWidgetAppGroup
-        ) else { return nil }
-        let url = container.appendingPathComponent(courseWidgetFileName)
-        guard let data = try? Data(contentsOf: url) else { return nil }
-        return try? JSONDecoder().decode(CourseWidgetSnapshot.self, from: data)
+    enum LoadResult {
+        case loaded(CourseWidgetSnapshot)
+        /// 共享容器打不开：安装时 App Group 没生效。
+        case noSharedContainer
+        /// 容器正常但还没有快照：App 还没同步过课表，或已退出登录。
+        case noSnapshot
+
+        var isLoaded: Bool {
+            if case .loaded = self { return true }
+            return false
+        }
+    }
+
+    static func load() -> LoadResult {
+        let containers = sharedContainers()
+        guard !containers.isEmpty else { return .noSharedContainer }
+        // SideStore 等重签工具会改 App Group 名；多个候选都试，取有快照的那个。
+        for container in containers {
+            let url = container.appendingPathComponent(courseWidgetFileName)
+            if let data = try? Data(contentsOf: url),
+               let snapshot = try? JSONDecoder().decode(CourseWidgetSnapshot.self, from: data) {
+                return .loaded(snapshot)
+            }
+        }
+        return .noSnapshot
+    }
+
+    private static func sharedContainers() -> [URL] {
+        var bundles = [Bundle.main.bundleURL]
+        // 扩展位于 宿主.app/PlugIns/xxx.appex，宿主的描述文件也读一遍。
+        let host = Bundle.main.bundleURL.deletingLastPathComponent().deletingLastPathComponent()
+        if host.pathExtension == "app" { bundles.append(host) }
+        var candidates = bundles.flatMap(groupsFromProfile(in:))
+        candidates.append(courseWidgetAppGroup)
+        var seen = Set<String>()
+        return candidates
+            .filter { seen.insert($0).inserted }
+            .compactMap { FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: $0) }
+    }
+
+    /// 与 CourseWidgetStore.ios.kt 的 courseWidgetGroupsFromProfile 同一规则：
+    /// SideStore/AltStore 把 App Group 重命名为“原名.TeamID”，从 embedded.mobileprovision 里找出来。
+    private static func groupsFromProfile(in bundle: URL) -> [String] {
+        let url = bundle.appendingPathComponent("embedded.mobileprovision")
+        guard let data = try? Data(contentsOf: url),
+              let raw = String(data: data, encoding: .isoLatin1),
+              let start = raw.range(of: "<?xml"),
+              let end = raw.range(of: "</plist>", range: start.lowerBound..<raw.endIndex),
+              let plistData = String(raw[start.lowerBound..<end.upperBound]).data(using: .isoLatin1),
+              let plist = try? PropertyListSerialization.propertyList(from: plistData, format: nil) as? [String: Any],
+              let entitlements = plist["Entitlements"] as? [String: Any],
+              let groups = entitlements["com.apple.security.application-groups"] as? [String] else {
+            return []
+        }
+        return groups.filter { $0 == courseWidgetAppGroup || $0.hasPrefix(courseWidgetAppGroup + ".") }
     }
 }
 
@@ -61,7 +109,9 @@ struct CourseDayPlan {
 }
 
 enum CourseWidgetState {
-    /// 没有快照：还没登录或已退出。
+    /// 共享容器打不开：安装方式没有保留 App Group。
+    case noSharedContainer
+    /// 没有快照：App 还没同步过课表，或已退出登录。
     case signedOut
     /// 快照没覆盖到今天：太久没打开 App。
     case stale
@@ -123,6 +173,14 @@ enum CourseWidgetCalendar {
         return CourseDayPlan(date: start, week: day.week, occurrences: occurrences)
     }
 
+    static func state(load: CourseWidgetStore.LoadResult, now: Date) -> CourseWidgetState {
+        switch load {
+        case .noSharedContainer: return .noSharedContainer
+        case .noSnapshot: return .signedOut
+        case .loaded(let snapshot): return state(snapshot: snapshot, now: now)
+        }
+    }
+
     static func state(snapshot: CourseWidgetSnapshot?, now: Date) -> CourseWidgetState {
         guard let snapshot else { return .signedOut }
         let todayKey = dayKey(now)
@@ -172,16 +230,19 @@ struct CourseWidgetProvider: TimelineProvider {
 
     func getSnapshot(in context: Context, completion: @escaping (CourseWidgetEntry) -> Void) {
         let now = Date.now
+        var load = CourseWidgetStore.load()
         // 添加小组件的预览里没有真实数据时，用示例课程展示样式。
-        let snapshot = CourseWidgetStore.load() ?? (context.isPreview ? .preview : nil)
-        completion(CourseWidgetEntry(date: now, state: CourseWidgetCalendar.state(snapshot: snapshot, now: now)))
+        if context.isPreview, !load.isLoaded { load = .loaded(.preview) }
+        completion(CourseWidgetEntry(date: now, state: CourseWidgetCalendar.state(load: load, now: now)))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<CourseWidgetEntry>) -> Void) {
         let now = Date.now
-        let snapshot = CourseWidgetStore.load()
+        let load = CourseWidgetStore.load()
+        var snapshot: CourseWidgetSnapshot?
+        if case .loaded(let loaded) = load { snapshot = loaded }
         let entries = CourseWidgetCalendar.refreshDates(snapshot: snapshot, from: now).map { date in
-            CourseWidgetEntry(date: date, state: CourseWidgetCalendar.state(snapshot: snapshot, now: date))
+            CourseWidgetEntry(date: date, state: CourseWidgetCalendar.state(load: load, now: date))
         }
         completion(Timeline(entries: entries, policy: .atEnd))
     }

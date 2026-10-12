@@ -337,17 +337,21 @@ fun CourseScheduleWorkspace(
     }
 
     if (showSchedulePicker) {
-        // 教学周芯片有二十多个，半屏放不下 → 直接全屏展开。
+        // iOS 按芯片实际高度展开（超出可用高度时由 sheet 滚动）；其他平台仍全屏展开。
+        val fitPickerSheet = currentPlatform().family == PlatformFamily.IOS
         AppleSheet(
             onDismissRequest = { showSchedulePicker = false },
             title = "课表与周数",
-            needsFullHeight = true,
+            needsFullHeight = !fitPickerSheet,
+            fitContentHeight = fitPickerSheet,
         ) {
             val pickerScrollState = rememberScrollState()
             Column(
                 modifier = Modifier.fillMaxWidth()
-                    .verticalScroll(pickerScrollState)
-                    .desktopTouchScroll(pickerScrollState)
+                    .then(
+                        if (fitPickerSheet) Modifier
+                        else Modifier.verticalScroll(pickerScrollState).desktopTouchScroll(pickerScrollState),
+                    )
                     .padding(horizontal = 20.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {

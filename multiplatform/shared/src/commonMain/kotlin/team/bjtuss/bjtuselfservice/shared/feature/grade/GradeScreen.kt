@@ -326,16 +326,19 @@ internal fun GradeWorkspace(
     }
 
     if (showFilterSheet) {
-        // 筛选器一屏放不下 → 直接全屏展开。
+        // iOS 按内容定高（超出可用高度时由 sheet 滚动）；其他平台仍全屏展开。
+        val fitFilterSheet = currentPlatform().family == PlatformFamily.IOS
         AppleSheet(
             onDismissRequest = { showFilterSheet = false },
             title = "筛选与计算",
-            needsFullHeight = true,
-            scrollableBody = true,
+            needsFullHeight = !fitFilterSheet,
+            scrollableBody = !fitFilterSheet,
+            fitContentHeight = fitFilterSheet,
         ) {
             GradeFilterSheet(
                 state = state,
                 model = model,
+                fitContentHeight = fitFilterSheet,
                 onSortOrderSelected = { order ->
                     model.setSortOrder(order)
                     showFilterSheet = false
@@ -475,6 +478,8 @@ private fun ColumnScope.GradeFilterSheet(
     state: GradeUiState,
     model: GradeScreenModel,
     onSortOrderSelected: (GradeSortOrder) -> Unit,
+    /** sheet 按内容定高时由 sheet 负责滚动和底部安全区，这里不能再套 verticalScroll。 */
+    fitContentHeight: Boolean = false,
 ) {
     val semesterOptions = state.semesterOptions
     val allSemestersSelected =
@@ -482,12 +487,19 @@ private fun ColumnScope.GradeFilterSheet(
     val filterScrollState = rememberScrollState()
 
     Column(
-        modifier = Modifier
-            .weight(1f)
-            .fillMaxWidth()
-            .verticalScroll(filterScrollState)
-            .desktopTouchScroll(filterScrollState)
-            .sheetScrollContentPadding(),
+        modifier = if (fitContentHeight) {
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(top = 8.dp, bottom = 16.dp)
+        } else {
+            Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(filterScrollState)
+                .desktopTouchScroll(filterScrollState)
+                .sheetScrollContentPadding()
+        },
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
         // —— 学期：小胶囊，默认全选 ——

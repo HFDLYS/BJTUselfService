@@ -29,8 +29,10 @@ struct UpNextWidgetView: View {
 
     var body: some View {
         switch entry.state {
+        case .noSharedContainer:
+            WidgetMessage(title: "无法读取课表", detail: "安装时需保留 App Group", compact: family.isAccessory)
         case .signedOut:
-            WidgetMessage(title: "暂无课表", detail: "登录 App 后显示课程", compact: family.isAccessory)
+            WidgetMessage(title: "暂无课表", detail: "打开 App 同步课表后显示", compact: family.isAccessory)
         case .stale:
             WidgetMessage(title: "课表需要更新", detail: "打开 App 刷新课表", compact: family.isAccessory)
         case .ready(let model):
@@ -176,8 +178,10 @@ struct TodayWidgetView: View {
 
     var body: some View {
         switch entry.state {
+        case .noSharedContainer:
+            WidgetMessage(title: "无法读取课表", detail: "安装时需保留 App Group", compact: false)
         case .signedOut:
-            WidgetMessage(title: "暂无课表", detail: "登录 App 后显示课程", compact: false)
+            WidgetMessage(title: "暂无课表", detail: "打开 App 同步课表后显示", compact: false)
         case .stale:
             WidgetMessage(title: "课表需要更新", detail: "打开 App 刷新课表", compact: false)
         case .ready(let model):

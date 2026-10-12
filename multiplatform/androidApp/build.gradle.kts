@@ -15,8 +15,8 @@ android {
         applicationId = "team.bjtuss.bjtuselfservice.kmp"
         minSdk = 28
         targetSdk = 35
-        versionCode = 32
-        versionName = "1.8.4-Beta-SheetFix-Widget"
+        versionCode = 33
+        versionName = "1.8.4-Beta-SheetFix-Widget-fix2"
     }
 
     buildFeatures {

@@ -1,14 +1,17 @@
 # BJTUselfService KMP 实时工作记忆
 
-> 最后更新：2026-10-12。
-> 当前阶段：调试版 `1.8.4-Beta-SheetFix-Widget` / Build 32，推 `debug-` 标签只走 CI 打包，不发布。
+> 最后更新：2026-10-13。
+> 当前阶段：调试版 `1.8.4-Beta-SheetFix-Widget-fix2` / Build 33，推 `debug-` 标签只走 CI 打包，不发布。
 > 当前分支：`main`。
-> KMP 应用版本：`1.8.4-Beta-SheetFix-Widget` / Build 32（macOS/Windows 安装包数值版本 1.8.4）。
+> KMP 应用版本：`1.8.4-Beta-SheetFix-Widget-fix2` / Build 33（macOS/Windows 安装包数值版本 1.8.4）。
 > 冻结原 Android：`v1.7.1` / versionCode 9（对照 `origin/main@7d94f74`）。
 > 正式 Latest 仍为 `v1.8.3-KMP`。
 
 ## 已完成
 
+- 版本改为 `1.8.4-Beta-SheetFix-Widget-fix2`（Build 33），推 `mine/main` 与标签 `debug-1.8.4-Beta-SheetFix-Widget-fix2`，仅 Actions 产物。
+- 小组件真机（SideStore「Keep App Extensions (Use Main Profile)」）显示“暂无课表”：SideStore 重签把 App Group 改名为 `原名.TeamID`（源码 `FetchProvisioningProfilesOperation.adjustedGroupIdentifier`），写死的原名打不开容器。App 与小组件改为从 `embedded.mobileprovision` 的 Entitlements 找“原名或原名.后缀”的组，再回退原名；小组件另分出“无法读取课表（App Group 未生效）”与“暂无课表（打开 App 同步）”。解析在本机真实描述文件与 iOS 单测（3 项）验证，真机待装 fix2 确认。
+- iOS「课表与周数」「筛选与计算」改为按内容定高（`fitContentHeight`），超出时由 sheet 滚动；Android/桌面仍全高。模拟器实测两者贴合内容，开关自选模式时平滑长高/缩回。
 - 版本改为 `1.8.4-Beta-SheetFix-Widget`（Build 32），提交弹窗竞态修复、前往日期半屏与 iOS 课程小组件，推 `mine/main` 与标签 `debug-1.8.4-Beta-SheetFix-Widget`，仅 Actions 产物、不建 Release。
 - 2026-10-12 iOS 弹窗偶发点不开：`IosNativeSheetPresenter` 同页共用一个呈现器，关闭动画中再 present 会被 UIKit 静默拒绝，而 Compose 状态已是“打开”，之后入口失效。现在关闭中收到的 present 等关闭完成再弹，打开动画中的 dismiss 等打开完成再关，present 被拒时重试（最多 10 次后复位状态）。模拟器实测：课表与周数选周后立即重开正常弹出。课表「前往日期」iOS 改为 `fitContentHeight`（约半屏，按日历实际高度），Android 不变。
 - 2026-10-12（用户要求重启小组件开发）iOS 课程小组件：新 target `CourseScheduleWidget`（`…kmp.ios.widget`，iOS 17+），App Group `group.team.bjtuss.bjtuselfservice.kmp`（沿用旧注册标识），主 App 加 `iosApp.entitlements`。共享层 `feature/widget/` 生成 14 天快照 JSON（课程+物理/演示实验，去校区/`[本]`，首页同色板），会话壳随课表变化写入、退出登录清空；Swift 宿主收通知刷新 WidgetCenter。两款：「临近课程」小/中/锁屏矩形/行内，「今日课程」中/大；当天课上完后显示下一个有课日并在日期头标明。模拟器真实数据浅/深色检查通过；`verify-apple-release-metadata.sh` 改为要求扩展存在且版本与宿主一致。
@@ -43,7 +46,7 @@
 ## 当前痛点
 
 - 小组件“正在上/还剩 N 分钟”状态只在代码层实现，未在上课时段实机观察；改版本号时须同时改 `iosApp/CourseScheduleWidget/Info.plist`。
-- 自签 IPA 需要签名工具支持扩展与 App Group，未在真机验证小组件数据共享。
+- 小组件 App Group 改名适配未在真机验证（需装 fix2，SideStore 保留扩展安装后打开一次 App）。
 - 小窗↔全屏来回切换未实测（adb 无法切换窗口模式）。
 - Android 统一后的二维码弹窗（标题 + 关闭、可滚动正文）未在平板上看过。
 - 「保存并扫一扫」最新包未装到平板/iPhone：Android MediaStore 保存与去重、扫一扫后从相册识别进入小程序/缴费页，均待真机验证；iOS 每次保存会多一张（仅添加权限无法去重）。
