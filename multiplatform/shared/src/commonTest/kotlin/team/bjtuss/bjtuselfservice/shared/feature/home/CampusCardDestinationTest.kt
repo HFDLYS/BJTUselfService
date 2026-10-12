@@ -4,49 +4,26 @@ import team.bjtuss.bjtuselfservice.shared.PlatformFamily
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CampusCardDestinationTest {
     @Test
-    fun iosUsesUserConfirmedWeChatMiniProgramLink() {
-        val destination = campusCardDestination(PlatformFamily.IOS)
-
-        assertEquals("https://wxaurl.cn/RLEw5IMZRKl", destination.url)
-        assertEquals(CampusCardAction.OpenUrl, destination.action)
-        assertEquals("打开完美校园", destination.confirmLabel)
+    fun onlyAndroidOffersOpeningTheCampusApp() {
+        assertTrue(campusCardDestination(PlatformFamily.Android).offersAppLaunch)
+        assertFalse(campusCardDestination(PlatformFamily.IOS).offersAppLaunch)
+        assertFalse(campusCardDestination(PlatformFamily.MacOS).offersAppLaunch)
     }
 
     @Test
-    fun macOsShowsQrCodeForTheSameMiniProgramLink() {
-        val destination = campusCardDestination(PlatformFamily.MacOS)
-
-        assertEquals(CampusCardAction.ShowQrCode, destination.action)
-        assertEquals("https://wxaurl.cn/RLEw5IMZRKl", destination.url)
-        assertEquals("关闭", destination.confirmLabel)
-    }
-
-    @Test
-    fun androidOpensTheMiniProgramLinkInWeChat() {
-        val destination = campusCardDestination(PlatformFamily.Android)
-
-        assertEquals(CampusCardAction.OpenUrl, destination.action)
-        assertEquals("https://wxaurl.cn/RLEw5IMZRKl", destination.url)
-        assertEquals("打开完美校园", destination.confirmLabel)
-        assertTrue(destination.message.contains("唤起微信"))
-        assertFalse(destination.message.contains("系统默认浏览器"))
-    }
-
-    @Test
-    fun urlLinkConvertsToWeChatSchemeAndLeavesCalendarHttpsAlone() {
-        assertEquals(
-            "weixin://dl/business/?t=RLEw5IMZRKl",
-            weChatUrlLinkScheme(WECHAT_MINI_PROGRAM_URL),
-        )
-        assertEquals("RLEw5IMZRKl", weChatUrlLinkTicket(WECHAT_MINI_PROGRAM_URL))
-        assertNull(weChatUrlLinkScheme("https://mp.weixin.qq.com/s/_O3Jwni5D2ZB93fmczCYmQ"))
-        assertNull(weChatUrlLinkScheme("https://weixin.bjtu.edu.cn/pay/wap/network/recharge.html"))
-        assertNull(weChatUrlLinkScheme("https://github.com/JasonZhang1225/BJTUselfService-KMP-Refreshed"))
+    fun everyPlatformExplainsScanningAndPastingIntoWeChat() {
+        PlatformFamily.entries.forEach { family ->
+            val message = campusCardDestination(family).message
+            assertTrue("二维码" in message, "$family: $message")
+            assertTrue("复制链接" in message, "$family: $message")
+            assertFalse("系统默认浏览器" in message, "$family: $message")
+        }
+        assertTrue("微信" in CAMPUS_CARD_LINK_COPIED)
+        assertEquals("https://wxaurl.cn/RLEw5IMZRKl", WECHAT_MINI_PROGRAM_URL)
     }
 
     @Test

@@ -1,5 +1,8 @@
 package team.bjtuss.bjtuselfservice.shared.feature.home
 
+import team.bjtuss.bjtuselfservice.shared.feature.shell.bottomSystemBars
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.windowInsetsPadding
 import team.bjtuss.bjtuselfservice.shared.feature.shell.LocalBottomBarClearance
 
 import team.bjtuss.bjtuselfservice.shared.feature.shell.AppleSheet
@@ -1584,7 +1587,7 @@ private fun HomeChangeDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .navigationBarsPadding()
+                        .windowInsetsPadding(WindowInsets.bottomSystemBars)
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.End,
                 ) {

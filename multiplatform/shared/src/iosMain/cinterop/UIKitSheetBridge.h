@@ -215,6 +215,42 @@ static inline void BJTUConfigureSheetPresentation(UIViewController *sheet, BOOL 
     }
 }
 
+/*
+ * 按内容定高：单一自定义 detent，高度 = 原生标题栏底边 + Compose 量出的正文高度，
+ * 超过系统允许的最大值时封顶（正文自带滚动）。detent 高度不含底部安全区。
+ * 内容变高（例如出现结果提示）时再次调用，animateChanges 让 sheet 平滑长高。
+ */
+static inline void BJTUSetSheetFittedHeight(UIViewController *sheet, double contentHeight) {
+    if (@available(iOS 16.0, *)) {
+        UISheetPresentationController *presentation = sheet.sheetPresentationController;
+        if (presentation == nil) {
+            return;
+        }
+        UISheetPresentationControllerDetentIdentifier fittedIdentifier = @"team.bjtuss.sheet.fitted";
+        __weak UIViewController *weakSheet = sheet;
+        UISheetPresentationControllerDetent *fitted =
+            [UISheetPresentationControllerDetent customDetentWithIdentifier:fittedIdentifier
+                                                                   resolver:^CGFloat(id<UISheetPresentationControllerDetentResolutionContext> context) {
+                CGFloat header = 56.0;
+                UIViewController *strongSheet = weakSheet;
+                if ([strongSheet isKindOfClass:UINavigationController.class]) {
+                    CGFloat barBottom = CGRectGetMaxY(((UINavigationController *)strongSheet).navigationBar.frame);
+                    if (barBottom > 0) {
+                        header = barBottom;
+                    }
+                }
+                return MIN(header + contentHeight, context.maximumDetentValue);
+            }];
+        if (@available(iOS 26.1, *)) {
+            fitted.backgroundEffect = [UIGlassEffect effectWithStyle:UIGlassEffectStyleRegular];
+        }
+        [presentation animateChanges:^{
+            presentation.detents = @[fitted];
+            presentation.selectedDetentIdentifier = fittedIdentifier;
+        }];
+    }
+}
+
 static inline void BJTUAttachSheetPresentationDelegate(
     UIViewController *sheet,
     id<UIAdaptivePresentationControllerDelegate> delegate

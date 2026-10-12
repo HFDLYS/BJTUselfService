@@ -187,7 +187,7 @@ import team.bjtuss.bjtuselfservice.shared.domain.home.HomeChangeRecord
 /**
  * 紧凑底栏：Material3 官方 [NavigationBar] + [NavigationBarItem]。
  * 挂在 NavDisplay 外层，一级 tab 切换时实例不销毁，按压/水波纹才能播完。
- * windowInsets 用 [WindowInsets.navigationBars]，由组件处理 Home Indicator / 手势条，
+ * windowInsets 用 [WindowInsets.bottomSystemBars]（导航栏 ∪ 小窗手势条），由组件处理 Home Indicator / 手势条，
  * 避免自绘固定高度把标签裁切或与系统安全区叠错。
  */
 @Composable
@@ -199,7 +199,7 @@ internal fun CompactBottomNavigation(
 ) {
     NavigationBar(
         modifier = modifier.fillMaxWidth(),
-        windowInsets = WindowInsets.navigationBars,
+        windowInsets = WindowInsets.bottomSystemBars,
     ) {
         sections.forEach { item ->
             val selected =

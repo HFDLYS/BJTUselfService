@@ -1,6 +1,7 @@
 package team.bjtuss.bjtuselfservice.shared.feature.shell
 
 
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.CubicBezierEasing
@@ -28,8 +29,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -209,14 +208,14 @@ internal fun CompactAppTopBar(
     // 顶栏与页面背景同色：iOS 的 SwiftUI 根视图在状态栏下方铺的就是 background，
     // 顶栏若用 surface 会在状态栏下方露出一条浅色带子，破坏沉浸感。
     // iOS 的 Compose 宿主已改为全屏布局（原生 push 转场需要覆盖状态栏区域），
-    // WindowInsets.statusBars 在 iOS 上恢复为真实值，顶栏统一应用状态栏内边距。
+    // WindowInsets.statusBars 在 iOS 上恢复为真实值，顶栏统一应用状态栏（含 Android 小窗标题栏）内边距。
     // 内容行固定高度：大标题与右侧「已同步」胶囊垂直居中同一条线，各 tab 一致。
     val topBarContentHeight = if (dense) 40.dp else 52.dp
     Surface(color = MaterialTheme.colorScheme.background) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .statusBarsPadding()
+                .windowInsetsPadding(WindowInsets.topSystemBars)
                 .height(topBarContentHeight)
                 .padding(start = if (onBack != null) 6.dp else 20.dp, end = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -469,17 +468,13 @@ internal fun HomeSyncDetailsDialog(
         confirmLabel = if (canRetry) "重试" else null,
         onConfirm = if (canRetry) onRetry else null,
         dismissLabel = null,
-        // The normal six-module list fits the native medium detent. When
-        // Physical Online adds a seventh row, start at large so the last
-        // status is not clipped; UIKit still keeps the native sheet gesture.
-        needsFullHeight = items.size > 6,
-        scrollableBody = true,
+        // 行数随启用的模块变化（6～8 行）：iOS 按列表实际高度展开，行数多到超出屏幕时封顶并滚动。
+        // 滚动与底部安全区由 sheet 负责，列表本身不再套 verticalScroll。
+        fitContentHeight = true,
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .navigationBarsPadding()
+                .fillMaxWidth()
                 .padding(horizontal = 20.dp, vertical = 4.dp),
         ) {
             // The sheet itself supplies the single material surface. A second

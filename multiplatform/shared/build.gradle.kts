@@ -42,7 +42,8 @@ kotlin {
             cinterops {
                 create("uikitSheet") {
                     defFile(project.file("src/iosMain/cinterop/UIKitSheetBridge.def"))
-                    compilerOpts("-I${project.file("src/iosMain/cinterop").absolutePath}")
+                    // includeDirs 会把头文件登记为任务输入；只用 -I 时改了 .h 不会重新生成绑定。
+                    includeDirs(project.file("src/iosMain/cinterop"))
                 }
             }
         }

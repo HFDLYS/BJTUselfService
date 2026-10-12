@@ -39,23 +39,19 @@ internal fun MoreWorkspace(
     physicsLabModel: PhysicsLabModel? = null,
     showPhysicsLabTile: Boolean = physicsLabModel != null,
     platformFamily: PlatformFamily = currentPlatform().family,
-    onOpenExternalUrl: ((String) -> Unit)? = null,
     onOpenPhysicsDemo: (() -> Unit)? = null,
 ) {
     val scroll = rememberLazyListState()
     val topClearance = LocalTopBarClearance.current
     var activeAccountEntry by remember { mutableStateOf<CampusAccountEntry?>(null) }
-    var actionError by remember { mutableStateOf<String?>(null) }
     val sections = applicationSections(preferences).filter {
         it != AppSection.PHYSICS_LAB || showPhysicsLabTile
     }
     val addCampusAccountTiles: MutableList<ApplicationTile>.() -> Unit = {
         add(ApplicationTile("校园卡", specialIcon = SpecialTileIcon.CAMPUS_CARD) {
-            actionError = null
             activeAccountEntry = CampusAccountEntry.CAMPUS_CARD
         })
         add(ApplicationTile("校园网", specialIcon = SpecialTileIcon.NETWORK) {
-            actionError = null
             activeAccountEntry = CampusAccountEntry.NETWORK
         })
     }
@@ -87,8 +83,6 @@ internal fun MoreWorkspace(
             entry = entry,
             family = platformFamily,
             onDismiss = { activeAccountEntry = null },
-            onError = { actionError = it },
-            onOpenUrl = onOpenExternalUrl,
         )
     }
     BoxWithConstraints(modifier.fillMaxSize()) {
@@ -110,11 +104,6 @@ internal fun MoreWorkspace(
                 bottom = 16.dp + LocalBottomBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            actionError?.let { message ->
-                item(key = "application-entry-error") {
-                    Text(message, color = MaterialTheme.colorScheme.error)
-                }
-            }
             items(rows.size) { rowIndex ->
                 val row = rows[rowIndex]
                 Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {

@@ -89,7 +89,7 @@ class SecurityReleaseConfigTest {
     }
 
     @Test
-    fun androidFilePreviewGrantsChooserTargetsAndWeChatUrlsPreferWeChat() {
+    fun androidFilePreviewGrantsChooserTargetsAndUrlsNeverLaunchWeChatTickets() {
         val gateway = root.resolve(
             "multiplatform/androidApp/src/main/kotlin/team/bjtuss/bjtuselfservice/kmp/AndroidHomeworkFileGateway.kt",
         ).readText()
@@ -101,10 +101,8 @@ class SecurityReleaseConfigTest {
         val urls = root.resolve(
             "multiplatform/androidApp/src/main/kotlin/team/bjtuss/bjtuselfservice/kmp/AndroidExternalUrls.kt",
         ).readText()
-        assertTrue("com.tencent.mm" in urls)
-        assertTrue("weixin://dl/business/?t=" in urls)
-        assertTrue("weChatUrlLinkScheme" in urls)
-        assertTrue("setPackage(WECHAT_PACKAGE)" in urls)
+        // 加密 URL Link 从 App 唤起微信会被一人一链拦截，不能再拼 weixin://dl/business/?t=。
+        assertFalse("weixin://" in urls)
         assertFalse("isWeChatOfficialAccountArticle" in urls)
 
         val ios = root.resolve(
@@ -114,8 +112,7 @@ class SecurityReleaseConfigTest {
         assertFalse("weChatOfficialAccountArticleScheme" in ios)
 
         val manifest = root.resolve("multiplatform/androidApp/src/main/AndroidManifest.xml").readText()
-        assertTrue("com.tencent.mm" in manifest)
-        assertTrue("android:scheme=\"weixin\"" in manifest)
+        assertTrue("<package android:name=\"com.newcapec.mobile.ncp\" />" in manifest)
         assertTrue("<data android:mimeType=\"*/*\" />" in manifest)
     }
 

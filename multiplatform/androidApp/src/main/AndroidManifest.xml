@@ -2,13 +2,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- Android 11+ 默认看不到其他应用。附件“打开方式”和完美校园唤起微信都要声明。 -->
+    <!-- Android 11+ 默认看不到其他应用。附件“打开方式”、打开完美校园 App 和微信扫一扫都要声明。 -->
     <queries>
+        <package android:name="com.newcapec.mobile.ncp" />
         <package android:name="com.tencent.mm" />
-        <intent>
-            <action android:name="android.intent.action.VIEW" />
-            <data android:scheme="weixin" />
-        </intent>
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:mimeType="*/*" />

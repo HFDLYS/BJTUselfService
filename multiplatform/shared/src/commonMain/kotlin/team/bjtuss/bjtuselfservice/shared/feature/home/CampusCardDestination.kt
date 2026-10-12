@@ -2,58 +2,39 @@ package team.bjtuss.bjtuselfservice.shared.feature.home
 
 import team.bjtuss.bjtuselfservice.shared.PlatformFamily
 
+/**
+ * 完美校园小程序的加密 URL Link。
+ *
+ * 从微信外唤起（Android 交给微信的 `weixin://dl/business/?t=`、iOS 由 Safari 跳转）时，
+ * 链接绑定第一个打开它的微信号，其他人会看到「此链接已被其他用户访问」。
+ * 在微信内点开或扫码（含扫一扫从相册识别）不受这个限制，所以入口给二维码（可保存后打开扫一扫）
+ * 和复制链接，不再用这条链接从 App 唤起微信。
+ * 明文 Scheme（`?appid=&path=`）运营方未开放，2026-10-12 实测各常见路径均「当前页面无法访问」。
+ */
 internal const val WECHAT_MINI_PROGRAM_URL = "https://wxaurl.cn/RLEw5IMZRKl"
 
-/**
- * URL Link `https://wxaurl.cn/{ticket}` 对应的微信 URL Scheme。
- * iOS 走 Universal Link；Android 不能把 HTTPS 直接交给微信（微信不接这个 VIEW），
- * 要用 `weixin://dl/business/?t=` 才能唤起小程序。校历等 mp.weixin.qq.com 不是 URL Link。
- */
-fun weChatUrlLinkScheme(url: String): String? {
-    val ticket = weChatUrlLinkTicket(url) ?: return null
-    return "weixin://dl/business/?t=$ticket"
-}
-
-internal fun weChatUrlLinkTicket(url: String): String? {
-    if (!url.startsWith("https://", ignoreCase = true)) return null
-    val hostAndPath = url.substringAfter("://").substringBefore('?').substringBefore('#')
-    val host = hostAndPath.substringBefore('/').lowercase()
-    if (host != "wxaurl.cn" && host != "wxmpurl.cn" && host != "wxa.wxs.qq.com") return null
-    val ticket = hostAndPath.substringAfter('/', "").substringBefore('/').trim()
-    if (ticket.isEmpty() || ticket.any { !it.isLetterOrDigit() }) return null
-    return ticket
-}
-
-internal enum class CampusCardAction {
-    OpenUrl,
-    ShowQrCode,
-}
-
 internal data class CampusCardDestination(
-    val action: CampusCardAction,
-    val url: String?,
     val message: String,
-    val confirmLabel: String,
+    /** Android 额外提供「打开完美校园 App」。 */
+    val offersAppLaunch: Boolean,
 )
+
+private const val CAMPUS_CARD_NOTICE = "校园卡充值由完美校园提供，本应用不会代填金额或发起支付。"
+
+internal const val CAMPUS_CARD_LINK_COPIED = "已复制链接。粘贴到微信任意聊天（例如文件传输助手）后点开即可进入小程序。"
 
 internal fun campusCardDestination(family: PlatformFamily): CampusCardDestination = when (family) {
     PlatformFamily.Android -> CampusCardDestination(
-        action = CampusCardAction.OpenUrl,
-        url = WECHAT_MINI_PROGRAM_URL,
-        message = "校园卡充值由完美校园提供。将唤起微信打开完美校园小程序，本应用不会代填金额或发起支付。",
-        confirmLabel = "打开完美校园",
+        message = "可打开完美校园 App、保存二维码后用微信扫一扫识别，或复制链接到微信聊天后点开。$CAMPUS_CARD_NOTICE",
+        offersAppLaunch = true,
     )
     PlatformFamily.IOS -> CampusCardDestination(
-        action = CampusCardAction.OpenUrl,
-        url = WECHAT_MINI_PROGRAM_URL,
-        message = "校园卡充值由完美校园提供。将使用系统默认浏览器打开完美校园微信小程序链接，本应用不会代填金额或发起支付。",
-        confirmLabel = "打开完美校园",
+        message = "可保存二维码后用微信扫一扫识别，或复制链接到微信聊天后点开。$CAMPUS_CARD_NOTICE",
+        offersAppLaunch = false,
     )
     PlatformFamily.MacOS -> CampusCardDestination(
-        action = CampusCardAction.ShowQrCode,
-        url = WECHAT_MINI_PROGRAM_URL,
-        message = "请使用手机微信扫描二维码，打开完美校园小程序。",
-        confirmLabel = "关闭",
+        message = "请使用手机微信扫描二维码，或复制链接到微信聊天后点开。",
+        offersAppLaunch = false,
     )
 }
 

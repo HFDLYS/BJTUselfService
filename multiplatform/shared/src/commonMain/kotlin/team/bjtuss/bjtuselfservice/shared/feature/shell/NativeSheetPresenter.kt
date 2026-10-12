@@ -31,6 +31,9 @@ interface NativeSheetPresenter {
 
     fun present(needsFullHeight: Boolean)
 
+    /** 按内容定高的 sheet 回报正文高度（dp，iOS 上 1pt == 1dp）；宿主据此调整 detent。 */
+    fun setFittedContentHeight(heightDp: Float) {}
+
     fun dismiss()
 }
 

@@ -1,5 +1,6 @@
 package team.bjtuss.bjtuselfservice.shared.feature.shell
 
+import androidx.compose.foundation.layout.windowInsetsPadding
 import team.bjtuss.bjtuselfservice.shared.feature.grade.GradeChangeNoticeDialog
 import team.bjtuss.bjtuselfservice.shared.feature.grade.GradeContentSource
 import team.bjtuss.bjtuselfservice.shared.feature.grade.GradeWorkspace
@@ -399,13 +400,13 @@ fun AuthenticatedAppShell(
         // （那里只剩 home indicator），真实高度由宿主写进 session。宿主还没回报时退回安全区，
         // 最坏情况是尾部留白偏小，不会崩。
         maxOf(
-            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(),
+            WindowInsets.bottomSystemBars.asPaddingValues().calculateBottomPadding(),
             session.glassTabBarBottomInsetDp.dp,
         )
     } else if (windowClass == WindowClass.Expanded) {
         0.dp
     } else {
-        80.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        80.dp + WindowInsets.bottomSystemBars.asPaddingValues().calculateBottomPadding()
     }
     // 宽屏（平板横屏/全屏、macOS）：二级页留在壳内，侧栏固定、右侧换内容，对齐桌面分屏。
     // 已经由原生宿主持有的页面始终继续使用宿主路由，旋转/展开不能把返回栈拆成两份。
@@ -1114,7 +1115,7 @@ fun AuthenticatedAppShell(
         // 宿主上报的是整个 tab bar frame 的高度，已经包含其底部安全区，不重复叠加。
         val reserveBottomBarSpace = !session.systemManagedContentBounds && !expanded && !showBack && !isPushedHostDestination
         val systemBottomInset = maxOf(
-            WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(),
+            WindowInsets.bottomSystemBars.asPaddingValues().calculateBottomPadding(),
             session.systemBottomInsetDp.dp,
         )
         val bottomContentClearance = destinationBottomClearance(
@@ -1196,7 +1197,7 @@ fun AuthenticatedAppShell(
                 // keepsTopBarInset 的不可滚页面改回布局内边距（停在栏下 + 8.dp 呼吸）。
                 val useTopUnderlap = topScrollTrackingActive && scrollUnderTopBar
                 val measuredTopInset = if (session.systemManagedContentBounds) session.glassTopBarInsetDp.dp else maxOf(
-                    WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
+                    WindowInsets.topSystemBars.asPaddingValues().calculateTopPadding(),
                     session.glassTopBarInsetDp.dp,
                 )
                 val topBarClearance = if (useTopUnderlap && !keepsTopBarInset) {
@@ -2102,7 +2103,6 @@ fun AuthenticatedAppShell(
                     onOpenSection = { target -> navigateToSection(target) },
                     modifier = Modifier.fillMaxSize(),
                     platformFamily = platform.family,
-                    onOpenExternalUrl = onOpenExternalUrl,
                 )
             }
         }
@@ -2117,7 +2117,7 @@ fun AuthenticatedAppShell(
         )
     } else if (windowClass == WindowClass.Expanded) {
         Row(
-            modifier = Modifier.fillMaxSize().statusBarsPadding().padding(18.dp),
+            modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.topSystemBars).padding(18.dp),
             horizontalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             AppSidebar(

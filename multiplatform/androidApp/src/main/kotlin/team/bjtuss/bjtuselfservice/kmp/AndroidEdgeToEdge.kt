@@ -17,9 +17,13 @@ internal fun ComponentActivity.enableImmersiveEdgeToEdge() {
     }
 }
 
-/** Reuse the current window's measured inset before the next Compose host gets its first dispatch. */
+/**
+ * Reuse the current window's measured inset before the next Compose host gets its first dispatch.
+ * HyperOS 小窗的底部手势条报告为 captionBar，与导航栏合并取值。
+ */
 internal fun ComponentActivity.rememberSystemBottomInset() {
     val insets = ViewCompat.getRootWindowInsets(window.decorView) ?: return
+    val bottomBars = WindowInsetsCompat.Type.navigationBars() or WindowInsetsCompat.Type.captionBar()
     AndroidAuthenticatedSessionRegistry.session?.systemBottomInsetDp =
-        insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom / resources.displayMetrics.density
+        insets.getInsets(bottomBars).bottom / resources.displayMetrics.density
 }

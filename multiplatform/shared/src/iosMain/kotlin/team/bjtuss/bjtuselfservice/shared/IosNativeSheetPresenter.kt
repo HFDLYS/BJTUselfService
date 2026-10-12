@@ -20,6 +20,8 @@ import platform.UIKit.UIRectEdgeNone
 import platform.UIKit.addChildViewController
 import platform.UIKit.didMoveToParentViewController
 import platform.darwin.NSObject
+import platform.darwin.dispatch_async
+import platform.darwin.dispatch_get_main_queue
 import team.bjtuss.bjtuselfservice.shared.feature.shell.NativeSheetPresenter
 import team.bjtuss.bjtuselfservice.shared.feature.shell.LocalNativeSheetContentBoundsHandled
 
@@ -98,10 +100,24 @@ class IosNativeSheetPresenter(
         sheetController?.let(::updateNativeHeader)
     }
 
+    private var fittedContentHeight: Float? = null
+
+    override fun setFittedContentHeight(heightDp: Float) {
+        if (fittedContentHeight == heightDp) return
+        fittedContentHeight = heightDp
+        // 高度来自 Compose 的 onSizeChanged（布局进行中）；同步改 detent 会让宿主在测量中途
+        // 改尺寸并崩溃（updateRootConstraints called while measuring），推迟到下一轮主线程。
+        dispatch_async(dispatch_get_main_queue()) {
+            val height = fittedContentHeight ?: return@dispatch_async
+            sheetController?.let { BJTUSetSheetFittedHeight(it, height.toDouble()) }
+        }
+    }
+
     override fun present(needsFullHeight: Boolean) {
         val existing = sheetController
         if (existing != null) {
             BJTUConfigureSheetPresentation(existing, needsFullHeight)
+            fittedContentHeight?.let { BJTUSetSheetFittedHeight(existing, it.toDouble()) }
             updateNativeHeader(existing)
             return
         }
@@ -129,6 +145,7 @@ class IosNativeSheetPresenter(
         applyContentLayout(sheet)
         BJTUInstallNativeSheetMaterial(sheet)
         BJTUConfigureSheetPresentation(sheet, needsFullHeight)
+        fittedContentHeight?.let { BJTUSetSheetFittedHeight(sheet, it.toDouble()) }
 
         val delegate = SheetDelegate { handleDismissed() }
         sheetDelegate = delegate
@@ -158,6 +175,7 @@ class IosNativeSheetPresenter(
 
     override fun dismiss() {
         val sheet = sheetController ?: return
+        fittedContentHeight = null
         sheetController = null
         sheetDelegate = null
         confirmTarget = null
@@ -167,6 +185,7 @@ class IosNativeSheetPresenter(
     }
 
     private fun handleDismissed() {
+        fittedContentHeight = null
         sheetController = null
         sheetDelegate = null
         confirmTarget = null

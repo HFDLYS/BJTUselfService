@@ -19,9 +19,9 @@
 	<key>CFBundlePackageType</key>
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.8.4-Alpha-phydemo-fix</string>
+	<string>1.8.4-Alpha-phydemo-fix2</string>
 	<key>CFBundleVersion</key>
-	<string>30</string>
+	<string>31</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
@@ -30,6 +30,8 @@
 	<string>用于创建“本学期课表”“选课课表”和单场考试日历，并在再次加入时更新同一日程。</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>用于把你主动选择的课程表或单场考试加入系统日历。</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>用于把校园卡、校园网缴费二维码保存到相册，方便在微信扫一扫中从相册识别。</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSExceptionDomains</key>

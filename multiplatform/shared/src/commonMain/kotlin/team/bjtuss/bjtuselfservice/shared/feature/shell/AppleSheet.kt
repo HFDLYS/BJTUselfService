@@ -1,5 +1,8 @@
 package team.bjtuss.bjtuselfservice.shared.feature.shell
 
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -53,6 +56,11 @@ fun AppleSheet(
     modifier: Modifier = Modifier,
     needsFullHeight: Boolean = false,
     scrollableBody: Boolean = false,
+    /**
+     * iOS 按正文实际高度展开（自定义 detent）。各平台都由 sheet 负责滚动和底部安全区，
+     * content 里不要再套 verticalScroll；非 iOS 的底部 sheet 本来就按内容高度展开。
+     */
+    fitContentHeight: Boolean = false,
     title: String? = null,
     confirmLabel: String? = null,
     confirmEnabled: Boolean = true,
@@ -88,19 +96,41 @@ fun AppleSheet(
                 // an unspecified color falls back to black over the native dark
                 // glass surface.
                 CompositionLocalProvider(LocalContentColor provides appColorScheme.onSurface) {
+                    val density = LocalDensity.current
+                    val horizontalBounds = if (LocalNativeSheetContentBoundsHandled.current) Modifier else
+                        Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+                    if (fitContentHeight) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .fillMaxHeight()
+                                .then(horizontalBounds)
+                                .verticalScroll(rememberScrollState())
+                                // verticalScroll 会把 fillMaxHeight 的最小高度传给内容；不清掉的话
+                                // 量到的永远 ≥ 当前 sheet 高度，回报后 sheet 越长越高。
+                                .wrapContentHeight(Alignment.Top)
+                                // 底部安全区不计入 detent（UIKit 另加），所以量高度时排除在外。
+                                .windowInsetsPadding(WindowInsets.bottomSystemBars)
+                                .onSizeChanged { size ->
+                                    presenter.setFittedContentHeight(with(density) { size.height.toDp().value })
+                                }
+                                .padding(top = 8.dp),
+                            content = content,
+                        )
+                        return@CompositionLocalProvider
+                    }
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             // 半屏 detent 也要吃满宿主高度，内部 verticalScroll 才有视口。
                             .fillMaxHeight()
-                            .then(if (LocalNativeSheetContentBoundsHandled.current) Modifier else
-                                Modifier.windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)))
+                            .then(horizontalBounds)
                             // Short informational sheets also need a bounded scroll viewport in landscape.
                             .then(if (!needsFullHeight && !scrollableBody) Modifier.verticalScroll(rememberScrollState()) else Modifier)
                             // Scrollable bodies use UIKit's title-bar clearance and
                             // own their bottom inset inside the scrolling content.
                             .padding(top = if (scrollableBody) 0.dp else 8.dp)
-                            .then(if (scrollableBody) Modifier else Modifier.navigationBarsPadding()),
+                            .then(if (scrollableBody) Modifier else Modifier.windowInsetsPadding(WindowInsets.bottomSystemBars)),
                         content = content,
                     )
                 }
@@ -190,7 +220,17 @@ fun AppleSheet(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .then(if (needsFullHeight) Modifier.weight(1f) else Modifier),
+                        .then(if (needsFullHeight) Modifier.weight(1f) else Modifier)
+                        // 与 iOS 同义：fitContentHeight 的 content 不自带滚动和底部安全区，由 sheet 提供。
+                        .then(
+                            if (fitContentHeight) {
+                                Modifier
+                                    .verticalScroll(rememberScrollState())
+                                    .windowInsetsPadding(WindowInsets.bottomSystemBars)
+                            } else {
+                                Modifier
+                            },
+                        ),
                     content = content,
                 )
             }
@@ -201,7 +241,7 @@ fun AppleSheet(
 /** Bottom inset lives in the scrolling content so a long sheet does not leave a blank home-indicator strip. */
 @Composable
 internal fun Modifier.sheetScrollContentPadding(): Modifier {
-    val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val bottomInset = WindowInsets.bottomSystemBars.asPaddingValues().calculateBottomPadding()
     return padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 16.dp + bottomInset)
 }
 
@@ -221,6 +261,8 @@ fun AppleSheetOrAlert(
     showDismissButton: Boolean = true,
     needsFullHeight: Boolean = false,
     scrollableBody: Boolean = false,
+    /** iOS 按正文高度展开；Android 对话框正文改为可滚动。两端 content 里都不要再套 verticalScroll。 */
+    fitContentHeight: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     if (currentPlatform().family == PlatformFamily.IOS) {
@@ -231,6 +273,7 @@ fun AppleSheetOrAlert(
             onDismissRequest = onDismissRequest,
             needsFullHeight = needsFullHeight,
             scrollableBody = scrollableBody,
+            fitContentHeight = fitContentHeight,
             title = title,
             confirmLabel = confirmLabel,
             confirmEnabled = confirmEnabled,
@@ -249,7 +292,10 @@ fun AppleSheetOrAlert(
         AlertDialog(
             onDismissRequest = onDismissRequest,
             title = title?.let { { Text(it) } },
-            text = { Column { content() } },
+            // AlertDialog 的正文区高度受限但不滚动，内容超高（如 HyperOS 小窗）时按钮会被裁掉。
+            text = {
+                Column(if (fitContentHeight) Modifier.verticalScroll(rememberScrollState()) else Modifier) { content() }
+            },
             confirmButton = if (fallbackConfirmLabel != null) {
                 {
                     TextButton(onClick = onConfirm ?: onDismissRequest) {
