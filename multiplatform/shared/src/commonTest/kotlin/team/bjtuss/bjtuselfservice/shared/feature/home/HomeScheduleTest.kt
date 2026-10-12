@@ -46,6 +46,19 @@ class HomeScheduleTest {
         assertEquals(0, base.withCourses(schedule).days.single { it.date == date }.eventCount)
     }
 
+    @Test fun physicsDemoBookingsShareTheHomeExperimentEntry() {
+        val date = LocalDate(2026, 10, 28)
+        val weeks = listOf(OccupancyWeekDate(7, "10/26", "11/1", LocalDate(2026, 10, 26)))
+        val demo = team.bjtuss.bjtuselfservice.shared.feature.phydemo.PhysicsDemoBooking("近代与综合", date, 5)
+        val fragments = team.bjtuss.bjtuselfservice.shared.feature.course.scheduleEventCourses(emptyList(), emptyList(), weeks, listOf(demo))
+        val schedule = HomeSchedulePresentation(academicWeeks = weeks, currentWeek = 7, today = date, supplementalCourses = fragments)
+        val labs = homePhysicsLabsOnDate(schedule, date)
+        assertEquals(1, labs.size)
+        assertEquals("phydemo", labs.single().scheduleEventKind)
+        assertEquals("18:30-20:10", labs.single().scheduleEventTime)
+        assertTrue(homeCoursesOnDate(schedule, date).isEmpty())
+    }
+
     @Test fun supplementalExamsDoNotBecomeLabsOrInflateOrdinaryCourseCounts() {
         val date = LocalDate(2026, 10, 12)
         val ordinary = course("课程", 1)

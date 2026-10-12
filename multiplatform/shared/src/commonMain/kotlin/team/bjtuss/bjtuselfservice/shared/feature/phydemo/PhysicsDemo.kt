@@ -18,6 +18,9 @@ data class PhysicsDemoBooking(val name: String, val date: LocalDate, val period:
     val location: String get() = if (name == "光学") "7418" else "7416"
 }
 
+internal fun sortedPhysicsDemoBookings(bookings: List<PhysicsDemoBooking>): List<PhysicsDemoBooking> =
+    bookings.sortedWith(compareBy({ it.date }, { it.period }, { it.name }))
+
 internal fun demoCompact(value: String): String = value.replace(Regex("[\\s\\u00a0]+"), "")
 
 fun parsePhysicsDemoBookings(html: String): List<PhysicsDemoBooking> {

@@ -72,10 +72,12 @@ class PhysicsDemoModel(private val scope: String, private val cache: CacheStore,
         }
     }
 
-    suspend fun refresh() {
+    /** [onlyIfUnsynced] 用于进入 App/页面时的自动同步：本次会话已成功查询过则不重复访问网络。 */
+    suspend fun refresh(onlyIfUnsynced: Boolean = false) {
         initialize()
         mutex.withLock {
             if (!state.value.enabled || !state.value.configured) return@withLock
+            if (onlyIfUnsynced && state.value.synced) return@withLock
             mutableState.value = state.value.copy(refreshing = true,failed = false,message = null)
             try {
                 val creds = vault?.load() ?: throw PhysicsDemoFailure("请配置演示实验账号。")

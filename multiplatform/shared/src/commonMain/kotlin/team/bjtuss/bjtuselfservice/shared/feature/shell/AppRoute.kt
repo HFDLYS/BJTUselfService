@@ -299,6 +299,8 @@ internal data object PhysicsLabSettingsRoute : AppRoute
 const val PHYSICS_LAB_SETTINGS_ROUTE_ID = "PHYSICS_LAB_SETTINGS"
 internal data object PhysicsDemoRoute : AppRoute
 const val PHYSICS_DEMO_ROUTE_ID = "PHYSICS_DEMO"
+internal data object PhysicsDemoSettingsRoute : AppRoute
+const val PHYSICS_DEMO_SETTINGS_ROUTE_ID = "PHYSICS_DEMO_SETTINGS"
 
 /** Google predictive-back full-screen surface 的 SystemUI 插值。 */
 internal val androidPredictiveEasing = CubicBezierEasing(0.1f, 0.1f, 0f, 1f)
@@ -322,6 +324,8 @@ internal fun String.toAppRoute(): AppRoute? =
         MailboxDetailRoute
     } else if (this == MAILBOX_COMPOSE_ROUTE_ID) {
         MailboxComposeRoute
+    } else if (this == PHYSICS_DEMO_SETTINGS_ROUTE_ID) {
+        PhysicsDemoSettingsRoute
     } else if (this == PHYSICS_DEMO_ROUTE_ID) {
         PhysicsDemoRoute
     } else if (this == PHYSICS_LAB_SETTINGS_ROUTE_ID) {

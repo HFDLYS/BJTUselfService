@@ -448,6 +448,7 @@ fun AuthenticatedAppShell(
         MailboxComposeRoute -> AppSection.MAILBOX
         PhysicsLabSettingsRoute -> AppSection.PHYSICS_LAB
         PhysicsDemoRoute -> AppSection.MORE
+        PhysicsDemoSettingsRoute -> AppSection.SETTINGS
         is AppSection -> currentRoute
     }
     val popBackStack: () -> Unit = if (forcedRouteId != null) {
@@ -949,10 +950,13 @@ fun AuthenticatedAppShell(
         // Only initial App entry triggers this; foreground/focus changes are not keys.
         // Reads/submissions recover the session only after confirmed expiry.
     }
-    LaunchedEffect(session.physicsDemoModel, entryLoggingIn, forcedRouteId) {
+    // 与物理实验/CITEL 同一门控：iOS 原生 Tab 下首页宿主带 forcedRouteId=HOME，仍需自动同步。
+    LaunchedEffect(session.physicsDemoModel, entryLoggingIn, forcedRouteId, nativeTabBarEnabled) {
         val demo = session.physicsDemoModel ?: return@LaunchedEffect
         demo.initialize()
-        if (!entryLoggingIn && forcedRouteId == null) demo.refresh()
+        if (!entryLoggingIn && shouldStartPhyVlabAutoSync(forcedRouteId, nativeTabBarEnabled)) {
+            SyncTiming.measure("startup.physics-demo") { demo.refresh(onlyIfUnsynced = true) }
+        }
     }
     LaunchedEffect(session.physicsLabModel, physicsLabEnabled, entryLoggingIn, forcedRouteId, nativeTabBarEnabled) {
         val labModel = session.physicsLabModel ?: return@LaunchedEffect
@@ -1428,9 +1432,23 @@ fun AuthenticatedAppShell(
                         },
                         onOpenPhyVlab = { event ->
                             if (event.id.startsWith("citel-")) {
-                                navigateToSection(AppSection.CITEL)
+                                // 与作业/考试一致：直接进入该 CITEL 作业的二级详情页。
+                                val taskId = event.id.substringAfterLast('-').toIntOrNull()
+                                val task = citelState.tasks.firstOrNull { it.id == taskId }
+                                val model = session.citelModel
+                                if (task != null && model != null) {
+                                    model.showTask(task)
+                                    if (useNativeSecondaryRoutes) {
+                                        onOpenNativeRoute(CITEL_DETAIL_ROUTE_ID)
+                                    } else if (backStack.lastOrNull() != CitelDetailRoute) {
+                                        backStack.add(CitelDetailRoute)
+                                    }
+                                } else {
+                                    navigateToSection(AppSection.CITEL)
+                                }
                             } else {
-                                val activity = phyVlabState.activities.firstOrNull { it.activityUrl == event.eventUrl }
+                                // 首页事件可能来自任一物理在线课程；当前页 activities 只含所选课程。
+                                val activity = phyVlabModel.findActivityForEvent(event)
                                 if (activity != null) {
                                     phyVlabModel.showActivityDetails(activity)
                                     if (useNativeSecondaryRoutes) {
@@ -1834,8 +1852,8 @@ fun AuthenticatedAppShell(
                     physicsDemoEnabled = physicsDemoState.enabled,
                     onPhysicsDemoEnabled = { enabled -> scope.launch { session.physicsDemoModel?.setEnabled(enabled) } },
                     onPhysicsDemoSettings = {
-                        if (useNativeSecondaryRoutes) onOpenNativeRoute(PHYSICS_DEMO_ROUTE_ID)
-                        else backStack.add(PhysicsDemoRoute)
+                        if (useNativeSecondaryRoutes) onOpenNativeRoute(PHYSICS_DEMO_SETTINGS_ROUTE_ID)
+                        else backStack.add(PhysicsDemoSettingsRoute)
                     },
                     citelConfigured = citelState.configured,
                     onPhysicsLabSettings = {
@@ -1980,6 +1998,16 @@ fun AuthenticatedAppShell(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
+            PhysicsDemoSettingsRoute -> DestinationPage(
+                title = "演示实验账号设置", expanded = expanded, refreshable = false,
+                isRefreshing = physicsDemoState.refreshing, showBack = true,
+                modifier = modifier, scrollUnderTopBar = true,
+            ) {
+                session.physicsDemoModel?.let {
+                    team.bjtuss.bjtuselfservice.shared.feature.phydemo.PhysicsDemoSettingsScreen(
+                        it, Modifier.fillMaxSize(), onAccountSaved = popBackStack)
+                }
+            }
             PhysicsDemoRoute -> DestinationPage(
                 title = "演示实验查询", expanded = expanded, refreshable = false,
                 isRefreshing = physicsDemoState.refreshing, showBack = true,
@@ -2067,7 +2095,7 @@ fun AuthenticatedAppShell(
                 MoreWorkspace(
                     preferences = settingsState.preferences,
                     physicsLabModel = session.physicsLabModel,
-                    onOpenPhysicsDemo = session.physicsDemoModel?.let { {
+                    onOpenPhysicsDemo = session.physicsDemoModel?.takeIf { physicsDemoState.enabled }?.let { {
                         if (useNativeSecondaryRoutes) onOpenNativeRoute(PHYSICS_DEMO_ROUTE_ID)
                         else backStack.add(PhysicsDemoRoute)
                     } },
@@ -2191,6 +2219,10 @@ fun AuthenticatedAppShell(
                             modifier = Modifier.fillMaxSize(),
                             usesLegacySmartTransport = usesLegacySmartTransportFor(platform.family),
                         )
+                    }
+                    entry<PhysicsDemoSettingsRoute> {
+                        SectionDestination(route = PhysicsDemoSettingsRoute, expanded = false, modifier = Modifier.fillMaxSize(),
+                            usesLegacySmartTransport = usesLegacySmartTransportFor(platform.family))
                     }
                     entry<PhysicsDemoRoute> {
                         SectionDestination(route = PhysicsDemoRoute, expanded = false, modifier = Modifier.fillMaxSize(),
@@ -2416,6 +2448,10 @@ fun AuthenticatedAppShell(
                             modifier = Modifier.fillMaxSize(),
                             usesLegacySmartTransport = false,
                         )
+                    }
+                    entry<PhysicsDemoSettingsRoute> {
+                        SectionDestination(route = PhysicsDemoSettingsRoute, expanded = false, modifier = Modifier.fillMaxSize(),
+                            usesLegacySmartTransport = usesLegacySmartTransportFor(platform.family))
                     }
                     entry<PhysicsDemoRoute> {
                         SectionDestination(route = PhysicsDemoRoute, expanded = false, modifier = Modifier.fillMaxSize(),

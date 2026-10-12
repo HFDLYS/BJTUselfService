@@ -10,6 +10,7 @@ import team.bjtuss.bjtuselfservice.shared.domain.calendar.*
 import team.bjtuss.bjtuselfservice.shared.domain.classroomoccupancy.OccupancyWeekDate
 import team.bjtuss.bjtuselfservice.shared.domain.course.Course
 import team.bjtuss.bjtuselfservice.shared.feature.course.*
+import team.bjtuss.bjtuselfservice.shared.feature.shell.PHYSICS_DEMO_SETTINGS_ROUTE_ID
 import team.bjtuss.bjtuselfservice.shared.feature.shell.PHYSICS_DEMO_ROUTE_ID
 import team.bjtuss.bjtuselfservice.shared.feature.shell.nativeRouteTitle
 import team.bjtuss.bjtuselfservice.shared.feature.shell.isNativeTabRoute
@@ -104,8 +105,16 @@ class PhysicsDemoTest {
         assertEquals(0,export(6..7,emptyList()).physicsDemoEventCount)
         assertTrue(exported.ics.contains("DTSTART;TZID=Asia/Shanghai:20261021T203000"))
     }
+    @Test fun bookingsAreListedChronologicallyLikePhysicsLabs() {
+        val optics = PhysicsDemoBooking("光学", kotlinx.datetime.LocalDate(2026, 11, 5), 4)
+        val modern = PhysicsDemoBooking("近代与综合", kotlinx.datetime.LocalDate(2026, 10, 28), 5)
+        val sameDayEarlier = PhysicsDemoBooking("光学", kotlinx.datetime.LocalDate(2026, 10, 28), 1)
+        assertEquals(listOf(sameDayEarlier, modern, optics), sortedPhysicsDemoBookings(listOf(optics, modern, sameDayEarlier)))
+    }
     @Test fun sharedNativeRouteHasAQueryTitleAndDoesNotAddABottomTab() {
         assertEquals("演示实验查询",nativeRouteTitle(PHYSICS_DEMO_ROUTE_ID))
         assertFalse(isNativeTabRoute(PHYSICS_DEMO_ROUTE_ID))
+        assertEquals("演示实验账号设置", nativeRouteTitle(PHYSICS_DEMO_SETTINGS_ROUTE_ID))
+        assertFalse(isNativeTabRoute(PHYSICS_DEMO_SETTINGS_ROUTE_ID))
     }
 }

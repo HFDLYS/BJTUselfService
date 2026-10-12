@@ -41,10 +41,11 @@ internal fun homeCoursesOnDate(schedule: HomeSchedulePresentation, date: LocalDa
     }.sortedWith(compareBy({ it.courseLocationIndex / 8 }, { it.courseName }))
 }
 
-/** Grid fragments of the same experiment share an id; the home agenda shows one actual event. */
+/** Grid fragments of the same experiment share an id; the home agenda shows one actual event.
+ *  Physics labs and demo experiments share the home "实验" entry. */
 internal fun homePhysicsLabsOnDate(schedule: HomeSchedulePresentation, date: LocalDate): List<Course> =
     schedule.supplementalCourses.filter {
-        it.scheduleEventKind == "physicslab" && date.toString() in it.eventDates
+        (it.scheduleEventKind == "physicslab" || it.scheduleEventKind == "phydemo") && date.toString() in it.eventDates
     }.distinctBy(Course::id).sortedWith(compareBy({ it.scheduleEventTime }, { it.courseName }))
 
 internal fun HomeAgenda.withCourses(schedule: HomeSchedulePresentation): HomeAgenda =

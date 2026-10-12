@@ -43,7 +43,7 @@ fun DesktopScheduleEventsSmoke(initialDark: Boolean = false, initialExpanded: Bo
         override suspend fun refresh() = CourseScheduleRefreshResult.Success(load())
     }) }
     val modelState by model.state.collectAsState()
-    val settings = remember { SettingsScreenModel(AppPreferences(), { true }, { true }, { true }, { team.bjtuss.bjtuselfservice.shared.update.AppUpdateChecker.Result.Unavailable }) }
+    val settings = remember { SettingsScreenModel(AppPreferences(physicsLabEnabled = true), { true }, { true }, { true }, { team.bjtuss.bjtuselfservice.shared.update.AppUpdateChecker.Result.Unavailable }) }
     val settingsState by settings.state.collectAsState()
     val cache = remember {
         val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
@@ -67,7 +67,7 @@ fun DesktopScheduleEventsSmoke(initialDark: Boolean = false, initialExpanded: Bo
                 when (tab) {
                     "应用" -> MoreWorkspace(settingsState.preferences, { if (it == AppSection.SETTINGS) tab = "设置" }, Modifier.fillMaxSize(), labModel, onOpenPhysicsDemo = { tab = "演示实验" })
                     "演示实验" -> PhysicsDemoResults(PhysicsDemoState(username = "fixture-demo", configured = true, enabled = true,
-                        bookings = demos, message = "已查询 2 个预约。", synced = true), {}, {}, {}, Modifier.fillMaxSize())
+                        bookings = demos, message = "已查询 2 个预约。", synced = true), {}, Modifier.fillMaxSize())
                     "物理实验" -> PhysicsLabSettingsForm(
                         PhysicsLabState(enabled = true, labs = (1..4).map { index ->
                             PhysicsLab(LocalDate(2026, 11, index), 4, "测试实验 $index", "测试实验室", "测试教师", 1)

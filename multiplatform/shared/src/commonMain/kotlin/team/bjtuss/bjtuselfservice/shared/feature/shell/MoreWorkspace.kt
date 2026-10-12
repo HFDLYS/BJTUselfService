@@ -66,11 +66,20 @@ internal fun MoreWorkspace(
                 section = section,
                 onClick = { onOpenSection(section) },
             ))
+            if (section == AppSection.PHYSICS_LAB) {
+                onOpenPhysicsDemo?.let { open ->
+                    add(ApplicationTile("演示实验", section = AppSection.PHYSICS_LAB, onClick = open))
+                }
+            }
             if (section == AppSection.MAILBOX) addCampusAccountTiles()
         }
         if (AppSection.MAILBOX !in sections) addCampusAccountTiles()
-        onOpenPhysicsDemo?.let { open ->
-            add(ApplicationTile("演示实验", section = AppSection.PHYSICS_LAB, onClick = open))
+        if (AppSection.PHYSICS_LAB !in sections) {
+            onOpenPhysicsDemo?.let { open ->
+                val position = indexOfFirst { it.section == AppSection.CALENDAR || it.section == AppSection.SETTINGS }
+                    .takeIf { it >= 0 } ?: size
+                add(position, ApplicationTile("演示实验", section = AppSection.PHYSICS_LAB, onClick = open))
+            }
         }
     }
     activeAccountEntry?.let { entry ->
@@ -84,7 +93,16 @@ internal fun MoreWorkspace(
     }
     BoxWithConstraints(modifier.fillMaxSize()) {
         val columns = when { maxWidth >= 800.dp -> 4; maxWidth >= 480.dp -> 3; else -> 2 }
-        val rows = entries.chunked(columns)
+        // Keep experiment entries together without leaving a hole in the preceding row.
+        val gridEntries = entries.toMutableList()
+        val experimentIndex = gridEntries.indexOfFirst { it.title == "物理实验" }
+        if (experimentIndex >= 0 && experimentIndex % columns == columns - 1 &&
+            gridEntries.getOrNull(experimentIndex + 1)?.title == "演示实验") {
+            gridEntries.getOrNull(experimentIndex + 2)?.let {
+                gridEntries.add(experimentIndex, gridEntries.removeAt(experimentIndex + 2))
+            }
+        }
+        val rows = gridEntries.chunked(columns)
         TopScrollLazyColumn(
             state = scroll,
             modifier = Modifier.fillMaxSize().desktopTouchScroll(scroll),

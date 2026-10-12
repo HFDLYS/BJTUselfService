@@ -255,6 +255,18 @@ class PhyVlabScreenModel(
 
     fun allActivities(): List<PhyVlabActivity> = activitiesByCourse.values.flatten().distinctBy { it.courseId to it.id }
 
+    /** 首页事件 → 活动：先按 activity-<courseId>-<activityId>-… 的 id，再按 URL，跨所有课程查找。 */
+    fun findActivityForEvent(event: PhyVlabEvent): PhyVlabActivity? {
+        val activities = allActivities()
+        val idParts = event.id.split("-")
+        if (idParts.size >= 4 && idParts[0] == "activity") {
+            val courseId = idParts[1].toIntOrNull()
+            val activityId = idParts[2].toIntOrNull()
+            activities.firstOrNull { it.courseId == courseId && it.id == activityId }?.let { return it }
+        }
+        return event.eventUrl?.let { url -> activities.firstOrNull { it.activityUrl == url } }
+    }
+
     fun selectCourse(course: PhyVlabCourse) {
         mutableState.value = mutableState.value.copy(
             selectedCourse = course,

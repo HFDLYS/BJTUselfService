@@ -28,6 +28,7 @@ internal fun IndependentAccountSettings(
     onUsername: (String) -> Unit, onPassword: (String) -> Unit, onSave: () -> Unit,
     message: String?, failed: Boolean = false, modifier: Modifier = Modifier,
     websiteUrl: String? = null,
+    websiteRedirectUrl: String? = null,
     onClear: (() -> Unit)? = null,
     canClear: Boolean = hasSavedPassword,
 ) {
@@ -42,9 +43,17 @@ internal fun IndependentAccountSettings(
         verticalArrangement = Arrangement.spacedBy(16.dp)) {
         websiteUrl?.let { url ->
             Column {
-                Text("请填写此网站的账号和密码", style = MaterialTheme.typography.bodyMedium)
-                TextButton(onClick = { uriHandler.openUri(url) }, contentPadding = PaddingValues(0.dp)) {
-                    Text(url)
+                if (websiteRedirectUrl == null) {
+                    Text("请填写此网站的账号和密码", style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = { uriHandler.openUri(url) }, contentPadding = PaddingValues(0.dp)) {
+                        Text(url)
+                    }
+                } else {
+                    Text("请填写此网站的账号和密码$url（重定向后为：", style = MaterialTheme.typography.bodyMedium)
+                    TextButton(onClick = { uriHandler.openUri(websiteRedirectUrl) }, contentPadding = PaddingValues(0.dp)) {
+                        Text(websiteRedirectUrl)
+                    }
+                    Text("）", style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }

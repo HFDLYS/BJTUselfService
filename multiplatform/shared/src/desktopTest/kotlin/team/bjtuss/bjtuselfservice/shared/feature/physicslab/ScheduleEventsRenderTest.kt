@@ -18,9 +18,9 @@ class ScheduleEventsRenderTest {
                 Triple("wide-light", 1080, "课表"), Triple("wide-dark", 1080, "课表"),
                 Triple("compact-light", 390, "课表"), Triple("compact-dark", 390, "课表"),
                 Triple("demo-query", 390, "演示实验"), Triple("demo-query-dark", 390, "演示实验"), Triple("demo-large-font", 390, "演示实验"), Triple("lab-settings", 390, "物理实验"), Triple("settings", 390, "设置"),
-                Triple("calendar", 390, "日历"), Triple("more", 390, "更多"),
+                Triple("calendar", 390, "日历"), Triple("more", 390, "应用"),
                 Triple("lab-settings-dark", 390, "物理实验"), Triple("settings-dark", 390, "设置"),
-                Triple("calendar-dark", 390, "日历"), Triple("more-dark", 390, "更多"),
+                Triple("calendar-dark", 390, "日历"), Triple("more-dark", 390, "应用"),
                 Triple("compact-large-font", 390, "课表"), Triple("lab-large-font", 390, "物理实验"),
             ).forEach { (name, width, tab) ->
                 val scene = ImageComposeScene(width = width, height = 844, density = Density(1f, if ("large-font" in name) 1.3f else 1f), coroutineContext = Dispatchers.Unconfined) {
