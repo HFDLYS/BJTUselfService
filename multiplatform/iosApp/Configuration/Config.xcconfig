@@ -1,6 +1,12 @@
 PRODUCT_NAME = 交大自由行 KMP
 BUNDLE_ID = team.bjtuss.bjtuselfservice.kmp.ios
-TEAM_ID =
+TEAM_ID = 34S53DC6T6
+
+// Login credentials require a signed app with working Keychain access.
+CODE_SIGNING_ALLOWED = YES
+CODE_SIGNING_REQUIRED = YES
+CODE_SIGN_STYLE = Automatic
+DEVELOPMENT_TEAM = $(TEAM_ID)
 
 IPHONEOS_DEPLOYMENT_TARGET = 16.0
 SWIFT_VERSION = 5.0
