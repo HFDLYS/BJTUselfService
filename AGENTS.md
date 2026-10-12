@@ -240,8 +240,8 @@
 
 # iOS  Xcode 打包与安装要求
 
-- iOS 应用（包括模拟器）必须启用签名：`CODE_SIGNING_ALLOWED=YES`、`CODE_SIGNING_REQUIRED=YES`，使用项目固定的开发团队 `34S53DC6T6`。配置位于 `multiplatform/iosApp/Configuration/Config.xcconfig`。
-- 禁止使用 `CODE_SIGNING_ALLOWED=NO` 打包或安装应用；遇到签名问题应解决配置问题，不能通过关闭签名绕过。Xcode 构建阶段的 `multiplatform/scripts/require-ios-signing.sh` 会拦截禁用签名的覆盖参数。
+- iOS **模拟器**构建必须启用签名（`CODE_SIGNING_ALLOWED=YES`、`CODE_SIGNING_REQUIRED=YES`，团队 `34S53DC6T6`），否则会丢钥匙串、每次都要重新登录；`require-ios-signing.sh` 只拦截模拟器构建。配置位于 `multiplatform/iosApp/Configuration/Config.xcconfig`。
+- 真机未签名 IPA（本地或 CI，`generic/platform=iOS` 加 `CODE_SIGNING_ALLOWED=NO`）用于自签安装，允许打包。
 - 安装前检查实际安装包的签名。安装后必须验证 Keychain 的保存、读取和清除（使用独立测试项，不读取、修改或输出用户凭据）；仅构建成功或进程启动不能证明登录信息保存正常。
 - 用户要求“这次不改／不重装”时，不重新打包、安装或替换当前运行的应用；允许按其要求固定后续打包配置。
 - 新版Xcode的模拟器为Device Hub.app，不是以前的 Simulator.app
