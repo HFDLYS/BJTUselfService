@@ -23,7 +23,9 @@ class AppUpdateCheckerTest {
 
     @Test
     fun releaseVersionCanUpgradeThe173Base() {
-        assertTrue(AppUpdateChecker.CURRENT_VERSION == "1.8.3-KMP")
+        assertTrue(AppUpdateChecker.CURRENT_VERSION == "1.8.4-Alpha-phydemo-fix")
+        assertTrue(AppUpdateChecker.compareVersions(AppUpdateChecker.CURRENT_VERSION, "1.8.3-KMP") > 0)
+        assertTrue(AppUpdateChecker.compareVersions("1.8.4-KMP", AppUpdateChecker.CURRENT_VERSION) > 0)
         assertTrue(AppUpdateChecker.compareVersions(AppUpdateChecker.CURRENT_VERSION, "1.8.3-Beta-ci") > 0)
         assertTrue(AppUpdateChecker.compareVersions(AppUpdateChecker.CURRENT_VERSION, "1.8.3-Alpha-ci") > 0)
         assertTrue(AppUpdateChecker.compareVersions(AppUpdateChecker.CURRENT_VERSION, "1.8.2-KMP") > 0)

@@ -1,13 +1,15 @@
 # BJTUselfService KMP 实时工作记忆
 
 > 最后更新：2026-10-12。
-> 当前阶段：正式 `1.8.3-KMP` / Build 29 已推标签，CI 打包与 GitHub Release 进行中。
+> 当前阶段：调试版 `1.8.4-Alpha-phydemo-fix` / Build 30，推 `debug-` 标签只走 CI 打包，不发布。
 > 当前分支：`main`。
-> KMP 应用版本：`1.8.3-KMP` / Build 29。
+> KMP 应用版本：`1.8.4-Alpha-phydemo-fix` / Build 30（macOS/Windows 安装包数值版本 1.8.4）。
 > 冻结原 Android：`v1.7.1` / versionCode 9（对照 `origin/main@7d94f74`）。
-> 正式 Latest 待 CI 完成后变为 `v1.8.3-KMP`。
+> 正式 Latest 仍为 `v1.8.3-KMP`。
 
 ## 已完成
+
+- 版本改为 `1.8.4-Alpha-phydemo-fix`（Build 30），推 `mine/main` 与标签 `debug-1.8.4-Alpha-phydemo-fix`，仅 Actions 产物、不建 Release。
 
 - 版本改为 `1.8.3-KMP`（Build 29）。
 - 已推 `mine/main` 与标签 `v1.8.3-KMP`（`7985a25`）。CI run `38033203351`。发布说明为仓库内 `docs/releases/v1.8.3-KMP.md`，本轮未再改正文。
