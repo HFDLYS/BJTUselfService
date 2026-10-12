@@ -48,6 +48,8 @@ data class CoursewareUiState(
     val loadingFolderKeys: Set<String> = emptySet(),
     val directoryDownloadCompleted: Int = 0,
     val directoryDownloadTotal: Int = 0,
+    /** 最近一次目录导出中因老师未开放下载而跳过的文件名。 */
+    val directoryExportSkipped: List<String> = emptyList(),
     val source: CoursewareContentSource? = null,
     val failure: CoursewareSyncFailure? = null,
     val fileFailure: CoursewareSyncFailure? = null,
@@ -254,6 +256,14 @@ class CoursewareScreenModel(
         val node = findCoursewareNode(course.children, stableKey)
             ?.takeIf { !it.isFolder }
             ?: return@withLock CoursewareOperationResult.Failure(CoursewareSyncFailure.MALFORMED_RESPONSE)
+        if (!node.downloadAllowed) {
+            // 不访问网络：服务器对这类链接只会返回 500，界面会误报成网络问题。
+            mutableState.value = mutableState.value.copy(
+                selectedNodeKey = node.stableKey,
+                fileFailure = CoursewareSyncFailure.DOWNLOAD_NOT_ALLOWED,
+            )
+            return@withLock CoursewareOperationResult.Failure(CoursewareSyncFailure.DOWNLOAD_NOT_ALLOWED)
+        }
         mutableState.value = mutableState.value.copy(
             isDownloading = true,
             selectedNodeKey = node.stableKey,
@@ -282,9 +292,19 @@ class CoursewareScreenModel(
             if (hydrationFailure != null) return@withLock CoursewareOperationResult.Failure(hydrationFailure)
             val course = mutableState.value.courses.firstOrNull { it.id == courseId }
                 ?: return@withLock CoursewareOperationResult.Failure(CoursewareSyncFailure.MALFORMED_RESPONSE)
-            val resources = course.resourcesWithFolders(stableKey)
+            val (resources, restricted) = course.resourcesWithFolders(stableKey)
+                .partition { it.node.downloadAllowed }
+            // 未开放下载的文件跳过并在结果里说明，不能让一个文件拖垮整次导出。
+            val skipped = restricted.map { it.node.name }
+            mutableState.value = mutableState.value.copy(directoryExportSkipped = skipped)
             if (resources.isEmpty()) {
-                return@withLock CoursewareOperationResult.Failure(CoursewareSyncFailure.MALFORMED_RESPONSE)
+                val reason = if (skipped.isNotEmpty()) {
+                    CoursewareSyncFailure.DOWNLOAD_NOT_ALLOWED
+                } else {
+                    CoursewareSyncFailure.MALFORMED_RESPONSE
+                }
+                mutableState.value = mutableState.value.copy(fileFailure = reason)
+                return@withLock CoursewareOperationResult.Failure(reason)
             }
             mutableState.value = mutableState.value.copy(
                 isDownloading = true,

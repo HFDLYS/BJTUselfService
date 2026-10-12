@@ -17,6 +17,11 @@ data class SchoolHttpRequest(
      */
     val rawBody: ByteArray? = null,
     val rawBodyContentType: String = "application/octet-stream",
+    /**
+     * 大文件下载（课件、附件）：放宽整体请求时长，但仍保留无数据的 socket 超时，
+     * 断网或卡死时照常失败。普通接口请求保持默认的短超时。
+     */
+    val largeTransfer: Boolean = false,
 ) {
     init {
         require(rawBody == null || (formFields.isEmpty() && multipartFiles.isEmpty())) {

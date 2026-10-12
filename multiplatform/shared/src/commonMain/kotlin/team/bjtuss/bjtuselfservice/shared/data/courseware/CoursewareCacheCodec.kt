@@ -101,6 +101,7 @@ private fun decodeNodes(
             teacherName = fields.string("teacherName").orEmpty(),
             inputTime = fields.string("inputTime").orEmpty(),
             downloadCount = fields.int("downloadCount") ?: 0,
+            downloadAllowed = fields.boolean("downloadAllowed") ?: true,
             children = children,
             childrenLoaded = if (kind == CoursewareNodeKind.RESOURCE) {
                 true
@@ -160,6 +161,8 @@ private fun StringBuilder.appendNode(node: CoursewareNode) {
     appendJsonField("inputTime", node.inputTime)
     append(',')
     appendJsonField("downloadCount", node.downloadCount.toString(), quoted = false)
+    append(',')
+    appendJsonField("downloadAllowed", node.downloadAllowed.toString(), quoted = false)
     append(',')
     appendJsonField("childrenLoaded", node.childrenLoaded.toString(), quoted = false)
     append(",\"children\":[")

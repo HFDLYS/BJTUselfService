@@ -16,6 +16,8 @@ data class CoursewareNode(
     val teacherName: String = "",
     val inputTime: String = "",
     val downloadCount: Int = 0,
+    /** 智慧教学 `stu_download`：网页端仅在值为 "2" 时显示下载；其余为老师未开放学生下载，只能在线查看。 */
+    val downloadAllowed: Boolean = true,
     val children: List<CoursewareNode> = emptyList(),
     val childrenLoaded: Boolean = true,
 ) {

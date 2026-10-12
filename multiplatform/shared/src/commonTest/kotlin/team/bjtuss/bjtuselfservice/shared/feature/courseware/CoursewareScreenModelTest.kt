@@ -241,6 +241,41 @@ class CoursewareScreenModelTest {
     }
 
     @Test
+    fun exportSkipsFilesTheTeacherDidNotOpenForDownload() = runBlocking {
+        val events = mutableListOf<String>()
+        val restricted = restrictedSnapshot()
+        val gateway = RecordingDirectoryGateway(events)
+        val model = CoursewareScreenModel(FakeRepository(restricted, restricted, events = events))
+        model.initialize()
+
+        val result = model.exportDirectory(null, "程序设计", gateway)
+
+        assertEquals(HomeworkFileSaveResult.Saved, assertIs<CoursewareOperationResult.Success<HomeworkFileSaveResult>>(result).value)
+        assertEquals(listOf("说明.pdf"), model.state.value.directoryExportSkipped)
+        assertEquals(1, gateway.files.size)
+        assertFalse("download:3" in events)
+        assertTrue("download:2" in events)
+        assertTrue(gateway.committed)
+    }
+
+    @Test
+    fun restrictedFileFailsWithoutNetworkAndRestrictedOnlyFolderReportsWhy() = runBlocking {
+        val events = mutableListOf<String>()
+        val restricted = restrictedSnapshot()
+        val model = CoursewareScreenModel(FakeRepository(restricted, restricted, events = events))
+        model.initialize()
+
+        val single = model.downloadResource(description().stableKey)
+        assertEquals(CoursewareSyncFailure.DOWNLOAD_NOT_ALLOWED, assertIs<CoursewareOperationResult.Failure>(single).reason)
+        assertEquals(CoursewareSyncFailure.DOWNLOAD_NOT_ALLOWED, model.state.value.fileFailure)
+        assertFalse(events.any { it.startsWith("download:") })
+
+        val onlyRestricted = model.exportDirectory(description().stableKey, "说明", RecordingDirectoryGateway(events))
+        assertEquals(CoursewareSyncFailure.DOWNLOAD_NOT_ALLOWED, assertIs<CoursewareOperationResult.Failure>(onlyRestricted).reason)
+        assertFalse(events.any { it.startsWith("open:") })
+    }
+
+    @Test
     fun expandedTreeSelectionAndResourceEnumerationAreRecursive() = runBlocking {
         val model = CoursewareScreenModel(FakeRepository(snapshot(), snapshot()))
         model.initialize()
@@ -600,6 +635,14 @@ class CoursewareScreenModelTest {
             ),
         ),
     )
+
+    private fun restrictedSnapshot() = snapshot().let { full ->
+        full.copy(
+            courses = full.courses.map { course ->
+                course.copy(children = course.children.map { if (it.id == 3) it.copy(downloadAllowed = false) else it })
+            },
+        )
+    }
 
     private fun partialSnapshot() = snapshot().let { full ->
         full.copy(

@@ -135,7 +135,14 @@ fun CoursewareWorkspace(
                     is CoursewareOperationResult.Failure -> Unit
                     is CoursewareOperationResult.Success -> {
                         fileFeedback = when (exported.value) {
-                            HomeworkFileSaveResult.Saved -> "目录已完整导出。"
+                            HomeworkFileSaveResult.Saved -> model.state.value.directoryExportSkipped.let { skipped ->
+                                if (skipped.isEmpty()) {
+                                    "目录已完整导出。"
+                                } else {
+                                    "已导出可下载的文件；跳过 ${skipped.size} 个老师未开放下载的文件：" +
+                                        skipped.take(3).joinToString("、") + if (skipped.size > 3) " 等。" else "。"
+                                }
+                            }
                             HomeworkFileSaveResult.Cancelled -> "已取消导出，没有写入目录。"
                             is HomeworkFileSaveResult.Failed -> "目录导出失败；没有报告为完整成功。"
                         }
@@ -821,6 +828,9 @@ private fun CoursewareDetailSheetBody(
         course?.let { DetailLine("课程", it.name) }
         if (node.isFolder) {
             DetailLine("包含", "${node.children.size} 个直接子项目")
+            node.restrictedResourceCount().takeIf { it > 0 }?.let { count ->
+                DetailLine("未开放下载", "$count 个文件（导出时跳过）")
+            }
             Button(
                 onClick = { onExportDirectory(node.stableKey, node.name) },
                 enabled = directoryGatewayAvailable && !isDownloading,
@@ -847,12 +857,21 @@ private fun CoursewareDetailSheetBody(
             node.teacherName.takeIf { it.isNotBlank() }?.let { DetailLine("上传教师", it) }
             node.inputTime.takeIf { it.isNotBlank() }?.let { DetailLine("上传时间", it) }
             DetailLine("下载次数", node.downloadCount.toString())
+            if (!node.downloadAllowed) {
+                DetailLine("下载权限", "老师未开放下载，只能在智慧教学网页中在线查看")
+            }
             Button(
                 onClick = { onDownload(node) },
-                enabled = fileGatewayAvailable && !isDownloading,
+                enabled = fileGatewayAvailable && !isDownloading && node.downloadAllowed,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(if (isDownloading) "正在读取文件" else "下载并选择保存位置")
+                Text(
+                    when {
+                        !node.downloadAllowed -> "未开放下载"
+                        isDownloading -> "正在读取文件"
+                        else -> "下载并选择保存位置"
+                    },
+                )
             }
             if (!fileGatewayAvailable) {
                 Text(
@@ -896,6 +915,7 @@ private fun CoursewareFileFailureBanner(failure: CoursewareSyncFailure, onDismis
             CoursewareSyncFailure.MALFORMED_RESPONSE -> "学校平台返回了无效的文件信息。"
             CoursewareSyncFailure.SECURE_CHANNEL_UNAVAILABLE -> "该资源地址不在允许的学校通道范围内。"
             CoursewareSyncFailure.CACHE -> "本地课件缓存不可用。"
+            CoursewareSyncFailure.DOWNLOAD_NOT_ALLOWED -> "老师未开放下载，只能在智慧教学网页中在线查看。"
         },
         onDismiss = onDismiss,
     )
@@ -912,6 +932,7 @@ private fun failureMessage(failure: CoursewareSyncFailure, hasContent: Boolean):
     // 已授权明文后勿再写「没有 HTTPS」，与顶部授权 banner 矛盾。
     CoursewareSyncFailure.SECURE_CHANNEL_UNAVAILABLE -> "该资源地址不在允许的学校通道范围内。"
     CoursewareSyncFailure.CACHE -> "本地课件缓存操作失败。"
+    CoursewareSyncFailure.DOWNLOAD_NOT_ALLOWED -> "老师未开放下载，只能在智慧教学网页中在线查看。"
 }
 
 @Composable
@@ -929,10 +950,15 @@ private fun compactPathTitle(state: CoursewareUiState): String = buildString {
     state.compactPathNames.forEach { name -> append(" / ").append(name) }
 }
 
+/** 只统计已加载的子树；未展开的子文件夹在导出前才会加载。 */
+private fun CoursewareNode.restrictedResourceCount(): Int =
+    children.sumOf { if (it.isFolder) it.restrictedResourceCount() else if (it.downloadAllowed) 0 else 1 }
+
 private fun resourceMetadata(node: CoursewareNode): String = listOfNotNull(
     node.extension.takeIf { it.isNotBlank() }?.let(::formatCoursewareTypeBadge),
     node.size.takeIf { it.isNotBlank() }?.let(::formatCoursewareSize),
     node.teacherName.takeIf { it.isNotBlank() },
+    "未开放下载".takeIf { !node.downloadAllowed },
 ).joinToString(" · ").ifBlank { "课程资源" }
 
 /**

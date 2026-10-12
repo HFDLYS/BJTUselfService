@@ -150,6 +150,7 @@ class SchoolCoursewareRemoteDataSource(
                 method = SchoolHttpMethod.GET,
                 url = ticket.url,
                 headers = buildHeaders(includeSession = false),
+                largeTransfer = true,
             ),
         )
         if (response.statusCode !in 200..299) network()

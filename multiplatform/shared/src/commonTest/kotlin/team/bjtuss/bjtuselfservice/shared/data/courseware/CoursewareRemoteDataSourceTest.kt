@@ -72,6 +72,9 @@ class CoursewareRemoteDataSourceTest {
         assertTrue(transport.requests.any { "up_id=1" in it.url })
         assertFalse(transport.requests.any { "123.121.147.7" in it.url })
         assertFalse(transport.requests.last().headers.containsKey("sessionid"))
+        // 几十 MB 的课件不能受 30 秒整体超时限制；目录/取票等接口请求仍保持短超时。
+        assertTrue(transport.requests.last().largeTransfer)
+        assertTrue(transport.requests.dropLast(1).none { it.largeTransfer })
     }
 
     @Test

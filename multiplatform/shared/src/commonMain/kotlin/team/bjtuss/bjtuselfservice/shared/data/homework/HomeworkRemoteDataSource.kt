@@ -204,7 +204,7 @@ class SchoolHomeworkRemoteDataSource(
         attachment: HomeworkAttachment,
     ): HomeworkFileContent {
         ensureInitialized()
-        val response = smartGetUrl(attachmentDownloadUrl(homeworkId, attachment.id))
+        val response = smartGetUrl(attachmentDownloadUrl(homeworkId, attachment.id), largeTransfer = true)
         return response.toFileContent(attachment.fileName)
     }
 
@@ -219,6 +219,7 @@ class SchoolHomeworkRemoteDataSource(
                 "filename" to attachment.fileName,
                 "id" to attachment.id,
             ),
+            largeTransfer = true,
         )
         return response.toFileContent(attachment.fileName)
     }
@@ -473,19 +474,22 @@ class SchoolHomeworkRemoteDataSource(
         path: String,
         query: LinkedHashMap<String, String>,
         includeSession: Boolean = true,
+        largeTransfer: Boolean = false,
     ): SchoolHttpResponse = smartRequest(
         method = SchoolHttpMethod.GET,
         path = path,
         query = query,
         includeSession = includeSession,
+        largeTransfer = largeTransfer,
     )
 
-    private suspend fun smartGetUrl(url: String): SchoolHttpResponse {
+    private suspend fun smartGetUrl(url: String, largeTransfer: Boolean = false): SchoolHttpResponse {
         if (!endpoint.acceptsApiUrl(url)) secureChannelUnavailable()
         return smartRequest(
             method = SchoolHttpMethod.GET,
             path = url.removePrefix(endpoint.apiOrigin).substringBefore('?'),
             query = url.queryParameters(),
+            largeTransfer = largeTransfer,
         )
     }
 
@@ -498,6 +502,7 @@ class SchoolHomeworkRemoteDataSource(
         includeSession: Boolean = true,
         includeSmartHeaders: Boolean = true,
         includeSessionHeader: Boolean = includeSmartHeaders,
+        largeTransfer: Boolean = false,
     ): SchoolHttpResponse {
         val headers = if (includeSmartHeaders) {
             linkedMapOf(
@@ -523,6 +528,8 @@ class SchoolHomeworkRemoteDataSource(
                 headers = headers,
                 formFields = formFields,
                 multipartFiles = multipartFiles,
+                // 附件上传同样受整体时长影响。
+                largeTransfer = largeTransfer || multipartFiles.isNotEmpty(),
             ),
         )
         if (response.statusCode in 300..399) {

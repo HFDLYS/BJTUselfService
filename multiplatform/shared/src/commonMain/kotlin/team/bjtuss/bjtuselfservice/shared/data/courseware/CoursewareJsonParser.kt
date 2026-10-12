@@ -69,6 +69,8 @@ fun parseCoursewareChildren(
             teacherName = item.string("teacherName").orEmpty(),
             inputTime = item.string("inputTime").orEmpty(),
             downloadCount = item.int("downloadNum") ?: 0,
+            // 字段缺失时沿用旧行为（允许下载）；只有明确给出非 "2" 才视为未开放。
+            downloadAllowed = item.string("stu_download")?.let { it.trim() == "2" } ?: true,
         )
     }
     CoursewareJsonParseResult.Success(nodes)

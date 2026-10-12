@@ -16,7 +16,10 @@ class CoursewareCacheCodecTest {
                 course(
                     children = listOf(
                         folder(
-                            children = listOf(resource(2, "讲义 \"第一讲\".pdf")),
+                            children = listOf(
+                                resource(2, "讲义 \"第一讲\".pdf"),
+                                resource(5, "仅在线查看.pptx").copy(downloadAllowed = false),
+                            ),
                         ),
                     ),
                 ),

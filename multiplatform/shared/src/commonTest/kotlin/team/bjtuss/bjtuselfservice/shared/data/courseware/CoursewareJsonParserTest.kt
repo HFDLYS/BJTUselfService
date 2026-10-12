@@ -26,6 +26,24 @@ class CoursewareJsonParserTest {
         assertEquals("讲义.pdf", resource.name)
         assertEquals("rp-2", resource.rpId)
         assertEquals(7, resource.downloadCount)
+        // 字段缺失时保持可下载（旧接口 / fixture 兼容）。
+        assertEquals(true, resource.downloadAllowed)
+    }
+
+    @Test
+    fun studentDownloadFlagMatchesTheWebPage() {
+        val nodes = assertIs<CoursewareJsonParseResult.Success<*>>(
+            parseCoursewareChildren(
+                """{"STATUS":"0","bagList":[],"resList":[
+                  {"resId":2,"rpId":"rp-2","rpName":"音频.m4a","stu_download":"2"},
+                  {"resId":3,"rpId":"rp-3","rpName":"课件.pptx","stu_download":"1"},
+                  {"resId":4,"rpId":"rp-4","rpName":"视频.mp4","stu_download":1}
+                ]}""".trimIndent(),
+                courseId = 17,
+            ),
+        ).value as List<*>
+        val flags = nodes.map { (it as team.bjtuss.bjtuselfservice.shared.domain.courseware.CoursewareNode).downloadAllowed }
+        assertEquals(listOf(true, false, false), flags)
     }
 
     @Test

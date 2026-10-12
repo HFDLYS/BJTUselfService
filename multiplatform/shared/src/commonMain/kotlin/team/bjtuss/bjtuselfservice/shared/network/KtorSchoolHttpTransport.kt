@@ -3,6 +3,7 @@ package team.bjtuss.bjtuselfservice.shared.network
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngineFactory
 import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.timeout
 import team.bjtuss.bjtuselfservice.shared.logging.SyncTiming
 import kotlin.time.TimeSource
 import kotlinx.coroutines.currentCoroutineContext
@@ -110,6 +111,8 @@ class KtorSchoolHttpTransport(
             try {
                 executeOn(httpClient(), request).also { result = "http-${it.statusCode}" }
             } catch (error: CancellationException) { result = "cancelled"; throw error }
+            // Class name only: messages may carry URLs or response details.
+            catch (error: Exception) { result = "error-${error::class.simpleName}"; throw error }
             finally {
                 SyncTiming.record("request-end $label wait_ms=$wait request_ms=${start.elapsedNow().inWholeMilliseconds} outcome=$result")
             }
@@ -150,6 +153,10 @@ class KtorSchoolHttpTransport(
                 method = when (request.method) {
                     SchoolHttpMethod.GET -> HttpMethod.Get
                     SchoolHttpMethod.POST -> HttpMethod.Post
+                }
+                if (request.largeTransfer) {
+                    // 30 秒整体上限会截断几十 MB 的课件；只放宽整体时长，socket 超时仍沿用客户端配置。
+                    timeout { requestTimeoutMillis = LARGE_TRANSFER_REQUEST_TIMEOUT_MILLIS }
                 }
                 headers {
                     request.headers.forEach { (name, value) ->
@@ -261,6 +268,8 @@ class KtorSchoolHttpTransport(
         }
     }
 }
+
+internal const val LARGE_TRANSFER_REQUEST_TIMEOUT_MILLIS = 15 * 60_000L
 
 private fun String.safeMultipartFileName(): String =
     substringAfterLast('/').substringAfterLast('\\').replace('"', '_').ifBlank { "upload.bin" }

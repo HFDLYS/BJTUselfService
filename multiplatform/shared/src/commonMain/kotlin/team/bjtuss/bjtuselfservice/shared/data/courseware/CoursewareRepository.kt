@@ -24,6 +24,8 @@ enum class CoursewareSyncFailure {
     MALFORMED_RESPONSE,
     SECURE_CHANNEL_UNAVAILABLE,
     CACHE,
+    /** 老师未开放学生下载（`stu_download` != "2"），服务器会对下载链接返回 500。 */
+    DOWNLOAD_NOT_ALLOWED,
 }
 
 sealed interface CoursewareRefreshResult {
