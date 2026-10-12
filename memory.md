@@ -1,13 +1,20 @@
 # BJTUselfService KMP 实时工作记忆
 
 > 最后更新：2026-10-12。
-> 当前阶段：调试版 `1.8.4-Alpha-phydemo-fix2` / Build 31，推 `debug-` 标签只走 CI 打包，不发布。
+> 当前阶段：调试版 `1.8.4-Beta-SheetFix-Widget` / Build 32，推 `debug-` 标签只走 CI 打包，不发布。
 > 当前分支：`main`。
-> KMP 应用版本：`1.8.4-Alpha-phydemo-fix2` / Build 31（macOS/Windows 安装包数值版本 1.8.4）。
+> KMP 应用版本：`1.8.4-Beta-SheetFix-Widget` / Build 32（macOS/Windows 安装包数值版本 1.8.4）。
 > 冻结原 Android：`v1.7.1` / versionCode 9（对照 `origin/main@7d94f74`）。
 > 正式 Latest 仍为 `v1.8.3-KMP`。
 
 ## 已完成
+
+- 版本改为 `1.8.4-Beta-SheetFix-Widget`（Build 32），提交弹窗竞态修复、前往日期半屏与 iOS 课程小组件，推 `mine/main` 与标签 `debug-1.8.4-Beta-SheetFix-Widget`，仅 Actions 产物、不建 Release。
+- 2026-10-12 iOS 弹窗偶发点不开：`IosNativeSheetPresenter` 同页共用一个呈现器，关闭动画中再 present 会被 UIKit 静默拒绝，而 Compose 状态已是“打开”，之后入口失效。现在关闭中收到的 present 等关闭完成再弹，打开动画中的 dismiss 等打开完成再关，present 被拒时重试（最多 10 次后复位状态）。模拟器实测：课表与周数选周后立即重开正常弹出。课表「前往日期」iOS 改为 `fitContentHeight`（约半屏，按日历实际高度），Android 不变。
+- 2026-10-12（用户要求重启小组件开发）iOS 课程小组件：新 target `CourseScheduleWidget`（`…kmp.ios.widget`，iOS 17+），App Group `group.team.bjtuss.bjtuselfservice.kmp`（沿用旧注册标识），主 App 加 `iosApp.entitlements`。共享层 `feature/widget/` 生成 14 天快照 JSON（课程+物理/演示实验，去校区/`[本]`，首页同色板），会话壳随课表变化写入、退出登录清空；Swift 宿主收通知刷新 WidgetCenter。两款：「临近课程」小/中/锁屏矩形/行内，「今日课程」中/大；当天课上完后显示下一个有课日并在日期头标明。模拟器真实数据浅/深色检查通过；`verify-apple-release-metadata.sh` 改为要求扩展存在且版本与宿主一致。
+- 课表 JSON 个人调整版（同一忽略目录）：按用户要求移除周六上午「改革开放史」网络课（8 次），把逸夫教学楼/思源西楼 10:10–12:00 的 5 条排课规则/56 次课程改为 10:20–12:20；共 226 条日程，6 次物理实验和 2 次演示实验及教学周映射保留。同步调整规则/实际日程/选课缓存附带记录并重算统计和冲突；JSON 回读与针对性断言通过，原刷新版保留，不改应用/学校数据。
+
+- 2026-10-12 按用户要求运行最新版 debug `:desktopApp:run --args=--sync-timing`，自动恢复真实登录并同步后导出刷新版 JSON 至忽略目录 `.artifacts/schedule-export-2026-10-12/`：15 门课程、21 条排课规则、4 项物理实验/6 次实验、2 项演示实验，共 234 条实际日程（旧版 232 条保留）。实时读取 bksy 公开校历逐周映射，10 月 12 日为第 5 教学周；JSON 回读、唯一 ID、时间/周次映射及敏感字段排除校验通过，无缺失警告/时间冲突。演示实验含实际 lastSync；课程/物理实验缓存无同步时间字段，注明启动自动同步后快照。源码 JVM 已精确结束、安装版保留；`:desktopApp:createDistributable` 构建成功，未重装或改源码。
 
 - 版本改为 `1.8.4-Alpha-phydemo-fix2`（Build 31），提交本轮完美校园/二维码/小窗/按内容定高改动，推 `mine/main` 与标签 `debug-1.8.4-Alpha-phydemo-fix2`，仅 Actions 产物、不建 Release。HyperOS 小窗临时诊断日志已删除。
 
@@ -35,6 +42,8 @@
 
 ## 当前痛点
 
+- 小组件“正在上/还剩 N 分钟”状态只在代码层实现，未在上课时段实机观察；改版本号时须同时改 `iosApp/CourseScheduleWidget/Info.plist`。
+- 自签 IPA 需要签名工具支持扩展与 App Group，未在真机验证小组件数据共享。
 - 小窗↔全屏来回切换未实测（adb 无法切换窗口模式）。
 - Android 统一后的二维码弹窗（标题 + 关闭、可滚动正文）未在平板上看过。
 - 「保存并扫一扫」最新包未装到平板/iPhone：Android MediaStore 保存与去重、扫一扫后从相册识别进入小程序/缴费页，均待真机验证；iOS 每次保存会多一张（仅添加权限无法去重）。

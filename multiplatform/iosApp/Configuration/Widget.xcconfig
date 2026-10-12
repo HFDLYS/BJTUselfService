@@ -1,0 +1,7 @@
+// 课程小组件扩展：沿用主应用的团队与签名设置，但不链接 KMP 框架（扩展只读 App Group 里的 JSON）。
+#include "Config.xcconfig"
+
+PRODUCT_NAME = CourseScheduleWidget
+IPHONEOS_DEPLOYMENT_TARGET = 17.0
+FRAMEWORK_SEARCH_PATHS =
+OTHER_LDFLAGS =

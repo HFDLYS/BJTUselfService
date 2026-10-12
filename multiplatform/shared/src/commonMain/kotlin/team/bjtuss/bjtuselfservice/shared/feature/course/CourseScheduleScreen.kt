@@ -652,12 +652,11 @@ private fun CourseDatePickerDialog(
         todayLabel = if (isIos) "今天" else null,
         onToday = if (isIos) ({ onSelect(today) }) else null,
         dismissLabel = "取消",
-        needsFullHeight = isIos,
-        scrollableBody = isIos,
+        // iOS 按日历实际高度展开（约半屏），不再整屏铺开；超出可用高度时由 sheet 负责滚动。
+        fitContentHeight = isIos,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth()
-                .then(if (isIos) Modifier.fillMaxHeight().verticalScroll(rememberScrollState()) else Modifier)
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
             if (isIos) {

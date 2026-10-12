@@ -481,6 +481,8 @@ fun LoginRoute(
         storageMessage = null
         postLoginStorageFailure = null
         state = reduceLoginState(state, LoginEvent.Logout)
+        // 退出后桌面小组件不能继续展示上一个账号的课表。
+        team.bjtuss.bjtuselfservice.shared.feature.widget.writeCourseWidgetSnapshot(null)
         scope.launch {
             // CAS 请求需要当前 Cookie，但不应阻塞本机敏感数据清理；并发执行，
             // 最后再汇总服务端结果供用户查看。

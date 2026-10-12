@@ -23,7 +23,8 @@ internal data class HomeSchedulePresentation(
 
 internal val LocalHomeSchedule = staticCompositionLocalOf { HomeSchedulePresentation() }
 
-internal fun homeCoursesOnDate(schedule: HomeSchedulePresentation, date: LocalDate): List<Course> {
+/** 日期所在教学周：优先查校历，没有校历时按当前周推算；不在 1..30 内视为非教学周。 */
+internal fun homeTeachingWeekOn(schedule: HomeSchedulePresentation, date: LocalDate): Int? {
     val calendar = schedule.academicWeeks.filter { it.startDate != null }
     val week = if (calendar.isNotEmpty()) {
         calendar.firstOrNull { date >= it.startDate!! && date <= it.startDate.plus(6, DateTimeUnit.DAY) }?.week
@@ -32,7 +33,11 @@ internal fun homeCoursesOnDate(schedule: HomeSchedulePresentation, date: LocalDa
         val offset = (date.toEpochDays() - monday.toEpochDays()).toInt()
         schedule.currentWeek + kotlin.math.floor(offset / 7.0).toInt()
     } else null
-    if (week == null || week !in 1..30) return emptyList()
+    return week?.takeIf { it in 1..30 }
+}
+
+internal fun homeCoursesOnDate(schedule: HomeSchedulePresentation, date: LocalDate): List<Course> {
+    val week = homeTeachingWeekOn(schedule, date) ?: return emptyList()
     // Historical isCurrentSemester=true means the selection schedule, not the current schedule.
     return schedule.courses.filter {
         !it.isCurrentSemester && it.scheduleEventKind == null &&

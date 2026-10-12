@@ -1,0 +1,76 @@
+package team.bjtuss.bjtuselfservice.shared.feature.widget
+
+import kotlinx.datetime.LocalDate
+import kotlinx.serialization.json.Json
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import team.bjtuss.bjtuselfservice.shared.domain.classroomoccupancy.OccupancyWeekDate
+import team.bjtuss.bjtuselfservice.shared.domain.course.Course
+import team.bjtuss.bjtuselfservice.shared.feature.home.HomeSchedulePresentation
+
+class CourseWidgetSnapshotTest {
+    private fun course(name: String, index: Int, weeks: String = "第1-5周", place: String = "海淀主校区,思源西楼,SX101") =
+        Course(courseId = name, courseName = name, courseTeacher = "教师", courseLocationIndex = index,
+            courseTime = weeks, coursePlace = place, isCurrentSemester = false)
+
+    private val monday = LocalDate(2026, 10, 12)
+    private val weeks = listOf(
+        OccupancyWeekDate(4, "10/12", "10/18", monday),
+        OccupancyWeekDate(5, "10/19", "10/25", LocalDate(2026, 10, 19)),
+    )
+
+    @Test fun expandsDaysWithWeeksAndSortsSessionsByTime() {
+        val lab = course("物理实验", 25).copy(id = -1, scheduleEventKind = "physicslab",
+            scheduleEventDate = monday.toString(), scheduleEventTime = "13:20-15:50")
+        val schedule = HomeSchedulePresentation(
+            courses = listOf(course("下午课", 25), course("上午课", 1), course("周二课", 2, weeks = "第5周")),
+            supplementalCourses = listOf(lab),
+            academicWeeks = weeks,
+            today = monday,
+        )
+        val snapshot = buildCourseWidgetSnapshot(schedule, monday, generatedAtEpochSeconds = 1L, dayCount = 9)
+
+        assertEquals(9, snapshot.days.size)
+        val today = snapshot.days.first()
+        assertEquals("2026-10-12", today.date)
+        assertEquals(4, today.week)
+        assertEquals(listOf("上午课", "物理实验", "下午课"), today.sessions.map { it.name })
+        assertEquals(8 * 60, today.sessions[0].startMinute)
+        assertEquals(9 * 60 + 50, today.sessions[0].endMinute)
+        assertTrue(today.sessions[1].isLab)
+        assertEquals(13 * 60 + 20, today.sessions[1].startMinute)
+        // 第 4 周周二没有“周二课”，第 5 周周二才有。
+        assertTrue(snapshot.days[1].sessions.isEmpty())
+        assertEquals(listOf("周二课"), snapshot.days[8].sessions.map { it.name })
+        assertEquals(5, snapshot.days[8].week)
+    }
+
+    @Test fun daysOutsideTheCalendarHaveNoWeekAndNoCourses() {
+        val schedule = HomeSchedulePresentation(courses = listOf(course("课", 1)), academicWeeks = weeks, today = monday)
+        val snapshot = buildCourseWidgetSnapshot(schedule, LocalDate(2026, 10, 26), generatedAtEpochSeconds = 1L, dayCount = 1)
+        assertNull(snapshot.days.single().week)
+        assertTrue(snapshot.days.single().sessions.isEmpty())
+    }
+
+    @Test fun placeDropsCampusAndColorMatchesPalette() {
+        assertEquals("思源西楼 SX101", compactWidgetPlace("海淀主校区,思源西楼,SX101"))
+        assertEquals("思源西楼 SX101", compactWidgetPlace("思源西楼，SX101"))
+        assertEquals("线上", compactWidgetPlace("线上"))
+        assertEquals("网络课", compactWidgetPlace("-,网络课"))
+        assertEquals("网络课", compactWidgetPlace("海淀西校区,-,网络课"))
+        assertEquals("主校区综合体育馆（篮排球馆）", compactWidgetPlace("主校区,新综合体育馆,主校区综合体育馆（篮排球馆）"))
+        assertEquals(courseWidgetColor("A"), courseWidgetColor("A"))
+    }
+
+    @Test fun encodesStableJsonWithoutAccountData() {
+        val schedule = HomeSchedulePresentation(courses = listOf(course("高等数学 [本]", 1)), academicWeeks = weeks, today = monday)
+        val json = buildCourseWidgetSnapshot(schedule, monday, generatedAtEpochSeconds = 42L, dayCount = 1).encode()
+        val decoded = Json.decodeFromString(CourseWidgetSnapshot.serializer(), json)
+        assertEquals(CourseWidgetSnapshot.VERSION, decoded.version)
+        assertEquals(42L, decoded.generatedAt)
+        assertEquals("高等数学", decoded.days.single().sessions.single().name)
+        assertTrue("\"startMinute\":480" in json)
+    }
+}

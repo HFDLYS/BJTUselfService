@@ -13,7 +13,34 @@
 		A10000000000000000000004 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000016 /* PrivacyInfo.xcprivacy */; };
 		A10000000000000000000005 /* BJTUCaptcha.mlpackage in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000017 /* BJTUCaptcha.mlpackage */; };
 		A11000000000000000000001 /* NativeNavigationGlassState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11000000000000000000002 /* NativeNavigationGlassState.swift */; };
+		B10000000000000000000001 /* CourseWidgetData.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000011 /* CourseWidgetData.swift */; };
+		B10000000000000000000002 /* CourseWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000012 /* CourseWidgets.swift */; };
+		B10000000000000000000003 /* CourseScheduleWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B10000000000000000000010 /* CourseScheduleWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B10000000000000000000043 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A10000000000000000000060 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B10000000000000000000040;
+			remoteInfo = CourseScheduleWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		B10000000000000000000053 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				B10000000000000000000003 /* CourseScheduleWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		A10000000000000000000010 /* 交大自由行 KMP.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "交大自由行 KMP.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -25,10 +52,24 @@
 		A10000000000000000000016 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A10000000000000000000017 /* BJTUCaptcha.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = BJTUCaptcha.mlpackage; sourceTree = "<group>"; };
 		A11000000000000000000002 /* NativeNavigationGlassState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeNavigationGlassState.swift; sourceTree = "<group>"; };
+		B10000000000000000000010 /* CourseScheduleWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CourseScheduleWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		B10000000000000000000011 /* CourseWidgetData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseWidgetData.swift; sourceTree = "<group>"; };
+		B10000000000000000000012 /* CourseWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseWidgets.swift; sourceTree = "<group>"; };
+		B10000000000000000000013 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B10000000000000000000014 /* CourseScheduleWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CourseScheduleWidget.entitlements; sourceTree = "<group>"; };
+		B10000000000000000000015 /* Widget.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Widget.xcconfig; sourceTree = "<group>"; };
+		B10000000000000000000016 /* iosApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iosApp.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A10000000000000000000020 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B10000000000000000000020 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -42,6 +83,7 @@
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000031 /* iosApp */,
+				B10000000000000000000031 /* CourseScheduleWidget */,
 				A10000000000000000000032 /* Configuration */,
 				A10000000000000000000033 /* Products */,
 			);
@@ -57,6 +99,7 @@
 				A10000000000000000000016 /* PrivacyInfo.xcprivacy */,
 				A10000000000000000000017 /* BJTUCaptcha.mlpackage */,
 				A10000000000000000000013 /* Info.plist */,
+				B10000000000000000000016 /* iosApp.entitlements */,
 			);
 			path = iosApp;
 			sourceTree = "<group>";
@@ -65,6 +108,7 @@
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000014 /* Config.xcconfig */,
+				B10000000000000000000015 /* Widget.xcconfig */,
 			);
 			path = Configuration;
 			sourceTree = "<group>";
@@ -73,8 +117,20 @@
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000010 /* 交大自由行 KMP.app */,
+				B10000000000000000000010 /* CourseScheduleWidget.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		B10000000000000000000031 /* CourseScheduleWidget */ = {
+			isa = PBXGroup;
+			children = (
+				B10000000000000000000011 /* CourseWidgetData.swift */,
+				B10000000000000000000012 /* CourseWidgets.swift */,
+				B10000000000000000000013 /* Info.plist */,
+				B10000000000000000000014 /* CourseScheduleWidget.entitlements */,
+			);
+			path = CourseScheduleWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -88,15 +144,34 @@
 				A10000000000000000000051 /* Sources */,
 				A10000000000000000000020 /* Frameworks */,
 				A10000000000000000000052 /* Resources */,
+				B10000000000000000000053 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				B10000000000000000000042 /* PBXTargetDependency */,
 			);
 			name = iosApp;
 			productName = iosApp;
 			productReference = A10000000000000000000010 /* 交大自由行 KMP.app */;
 			productType = "com.apple.product-type.application";
+		};
+		B10000000000000000000040 /* CourseScheduleWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B10000000000000000000041 /* Build configuration list for PBXNativeTarget "CourseScheduleWidget" */;
+			buildPhases = (
+				B10000000000000000000051 /* Sources */,
+				B10000000000000000000020 /* Frameworks */,
+				B10000000000000000000052 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CourseScheduleWidget;
+			productName = CourseScheduleWidget;
+			productReference = B10000000000000000000010 /* CourseScheduleWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -110,6 +185,9 @@
 				TargetAttributes = {
 					A10000000000000000000040 = {
 						CreatedOnToolsVersion = 26.6;
+					};
+					B10000000000000000000040 = {
+						CreatedOnToolsVersion = 27.1;
 					};
 				};
 			};
@@ -128,6 +206,7 @@
 			projectRoot = "";
 			targets = (
 				A10000000000000000000040 /* iosApp */,
+				B10000000000000000000040 /* CourseScheduleWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -140,6 +219,13 @@
 				A10000000000000000000003 /* Assets.xcassets in Resources */,
 				A10000000000000000000004 /* PrivacyInfo.xcprivacy in Resources */,
 				A10000000000000000000005 /* BJTUCaptcha.mlpackage in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B10000000000000000000052 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -174,7 +260,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B10000000000000000000051 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000000000000000000001 /* CourseWidgetData.swift in Sources */,
+				B10000000000000000000002 /* CourseWidgets.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B10000000000000000000042 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B10000000000000000000040 /* CourseScheduleWidget */;
+			targetProxy = B10000000000000000000043 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A10000000000000000000070 /* Debug */ = {
@@ -188,6 +291,7 @@
 				DEVELOPMENT_TEAM = 34S53DC6T6;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = NO;
+				CODE_SIGN_ENTITLEMENTS = iosApp/iosApp.entitlements;
 				INFOPLIST_FILE = iosApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -212,6 +316,7 @@
 				DEVELOPMENT_TEAM = 34S53DC6T6;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = NO;
+				CODE_SIGN_ENTITLEMENTS = iosApp/iosApp.entitlements;
 				INFOPLIST_FILE = iosApp/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -252,6 +357,52 @@
 			};
 			name = Release;
 		};
+		B10000000000000000000070 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B10000000000000000000015 /* Widget.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = CourseScheduleWidget/CourseScheduleWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 34S53DC6T6;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CourseScheduleWidget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID).widget";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B10000000000000000000071 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B10000000000000000000015 /* Widget.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = CourseScheduleWidget/CourseScheduleWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 34S53DC6T6;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CourseScheduleWidget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "$(BUNDLE_ID).widget";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -269,6 +420,15 @@
 			buildConfigurations = (
 				A10000000000000000000072 /* Debug */,
 				A10000000000000000000073 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B10000000000000000000041 /* Build configuration list for PBXNativeTarget "CourseScheduleWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B10000000000000000000070 /* Debug */,
+				B10000000000000000000071 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

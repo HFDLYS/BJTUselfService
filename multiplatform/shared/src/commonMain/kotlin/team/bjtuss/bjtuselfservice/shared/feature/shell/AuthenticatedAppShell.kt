@@ -1,5 +1,6 @@
 package team.bjtuss.bjtuselfservice.shared.feature.shell
 
+import team.bjtuss.bjtuselfservice.shared.feature.widget.encode
 import androidx.compose.foundation.layout.windowInsetsPadding
 import team.bjtuss.bjtuselfservice.shared.feature.grade.GradeChangeNoticeDialog
 import team.bjtuss.bjtuselfservice.shared.feature.grade.GradeContentSource
@@ -296,6 +297,28 @@ fun AuthenticatedAppShell(
         physicsLabEnabled, physicsDemoState.bookings, physicsDemoState.enabled) {
         scheduleEventCourses(examState.exams, if (physicsLabEnabled) physicsLabState.labs else emptyList(),
             courseState.homeAcademicWeeks, if (physicsDemoState.enabled) physicsDemoState.bookings else emptyList())
+    }
+    // iOS 课程小组件：课表、实验、校历或日期变化时重写快照；内容（不含生成时间）不变就不写，
+    // 避免每次重组都让 WidgetKit 重新加载时间线。
+    val widgetToday = homeworkState.now.date
+    var lastWidgetDays by remember(session) { mutableStateOf<List<team.bjtuss.bjtuselfservice.shared.feature.widget.CourseWidgetDay>?>(null) }
+    LaunchedEffect(courseState.courses, homeScheduleEvents, courseState.homeAcademicWeeks, courseState.currentWeek, widgetToday) {
+        if (courseState.courses.isEmpty() && homeScheduleEvents.isEmpty()) return@LaunchedEffect
+        if (courseState.homeAcademicWeeks.isEmpty() && courseState.currentWeek <= 0) return@LaunchedEffect
+        val snapshot = team.bjtuss.bjtuselfservice.shared.feature.widget.buildCourseWidgetSnapshot(
+            schedule = team.bjtuss.bjtuselfservice.shared.feature.home.HomeSchedulePresentation(
+                courses = courseState.courses,
+                supplementalCourses = homeScheduleEvents,
+                academicWeeks = courseState.homeAcademicWeeks,
+                currentWeek = courseState.currentWeek,
+                today = widgetToday,
+            ),
+            startDate = widgetToday,
+            generatedAtEpochSeconds = kotlin.time.Clock.System.now().epochSeconds,
+        )
+        if (snapshot.days == lastWidgetDays) return@LaunchedEffect
+        lastWidgetDays = snapshot.days
+        team.bjtuss.bjtuselfservice.shared.feature.widget.writeCourseWidgetSnapshot(snapshot.encode())
     }
     val homeState by homeModel.state.collectAsState()
     val phyVlabEnabled = settingsState.preferences.isPhyVlabEnabled

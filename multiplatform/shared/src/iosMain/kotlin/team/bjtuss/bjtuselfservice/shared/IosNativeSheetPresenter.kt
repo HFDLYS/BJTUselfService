@@ -20,7 +20,10 @@ import platform.UIKit.UIRectEdgeNone
 import platform.UIKit.addChildViewController
 import platform.UIKit.didMoveToParentViewController
 import platform.darwin.NSObject
+import platform.darwin.DISPATCH_TIME_NOW
+import platform.darwin.dispatch_after
 import platform.darwin.dispatch_async
+import platform.darwin.dispatch_time
 import platform.darwin.dispatch_get_main_queue
 import team.bjtuss.bjtuselfservice.shared.feature.shell.NativeSheetPresenter
 import team.bjtuss.bjtuselfservice.shared.feature.shell.LocalNativeSheetContentBoundsHandled
@@ -69,6 +72,13 @@ class IosNativeSheetPresenter(
     private var dismissTarget: SheetActionTarget? = null
     private var sheetController: UIViewController? = null
     private var sheetDelegate: SheetDelegate? = null
+    /** 正在执行打开动画的 sheet；期间的 dismiss 推迟到动画完成。 */
+    private var presentingSheet: UIViewController? = null
+    private var pendingDismiss = false
+    /** 正在执行关闭动画的 sheet；期间的 present 推迟到动画完成。 */
+    private var dismissingSheet: UIViewController? = null
+    private var pendingPresent: Boolean? = null
+    private var retryCount = 0
 
     override fun update(
         content: @Composable () -> Unit,
@@ -116,11 +126,20 @@ class IosNativeSheetPresenter(
     override fun present(needsFullHeight: Boolean) {
         val existing = sheetController
         if (existing != null) {
+            // 打开动画还没结束就被关、又马上被重新打开：取消待执行的关闭，继续用这张 sheet。
+            pendingDismiss = false
             BJTUConfigureSheetPresentation(existing, needsFullHeight)
             fittedContentHeight?.let { BJTUSetSheetFittedHeight(existing, it.toDouble()) }
             updateNativeHeader(existing)
             return
         }
+        // 上一张 sheet 的关闭动画还在进行时 UIKit 会静默拒绝新的 present，Compose 却以为已经打开，
+        // 之后再点入口也不会有反应（“点不出来”）。等关闭完成后再弹。
+        if (dismissingSheet != null) {
+            pendingPresent = needsFullHeight
+            return
+        }
+        pendingPresent = null
 
         val contentController = ComposeUIViewController(
             configure = { opaque = false },
@@ -150,10 +169,45 @@ class IosNativeSheetPresenter(
         val delegate = SheetDelegate { handleDismissed() }
         sheetDelegate = delegate
         sheetController = sheet
+        presentingSheet = sheet
         owner().presentViewController(sheet, animated = true) {
+            if (presentingSheet === sheet) presentingSheet = null
             BJTUInstallNativeSheetMaterial(sheet)
+            // 打开动画期间收到的关闭请求（例如刚弹出就点了选项）在这里补做。
+            if (pendingDismiss && sheetController === sheet) {
+                pendingDismiss = false
+                dismiss()
+            }
         }
         BJTUAttachSheetPresentationDelegate(sheet, delegate)
+        if (sheet.presentingViewController == null) {
+            // 宿主正被别的转场占用（例如其他弹窗正在关闭），present 被拒绝：稍后重试，不让入口失效。
+            sheetController = null
+            sheetDelegate = null
+            presentingSheet = null
+            scheduleRetry(needsFullHeight)
+        } else {
+            retryCount = 0
+        }
+    }
+
+    private fun scheduleRetry(needsFullHeight: Boolean) {
+        if (retryCount >= MAX_PRESENT_RETRIES) {
+            retryCount = 0
+            // 实在弹不出来：把 Compose 状态复位，下次点击可以重新打开。
+            dismissRequest()
+            return
+        }
+        retryCount += 1
+        pendingPresent = needsFullHeight
+        dispatch_after(
+            dispatch_time(DISPATCH_TIME_NOW, PRESENT_RETRY_DELAY_NS),
+            dispatch_get_main_queue(),
+        ) {
+            val pending = pendingPresent ?: return@dispatch_after
+            if (dismissingSheet != null || sheetController != null) return@dispatch_after
+            present(pending)
+        }
     }
 
     private fun updateNativeHeader(sheet: UIViewController) {
@@ -174,20 +228,36 @@ class IosNativeSheetPresenter(
     }
 
     override fun dismiss() {
+        pendingPresent = null
         val sheet = sheetController ?: return
+        if (presentingSheet === sheet) {
+            // 打开动画中 UIKit 会忽略 dismiss，sheet 就会孤零零留在屏幕上；等打开完成再关。
+            pendingDismiss = true
+            return
+        }
+        pendingDismiss = false
         fittedContentHeight = null
         sheetController = null
         sheetDelegate = null
         confirmTarget = null
         todayTarget = null
         dismissTarget = null
-        sheet.dismissViewControllerAnimated(flag = true, completion = null)
+        dismissingSheet = sheet
+        sheet.dismissViewControllerAnimated(flag = true) {
+            if (dismissingSheet === sheet) dismissingSheet = null
+            pendingPresent?.let { needsFullHeight ->
+                pendingPresent = null
+                present(needsFullHeight)
+            }
+        }
     }
 
     private fun handleDismissed() {
         fittedContentHeight = null
         sheetController = null
         sheetDelegate = null
+        presentingSheet = null
+        pendingDismiss = false
         confirmTarget = null
         todayTarget = null
         dismissTarget = null
@@ -211,6 +281,9 @@ class IosNativeSheetPresenter(
         }
     }
 }
+
+private const val MAX_PRESENT_RETRIES = 10
+private const val PRESENT_RETRY_DELAY_NS = 120_000_000L
 
 /** Uses this presentation's insets, never the underlying tab/navigation bars. */
 @OptIn(ExperimentalForeignApi::class)

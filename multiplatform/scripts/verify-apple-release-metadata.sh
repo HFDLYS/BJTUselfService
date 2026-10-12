@@ -40,11 +40,19 @@ require_file "$ios_app/Assets.car"
 require_file "$ios_app/AppIcon60x60@2x.png"
 require_file "$ios_app/AppIcon76x76@2x~ipad.png"
 require_file "$ios_icon_source"
-require_absent "$ios_app/PlugIns/CourseScheduleWidget.appex"
+ios_widget="$ios_app/PlugIns/CourseScheduleWidget.appex"
+require_file "$ios_widget/Info.plist"
 
 plutil -lint "$ios_info" "$ios_privacy" >/dev/null
 require_value "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$ios_info")" \
   "team.bjtuss.bjtuselfservice.kmp.ios" "iOS bundle ID"
+require_value "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$ios_widget/Info.plist")" \
+  "team.bjtuss.bjtuselfservice.kmp.ios.widget" "iOS widget bundle ID"
+# App Store 要求扩展与宿主版本一致；两处 Info.plist 都是手写版本号。
+for key in CFBundleShortVersionString CFBundleVersion; do
+  require_value "$(/usr/libexec/PlistBuddy -c "Print :$key" "$ios_widget/Info.plist")" \
+    "$(/usr/libexec/PlistBuddy -c "Print :$key" "$ios_info")" "iOS widget $key"
+done
 require_value "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIcons:CFBundlePrimaryIcon:CFBundleIconName' "$ios_info")" \
   "AppIcon" "iOS app icon name"
 require_value "$(/usr/libexec/PlistBuddy -c 'Print :NSAppTransportSecurity:NSExceptionDomains:yaya.csoci.com:NSExceptionAllowsInsecureHTTPLoads' "$ios_info")" \
