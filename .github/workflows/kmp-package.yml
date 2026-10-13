@@ -14,6 +14,7 @@ on:
   pull_request:
     paths:
       - ".github/workflows/kmp-package.yml"
+      - "multiplatform/scripts/stage-actions-artifact.py"
       - "multiplatform/scripts/sign-ios-sideload-app.sh"
       - "multiplatform/iosApp/**"
   workflow_dispatch:
@@ -26,6 +27,9 @@ permissions:
   contents: read
 
 env:
+  # Shell/ZIP timestamps and JVM packaging tools use Beijing time on every platform.
+  TZ: Asia/Shanghai
+  JAVA_TOOL_OPTIONS: -Duser.timezone=Asia/Shanghai
   GRADLE_OPTS: -Dorg.gradle.daemon=false
 
 jobs:
@@ -99,6 +103,10 @@ jobs:
           test -f "$APK"
           NAME="BJTUSelfService-KMP-${VERSION}-arm64-v8a.apk"
           cp "$APK" "$NAME"
+          # Keep the signed APK contents intact; refresh only the output file mtime.
+          touch "$NAME"
+          echo "Packaged at $(date '+%Y-%m-%d %H:%M:%S %z') (Asia/Shanghai)"
+          python3 scripts/stage-actions-artifact.py "$NAME"
           echo "file=$NAME" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           ls -lh "$NAME"
@@ -107,7 +115,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kmp-android-apk
-          path: multiplatform/${{ steps.artifact.outputs.file }}
+          path: multiplatform/artifact-upload/${{ steps.artifact.outputs.file }}
           if-no-files-found: error
 
   windows:
@@ -121,6 +129,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set Windows timezone to Beijing
+        run: |
+          # Native Windows packaging tools do not consistently honor TZ.
+          tzutil /s "China Standard Time"
+          if ($LASTEXITCODE -ne 0) { throw "Failed to set Windows timezone" }
 
       - name: Validate Gradle Wrapper
         uses: gradle/actions/wrapper-validation@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
@@ -148,7 +162,7 @@ jobs:
           # jpackage 按 JVM 默认语言挑 WiX 本地化文件：英文 runner 用 en（代码页 1252），
           # 中文名会被打成 ??? 并报 LGHT0311。强制 zh_CN 让它改用代码页 936 的中文 .wxl，
           # 这样安装器、开始菜单和快捷方式都能用中文名「交大自由行 KMP」。
-          JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -Duser.language=zh -Duser.country=CN
+          JAVA_TOOL_OPTIONS: -Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8 -Duser.language=zh -Duser.country=CN -Duser.timezone=Asia/Shanghai
         run: |
           chcp 65001 | Out-Null
           .\gradlew.bat :windowsApp:packageMsi --stacktrace
@@ -170,6 +184,11 @@ jobs:
           if (-not $msi) { throw "MSI not found" }
           $name = "BJTUselfServiceKMP-$version.msi"
           Copy-Item $msi.FullName $name
+          # Store the real instant; the runner displays it in China Standard Time.
+          (Get-Item $name).LastWriteTimeUtc = [DateTime]::UtcNow
+          Write-Host "Packaged at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss zzz') (Asia/Shanghai)"
+          python scripts/stage-actions-artifact.py $name
+          if ($LASTEXITCODE -ne 0) { throw "Failed to stage MSI for Actions upload" }
           "file=$name" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           Get-Item $name | Format-List Name, Length, LastWriteTime
@@ -178,7 +197,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kmp-windows-msi
-          path: multiplatform/${{ steps.artifact.outputs.file }}
+          path: multiplatform/artifact-upload/${{ steps.artifact.outputs.file }}
           if-no-files-found: error
 
   macos:
@@ -224,6 +243,9 @@ jobs:
           test -f "$DMG"
           NAME="BJTUselfServiceKMP-${VERSION}.dmg"
           cp "$DMG" "$NAME"
+          touch "$NAME"
+          echo "Packaged at $(date '+%Y-%m-%d %H:%M:%S %z') (Asia/Shanghai)"
+          python3 scripts/stage-actions-artifact.py "$NAME"
           echo "file=$NAME" >> "$GITHUB_OUTPUT"
           ls -lh "$NAME"
 
@@ -231,7 +253,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kmp-macos-dmg
-          path: multiplatform/${{ steps.artifact.outputs.file }}
+          path: multiplatform/artifact-upload/${{ steps.artifact.outputs.file }}
           if-no-files-found: error
 
   ios:
@@ -336,8 +358,16 @@ jobs:
           # Ad-hoc signing preserves entitlements for SideStore to discover and re-sign.
           # This is not a provisioning profile or a device-installable Apple signature.
           bash scripts/sign-ios-sideload-app.sh "ipa-stage/Payload/$APP_NAME"
-          (cd ipa-stage && zip -qry "../$NAME" Payload)
+          # Normalize mtimes after signing. ZIP's DOS timestamps have no timezone;
+          # -X omits extra UTC timestamps so readers use the Beijing wall time.
+          STAMP="$(date +%Y%m%d%H%M.%S)"
+          find ipa-stage -exec touch -h -t "$STAMP" {} +
+          codesign --verify --deep --strict "ipa-stage/Payload/$APP_NAME"
+          (cd ipa-stage && zip -qry -X "../$NAME" Payload)
           unzip -tq "$NAME"
+          touch -t "$STAMP" "$NAME"
+          echo "Packaged at $(date '+%Y-%m-%d %H:%M:%S %z') (Asia/Shanghai)"
+          python3 scripts/stage-actions-artifact.py "$NAME"
           echo "file=$NAME" >> "$GITHUB_OUTPUT"
           ls -lh "$NAME"
 
@@ -345,7 +375,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kmp-ios-ipa
-          path: multiplatform/${{ steps.artifact.outputs.file }}
+          path: multiplatform/artifact-upload/${{ steps.artifact.outputs.file }}
           if-no-files-found: error
 
   release:
