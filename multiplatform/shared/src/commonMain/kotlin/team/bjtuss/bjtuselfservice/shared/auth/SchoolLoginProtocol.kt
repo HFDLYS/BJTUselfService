@@ -5,6 +5,7 @@ import team.bjtuss.bjtuselfservice.shared.network.SchoolEndpoints
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpMethod
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpRequest
 import team.bjtuss.bjtuselfservice.shared.network.looksLikeSessionExpired
+import team.bjtuss.bjtuselfservice.shared.network.parseOffMain
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpTransport
 
 private const val MIS_SSO_URL = "https://mis.bjtu.edu.cn/auth/sso/?next=/"
@@ -45,7 +46,8 @@ class SchoolLoginProtocol(
         return if (
             response.statusCode in 200..299 &&
                 response.finalUrl.matchesEndpoint(MIS_HOME_URL) &&
-                !response.looksLikeSessionExpired()
+                // 各模块刷新前都会探测一次；MIS 首页很大，整页判断放后台（真机每次约 30~40ms 主线程卡顿）。
+                !parseOffMain { response.looksLikeSessionExpired() }
         ) {
             SessionProbeResult.Active
         } else {

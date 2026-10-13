@@ -109,8 +109,11 @@ fun SchoolHttpResponse.looksLikeSessionExpired(): Boolean {
         return true
     }
 
-    val bodyText = bodyText().trim().lowercase()
-    if (bodyText.isEmpty()) return false
+    // 不再整页 trim()/lowercase() 复制：大页面每次判断都会多分配两份整页字符串，
+    // 同步期间逐页调用会推高 GC（iOS 真机可见 stop-the-world 标记卡住主线程）。
+    val bodyText = bodyText()
+    val start = bodyText.indexOfFirst { !it.isWhitespace() }
+    if (start < 0) return false
     if (listOf(
             "会话失效",
             "会话结束",
@@ -121,21 +124,20 @@ fun SchoolHttpResponse.looksLikeSessionExpired(): Boolean {
             "session expired",
             "session timeout",
             "not logged in",
-        ).any(bodyText::contains)
+        ).any { bodyText.contains(it, ignoreCase = true) }
     ) {
         return true
     }
 
-    val looksLikeHtml = bodyText.startsWith("<!doctype html") ||
-        bodyText.startsWith("<html") ||
-        bodyText.startsWith("<form") ||
-        bodyText.contains("<form")
-    val hasCredentialField = bodyText.contains("type=\"password\"") ||
-        bodyText.contains("type='password'") ||
-        bodyText.contains("name=\"password\"") ||
-        bodyText.contains("name='password'") ||
-        bodyText.contains("id=\"id_captcha") ||
-        bodyText.contains("name=\"loginname\"")
+    val looksLikeHtml = bodyText.startsWith("<!doctype html", start, ignoreCase = true) ||
+        bodyText.startsWith("<html", start, ignoreCase = true) ||
+        bodyText.contains("<form", ignoreCase = true)
+    val hasCredentialField = bodyText.contains("type=\"password\"", ignoreCase = true) ||
+        bodyText.contains("type='password'", ignoreCase = true) ||
+        bodyText.contains("name=\"password\"", ignoreCase = true) ||
+        bodyText.contains("name='password'", ignoreCase = true) ||
+        bodyText.contains("id=\"id_captcha", ignoreCase = true) ||
+        bodyText.contains("name=\"loginname\"", ignoreCase = true)
     return looksLikeHtml && hasCredentialField
 }
 

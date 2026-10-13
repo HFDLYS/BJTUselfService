@@ -210,6 +210,7 @@ private final class NativeChromeBinding {
     private var usesSystemBars: Bool { (controller?.navigationController as? TabRootNavigationController)?.usesSystemBars == true }
     private var lastActionLayoutKey: NativeBarActionLayoutKey?
     private var lastActionVertical: Bool?
+    private var lastActionVisualKey: [String]?
     private var pendingTitle: String?
     private var pendingAction: NativeBarAction?
     private var hasPendingAction = false
@@ -367,6 +368,12 @@ private final class NativeChromeBinding {
     }
 
     private func updateActionVisuals(_ action: NativeBarAction) {
+        // Compose reports the bar on every recomposition (many per second while syncing).
+        // Re-assigning identical images/titles to bar items relayouts UINavigationBar each
+        // time; on device that cost ~40% of the main thread during sync.
+        let visualKey = [action.status, action.label, action.extraLabel ?? ""]
+        guard visualKey != lastActionVisualKey else { return }
+        lastActionVisualKey = visualKey
         systemActionItems[.status]?.image = UIImage(systemName: symbolName(for: action.status, kind: .status))
         systemActionItems[.status]?.accessibilityLabel = action.status
         systemActionItems[.status]?.title = action.status
@@ -412,6 +419,7 @@ private final class NativeChromeBinding {
             actionButtons.removeAll()
             systemActionItems.removeAll()
             lastActionLayoutKey = nil
+            lastActionVisualKey = nil
             UIView.performWithoutAnimation {
                 controller.navigationItem.leftBarButtonItems = nil
                 controller.navigationItem.leftItemsSupplementBackButton = false
@@ -433,6 +441,7 @@ private final class NativeChromeBinding {
         }
         lastActionLayoutKey = layoutKey
         lastActionVertical = vertical
+        lastActionVisualKey = nil
         retainedActionTargets.removeAll()
         actionTargets.removeAll()
         actionButtons.removeAll()
@@ -637,6 +646,7 @@ private enum NativeBarActionItemKind {
 }
 
 private final class NativeBarIconButton: UIButton {
+    private var currentSymbolName: String?
     init(title: String) {
         super.init(frame: .zero)
         setTitle(title, for: .normal)
@@ -656,9 +666,11 @@ private final class NativeBarIconButton: UIButton {
             pointSize: 18,
             weight: .semibold,
         )
-        let image = UIImage(systemName: symbolName, withConfiguration: symbolConfiguration)
-        setImage(image, for: .normal)
-        if let accessibilityLabel {
+        if symbolName != currentSymbolName {
+            currentSymbolName = symbolName
+            setImage(UIImage(systemName: symbolName, withConfiguration: symbolConfiguration), for: .normal)
+        }
+        if let accessibilityLabel, self.accessibilityLabel != accessibilityLabel {
             self.accessibilityLabel = accessibilityLabel
         }
     }
@@ -1233,9 +1245,10 @@ private final class TabRootNavigationController: UINavigationController, UINavig
             ])
             centeredTitleLabel = label
         }
-        label.text = title
-        label.isHidden = false
-        navigationBar.bringSubviewToFront(label)
+        // Same-value writes and subview reordering both invalidate the bar's layout.
+        if label.text != title { label.text = title }
+        if label.isHidden { label.isHidden = false }
+        if navigationBar.subviews.last !== label { navigationBar.bringSubviewToFront(label) }
     }
 
     override func viewDidLayoutSubviews() {
