@@ -11,6 +11,11 @@ on:
       # debug-* 只打包并上传 Actions 产物，不创建 GitHub Release / pre-release，
       # 因此应用内更新检查不会把它当成全量更新。
       - "debug-*"
+  pull_request:
+    paths:
+      - ".github/workflows/kmp-package.yml"
+      - "multiplatform/scripts/sign-ios-sideload-app.sh"
+      - "multiplatform/iosApp/**"
   workflow_dispatch:
 
 concurrency:
@@ -18,7 +23,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   GRADLE_OPTS: -Dorg.gradle.daemon=false
@@ -26,7 +31,7 @@ env:
 jobs:
   android:
     name: Android arm64 release APK
-    if: ${{ github.event_name == 'workflow_dispatch' || github.ref_name != 'v1.7.0' }}
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'workflow_dispatch' || github.ref_name != 'v1.7.0') }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -107,7 +112,7 @@ jobs:
 
   windows:
     name: Windows MSI
-    if: ${{ github.event_name == 'workflow_dispatch' || github.ref_name != 'v1.7.0' }}
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'workflow_dispatch' || github.ref_name != 'v1.7.0') }}
     runs-on: windows-latest
     defaults:
       run:
@@ -178,7 +183,7 @@ jobs:
 
   macos:
     name: macOS DMG
-    if: ${{ github.event_name == 'workflow_dispatch' || github.ref_name != 'v1.7.0' }}
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'workflow_dispatch' || github.ref_name != 'v1.7.0') }}
     runs-on: macos-15
     timeout-minutes: 60
     defaults:
@@ -230,7 +235,11 @@ jobs:
           if-no-files-found: error
 
   ios:
-    name: iOS unsigned IPA
+    name: iOS sideload IPA
+    permissions:
+      contents: read
+    env:
+      IOS_CONFIGURATION: ${{ github.event_name == 'pull_request' && 'Debug' || 'Release' }}
     # Duo / 系统栏用了 iOS 27.1 API（axisBehavior、verticalBarEdge、
     # navigationBarMinimization）。macos-26 默认 Xcode 26.6 / iPhoneOS 26.5，
     # `#available` 挡不住编译。必须用 xcode-27 镜像并选 27.1+ SDK。
@@ -298,7 +307,7 @@ jobs:
           xcodebuild \
             -project iosApp/iosApp.xcodeproj \
             -scheme iosApp \
-            -configuration Release \
+            -configuration "$IOS_CONFIGURATION" \
             -destination 'generic/platform=iOS' \
             -derivedDataPath iosApp/DerivedData \
             CODE_SIGNING_ALLOWED=NO \
@@ -311,17 +320,24 @@ jobs:
         run: |
           VERSION="$(sed -n 's/.*CURRENT_VERSION = "\([^"]*\)".*/\1/p' shared/src/commonMain/kotlin/team/bjtuss/bjtuselfservice/shared/update/AppUpdateChecker.kt | head -n 1)"
           VERSION="${VERSION%-KMP}"
-          APP="$(find iosApp/DerivedData/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' | head -n 1)"
+          APP="$(find "iosApp/DerivedData/Build/Products/$IOS_CONFIGURATION-iphoneos" -maxdepth 1 -name '*.app' | head -n 1)"
           test -n "$VERSION"
           test -d "$APP"
           NAME="BJTUSelfService-KMP-${VERSION}-iOS-unsigned.ipa"
+          if [ "$IOS_CONFIGURATION" = Debug ]; then
+            NAME="BJTUSelfService-KMP-${VERSION}-iOS-Debug-sideload.ipa"
+          fi
           rm -rf ipa-stage
           mkdir -p ipa-stage/Payload
           APP_NAME="BJTUselfServiceKMP.app"
           cp -R "$APP" "ipa-stage/Payload/$APP_NAME"
           mv "ipa-stage/Payload/$APP_NAME/交大自由行 KMP" "ipa-stage/Payload/BJTUselfServiceKMP.app/BJTUselfServiceKMP"
           /usr/libexec/PlistBuddy -c 'Set :CFBundleExecutable BJTUselfServiceKMP' "ipa-stage/Payload/$APP_NAME/Info.plist"
+          # Ad-hoc signing preserves entitlements for SideStore to discover and re-sign.
+          # This is not a provisioning profile or a device-installable Apple signature.
+          bash scripts/sign-ios-sideload-app.sh "ipa-stage/Payload/$APP_NAME"
           (cd ipa-stage && zip -qry "../$NAME" Payload)
+          unzip -tq "$NAME"
           echo "file=$NAME" >> "$GITHUB_OUTPUT"
           ls -lh "$NAME"
 
@@ -334,6 +350,8 @@ jobs:
 
   release:
     name: GitHub Release
+    permissions:
+      contents: write
     needs: [android, windows, macos, ios]
     # 只给正式 v* 标签发 GitHub Release。debug-* / alpha / beta 标签只保留 Actions 产物，
     # 避免应用内更新检查把调试包当成全量更新或 pre-release。
