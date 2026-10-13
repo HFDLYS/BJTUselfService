@@ -8,6 +8,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import team.bjtuss.bjtuselfservice.shared.domain.classroomoccupancy.OccupancyWeekDate
 import team.bjtuss.bjtuselfservice.shared.domain.course.Course
+import team.bjtuss.bjtuselfservice.shared.domain.grade.CourseType
 import team.bjtuss.bjtuselfservice.shared.feature.home.HomeSchedulePresentation
 
 class CourseWidgetSnapshotTest {
@@ -72,5 +73,33 @@ class CourseWidgetSnapshotTest {
         assertEquals(42L, decoded.generatedAt)
         assertEquals("高等数学", decoded.days.single().sessions.single().name)
         assertTrue("\"startMinute\":480" in json)
+    }
+
+    @Test fun rangeStartsOnMondaySoTheWeekViewSeesEarlierDays() {
+        assertEquals(monday to COURSE_WIDGET_DAYS, courseWidgetRange(monday))
+        assertEquals(monday to COURSE_WIDGET_DAYS + 1, courseWidgetRange(LocalDate(2026, 10, 13)))
+        assertEquals(monday to COURSE_WIDGET_DAYS + 6, courseWidgetRange(LocalDate(2026, 10, 18)))
+    }
+
+    @Test fun sessionsCarryScheduleColorKind() {
+        val lab = course("物理实验", 25).copy(id = -1, scheduleEventKind = "physicslab",
+            scheduleEventDate = monday.toString(), scheduleEventTime = "13:20-15:50")
+        val schedule = HomeSchedulePresentation(
+            courses = listOf(course("M1001001", 1), course("M2002002", 9), course("M3003003", 17)),
+            supplementalCourses = listOf(lab), academicWeeks = weeks, today = monday,
+        )
+        val types = mapOf("M1001001" to CourseType.REQUIRED, "M2002002" to CourseType.PHYSICAL_EDUCATION)
+        val kinds = buildCourseWidgetSnapshot(schedule, monday, 1L, dayCount = 1, courseTypesByCode = types)
+            .days.single().sessions.associate { it.name to it.kind }
+        assertEquals(mapOf("M1001001" to "required", "M2002002" to "pe", "M3003003" to "unknown", "物理实验" to "lab"), kinds)
+        // 培养方案没同步时全是 unknown，实验仍单独着色。
+        val noMapping = buildCourseWidgetSnapshot(schedule, monday, 1L, dayCount = 1).days.single().sessions
+        assertEquals(setOf("unknown", "lab"), noMapping.map { it.kind }.toSet())
+    }
+
+    @Test fun snapshotCarriesSlotTimes() {
+        val schedule = HomeSchedulePresentation(courses = emptyList(), academicWeeks = weeks, today = monday)
+        val json = buildCourseWidgetSnapshot(schedule, monday, 1L, dayCount = 1).encode()
+        assertTrue("\"slotTimes\":[\"08:00-09:50\"" in json)
     }
 }

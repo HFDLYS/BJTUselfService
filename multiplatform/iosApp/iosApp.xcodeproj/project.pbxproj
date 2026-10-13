@@ -15,6 +15,7 @@
 		A11000000000000000000001 /* NativeNavigationGlassState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11000000000000000000002 /* NativeNavigationGlassState.swift */; };
 		B10000000000000000000001 /* CourseWidgetData.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000011 /* CourseWidgetData.swift */; };
 		B10000000000000000000002 /* CourseWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000012 /* CourseWidgets.swift */; };
+		B10000000000000000000004 /* WeekCourseWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000017 /* WeekCourseWidget.swift */; };
 		B10000000000000000000003 /* CourseScheduleWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B10000000000000000000010 /* CourseScheduleWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -55,6 +56,7 @@
 		B10000000000000000000010 /* CourseScheduleWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CourseScheduleWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		B10000000000000000000011 /* CourseWidgetData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseWidgetData.swift; sourceTree = "<group>"; };
 		B10000000000000000000012 /* CourseWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CourseWidgets.swift; sourceTree = "<group>"; };
+		B10000000000000000000017 /* WeekCourseWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekCourseWidget.swift; sourceTree = "<group>"; };
 		B10000000000000000000013 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B10000000000000000000014 /* CourseScheduleWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CourseScheduleWidget.entitlements; sourceTree = "<group>"; };
 		B10000000000000000000015 /* Widget.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Widget.xcconfig; sourceTree = "<group>"; };
@@ -127,6 +129,7 @@
 			children = (
 				B10000000000000000000011 /* CourseWidgetData.swift */,
 				B10000000000000000000012 /* CourseWidgets.swift */,
+				B10000000000000000000017 /* WeekCourseWidget.swift */,
 				B10000000000000000000013 /* Info.plist */,
 				B10000000000000000000014 /* CourseScheduleWidget.entitlements */,
 			);
@@ -266,6 +269,7 @@
 			files = (
 				B10000000000000000000001 /* CourseWidgetData.swift in Sources */,
 				B10000000000000000000002 /* CourseWidgets.swift in Sources */,
+				B10000000000000000000004 /* WeekCourseWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

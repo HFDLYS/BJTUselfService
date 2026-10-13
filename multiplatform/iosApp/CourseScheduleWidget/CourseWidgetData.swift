@@ -11,6 +11,8 @@ struct CourseWidgetSnapshot: Codable {
     let version: Int
     let generatedAt: Int64
     let days: [CourseWidgetDay]
+    /// 大节时间 "HH:mm-HH:mm"；旧快照没有这个字段。
+    let slotTimes: [String]?
 }
 
 struct CourseWidgetDay: Codable {
@@ -27,6 +29,8 @@ struct CourseWidgetSession: Codable, Hashable {
     let endMinute: Int
     let isLab: Bool
     let color: Int64
+    /// 课表色块分类：required/limited/elective/pe/unknown/lab；旧快照没有这个字段。
+    let kind: String?
 }
 
 enum CourseWidgetStore {
@@ -123,6 +127,10 @@ struct CourseWidgetModel {
     let today: CourseDayPlan
     /// 今天之后第一个有课的日子（最多看 snapshot 覆盖范围）。
     let nextDay: CourseDayPlan?
+    /// 本周一到周日；快照没覆盖到的日子是空的。
+    let week: [CourseDayPlan]
+    /// 大节的开始/结束分钟，周视图按它画行。
+    let slots: [ClosedRange<Int>]
 
     var ongoing: CourseOccurrence? { today.occurrences.first { $0.isOngoing(at: now) } }
 
@@ -191,7 +199,40 @@ enum CourseWidgetCalendar {
         let nextDay = snapshot.days[(index + 1)...]
             .first { !$0.sessions.isEmpty }
             .flatMap(plan(for:))
-        return .ready(CourseWidgetModel(now: now, today: today, nextDay: nextDay))
+        return .ready(CourseWidgetModel(
+            now: now, today: today, nextDay: nextDay,
+            week: week(of: now, in: snapshot), slots: slots(snapshot.slotTimes)
+        ))
+    }
+
+    static func week(of now: Date, in snapshot: CourseWidgetSnapshot) -> [CourseDayPlan] {
+        let today = calendar.startOfDay(for: now)
+        // weekday：1 = 周日 … 7 = 周六。
+        let sinceMonday = (calendar.component(.weekday, from: today) + 5) % 7
+        guard let monday = calendar.date(byAdding: .day, value: -sinceMonday, to: today) else { return [] }
+        let byKey = Dictionary(snapshot.days.map { ($0.date, $0) }, uniquingKeysWith: { first, _ in first })
+        return (0..<7).compactMap { offset in
+            guard let date = calendar.date(byAdding: .day, value: offset, to: monday) else { return nil }
+            return byKey[dayKey(date)].flatMap(plan(for:)) ?? CourseDayPlan(date: date, week: nil, occurrences: [])
+        }
+    }
+
+    /// 与 shared 的 SLOT_TIME_RANGES 一致，旧快照没带时使用。
+    static let defaultSlotTimes = [
+        "08:00-09:50", "10:10-12:00", "12:10-14:00", "14:10-16:00",
+        "16:20-18:10", "19:00-20:50", "21:00-21:50",
+    ]
+
+    static func slots(_ times: [String]?) -> [ClosedRange<Int>] {
+        let parsed = (times ?? defaultSlotTimes).compactMap { range -> ClosedRange<Int>? in
+            let minutes = range.split(separator: "-").map { part -> Int? in
+                let hm = part.split(separator: ":").compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+                return hm.count == 2 ? hm[0] * 60 + hm[1] : nil
+            }
+            guard minutes.count == 2, let start = minutes[0], let end = minutes[1], start < end else { return nil }
+            return start...end
+        }
+        return parsed.isEmpty && times != nil ? slots(nil) : parsed
     }
 
     /// 小组件需要重新排版的时刻：每节课开始/结束、每天零点。
@@ -254,22 +295,31 @@ extension CourseWidgetSnapshot {
     static var preview: CourseWidgetSnapshot {
         let calendar = CourseWidgetCalendar.calendar
         let today = calendar.startOfDay(for: .now)
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) ?? today
-        func session(_ name: String, _ place: String, _ teacher: String, _ start: Int, _ end: Int, _ color: Int64) -> CourseWidgetSession {
-            CourseWidgetSession(name: name, place: place, teacher: teacher, startMinute: start, endMinute: end, isLab: false, color: color)
+        func session(_ name: String, _ place: String, _ teacher: String, _ start: Int, _ end: Int, _ color: Int64, _ kind: String) -> CourseWidgetSession {
+            CourseWidgetSession(name: name, place: place, teacher: teacher, startMinute: start, endMinute: end,
+                                isLab: kind == "lab", color: color, kind: kind)
         }
-        let sessions = [
-            session("高等数学", "思源楼 101", "张老师", 8 * 60, 9 * 60 + 50, 0x4C8BF5),
-            session("数据结构", "逸夫楼 302", "李老师", 10 * 60 + 10, 12 * 60, 0x2E9E6B),
-            session("大学物理", "思源西楼 205", "王老师", 14 * 60 + 10, 16 * 60, 0xE0674F),
+        let math = session("高等数学", "思源楼 101", "张老师", 8 * 60, 9 * 60 + 50, 0x4C8BF5, "required")
+        let data = session("数据结构", "逸夫楼 302", "李老师", 10 * 60 + 10, 12 * 60, 0x2E9E6B, "required")
+        let physics = session("大学物理", "思源西楼 205", "王老师", 14 * 60 + 10, 16 * 60, 0xE0674F, "limited")
+        let sports = session("排球", "体育馆", "赵老师", 8 * 60, 9 * 60 + 50, 0x16A4A4, "pe")
+        let lab = session("物理实验", "物理实验中心", "", 13 * 60 + 30, 15 * 60 + 20, 0x9B59B6, "lab")
+        let film = session("电影赏析", "第八教学楼 8202", "钱老师", 19 * 60, 20 * 60 + 50, 0xD4658E, "elective")
+        // 周一到周日轮换几种组合，让周视图预览像一张真实的课表。
+        let rotation: [[CourseWidgetSession]] = [
+            [math, data, physics], [sports, data, film], [math, lab], [data, physics], [math, film], [], [],
         ]
+        let sinceMonday = (calendar.component(.weekday, from: today) + 5) % 7
+        let monday = calendar.date(byAdding: .day, value: -sinceMonday, to: today) ?? today
+        let days = (0..<14).map { offset -> CourseWidgetDay in
+            let date = calendar.date(byAdding: .day, value: offset, to: monday) ?? monday
+            return CourseWidgetDay(date: CourseWidgetCalendar.dayKey(date), week: 5 + offset / 7, sessions: rotation[offset % 7])
+        }
         return CourseWidgetSnapshot(
             version: 1,
             generatedAt: Int64(Date.now.timeIntervalSince1970),
-            days: [
-                CourseWidgetDay(date: CourseWidgetCalendar.dayKey(today), week: 5, sessions: sessions),
-                CourseWidgetDay(date: CourseWidgetCalendar.dayKey(tomorrow), week: 5, sessions: Array(sessions.prefix(2))),
-            ]
+            days: days,
+            slotTimes: nil
         )
     }
 }

@@ -302,9 +302,11 @@ fun AuthenticatedAppShell(
     // 避免每次重组都让 WidgetKit 重新加载时间线。
     val widgetToday = homeworkState.now.date
     var lastWidgetDays by remember(session) { mutableStateOf<List<team.bjtuss.bjtuselfservice.shared.feature.widget.CourseWidgetDay>?>(null) }
-    LaunchedEffect(courseState.courses, homeScheduleEvents, courseState.homeAcademicWeeks, courseState.currentWeek, widgetToday) {
+    LaunchedEffect(courseState.courses, homeScheduleEvents, courseState.homeAcademicWeeks, courseState.currentWeek, widgetToday,
+        gradeState.courseTypesByCode) {
         if (courseState.courses.isEmpty() && homeScheduleEvents.isEmpty()) return@LaunchedEffect
         if (courseState.homeAcademicWeeks.isEmpty() && courseState.currentWeek <= 0) return@LaunchedEffect
+        val (widgetStart, widgetDayCount) = team.bjtuss.bjtuselfservice.shared.feature.widget.courseWidgetRange(widgetToday)
         val snapshot = team.bjtuss.bjtuselfservice.shared.feature.widget.buildCourseWidgetSnapshot(
             schedule = team.bjtuss.bjtuselfservice.shared.feature.home.HomeSchedulePresentation(
                 courses = courseState.courses,
@@ -313,8 +315,10 @@ fun AuthenticatedAppShell(
                 currentWeek = courseState.currentWeek,
                 today = widgetToday,
             ),
-            startDate = widgetToday,
+            startDate = widgetStart,
             generatedAtEpochSeconds = kotlin.time.Clock.System.now().epochSeconds,
+            dayCount = widgetDayCount,
+            courseTypesByCode = gradeState.courseTypesByCode,
         )
         if (snapshot.days == lastWidgetDays) return@LaunchedEffect
         lastWidgetDays = snapshot.days

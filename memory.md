@@ -9,6 +9,7 @@
 
 ## 已完成
 
+- 2026-10-13（未提交）iOS 小组件三项：①「今日课程」放不下时脚注改为分开统计——“之后还有 N 节 · 时间 课名”与“已上完 M 节”（原“还有 2 节”把已下课的也算进去，且没写出被挤掉的后续课）；②「临近课程」中号按 WakeUp 两栏样式重做（头部日期 + 右侧“第 N 周”，“当前 · 还剩…/接下来”，大字课名、地点、时间）；③新增大号「本周课表」周视图（新文件 `WeekCourseWidget.swift`，已登记 pbxproj）：按大节行（1/2/4/5 固定，午间/晚上有课才显示）、周一到周日列（周末无课且非今天隐藏），色块用课程表页按课程性质的底色+描边，冲突课并排，已下课变淡、进行中加粗描边。各处“第 N 周”改为加大加粗的数字胶囊（周视图左上角同样放大）。共享快照新增 `kind`（required/limited/elective/pe/unknown/lab，来自培养方案映射）与 `slotTimes`，快照改从本周一开始（往后仍 14 天）。Swift 只在 Linux 上静态编写；本地 Gradle 被 Maven Central 429 限流，单测与 iOS Debug IPA 交给分支 `feat/ios-widget-week-view` 的 PR 检查（kmp-security-check / kmp-package）。
 - 2026-10-13 云端签名排查：CI 在 IPA 压缩前为嵌套 framework、Widget、主 App 依次 ad-hoc 签名，保留两端 App Group Entitlements；新增 `sign-ios-sideload-app.sh` 校验实际可执行文件权限、签名结构及宿主/扩展版本。`kmp-package.yml` 新增 iOS 相关 PR 的 Debug IPA 构建，其他平台在 PR 打包流程跳过；正式标签仍用 Release，PR 不发 Release。静态检查已通过；Apple 签名/构建检查由 CI 执行，SideStore 安装后的共享权限仍待真机验证。应用版本保持 Build 33。
 - 版本改为 `1.8.4-Beta-SheetFix-Widget-fix2`（Build 33），推 `mine/main` 与标签 `debug-1.8.4-Beta-SheetFix-Widget-fix2`，仅 Actions 产物。
 - 小组件真机（SideStore「Keep App Extensions (Use Main Profile)」）显示“暂无课表”：SideStore 重签把 App Group 改名为 `原名.TeamID`（源码 `FetchProvisioningProfilesOperation.adjustedGroupIdentifier`），写死的原名打不开容器。App 与小组件改为从 `embedded.mobileprovision` 的 Entitlements 找“原名或原名.后缀”的组，再回退原名；小组件另分出“无法读取课表（App Group 未生效）”与“暂无课表（打开 App 同步）”。解析在本机真实描述文件与 iOS 单测（3 项）验证，真机待装 fix2 确认。
@@ -46,6 +47,7 @@
 
 ## 当前痛点
 
+- 本轮小组件改动（周视图、中号两栏、脚注）未经 Xcode 编译、未在模拟器浅/深色下查看；周视图在小屏 iPhone 上文字可能偏挤。
 - 小组件“正在上/还剩 N 分钟”状态只在代码层实现，未在上课时段实机观察；改版本号时须同时改 `iosApp/CourseScheduleWidget/Info.plist`。
 - 用户反馈 fix2 真机小组件显示“无法读取课表”；当前 CI 未签名包可能丢失 App Group 声明。新增打包 ad-hoc 签名与权限门禁后，仍需用 SideStore 保留扩展覆盖安装、打开 App 同步，再验证共享容器。
 - 小窗↔全屏来回切换未实测（adb 无法切换窗口模式）。
