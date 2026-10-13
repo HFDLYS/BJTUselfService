@@ -1,15 +1,14 @@
 # BJTUselfService 实时工作记忆
 
 > 最后更新：2026-10-13。
-> 当前分支：`fix/ios-widget-copy`（基于 `mine/main@f0c997f`，PR #11 与文档整理已合入）。
+> 当前分支：`main` = `mine/main`（PR #11 与文档整理 `f0c997f` 已推送）。本地与远端都只剩 `main`。
 > KMP 应用版本：`1.8.4-Beta3` / Build 35（macOS/Windows 安装包数值版本 1.8.4）。正式 Latest 仍为 `v1.8.3-KMP`。
 > 冻结原 Android：`v1.7.1` / versionCode 9（对照 `origin/main@7d94f74`）。
 > 已完成工作的细节见 `history_full.md` 末尾日志。
 
 ## 进行中
 
-- iOS 小组件文案（分支 `fix/ios-widget-copy`，PR 待合入）：①小号跨天头部有“明天/后天”时省掉日期，只留“明天 周三”；更远的日子写“10.16 周五”（修掉原来“周五 10.16 周五”重复）。②中号「临近课程」跨天时日期下方单开一行“今天已上完”，两栏标题改为“明天第一节/明天第二节”（后天、周几、下周几同理），只有一节时写“明天只有一节课”；这一模式下课名字号不变，标签/地点/时间改 footnote 并收紧间距。③「今日课程」中/大号跨天时日期下方同样加“今天已上完”行（与小号、中号同一 `DayStatusLine` 样式：caption2 + 勾选图标）；中号此时行距收紧、紧凑行少放一节。④状态行在下一个有课日不是明天时补“· 明天无课”/“· 之后 N 天无课”。⑤整周没课且明天也没课（`isRestPeriod`）时所有尺寸显示“非教学周 / Enjoy🎉”（今天在教学周内则“本周没有课 / Enjoy🎉”），头部保持今天，有下次课时小字“下次上课 下周一 08:00 …”；锁屏矩形/行内、周视图空周同一文案。Swift 无本地工具链，只交 PR CI（kmp-package iOS Debug IPA）编译；未在模拟器看过各尺寸实际排版。
-- 已合并但仍在本地/远端的分支：本地 `feat/category-colors-widget-links`，远端 `mine/` 下 PR #8～#11 的分支与 `claude/project-thread-a8br6t`；是否删除等用户决定。
+- 无。
 
 ## 当前痛点
 
@@ -36,6 +35,5 @@
 
 ## 接下来
 
-1. `fix/ios-widget-copy` 的 PR CI 通过后由用户合并；合入后把上面条目移入 `history_full.md`。
-2. 在真机已装的 Beta3（SideStore 保留扩展）上验证小组件共享容器与各尺寸显示。
-3. 准备 1.8.4 正式发布时：核对版本号清单（见 `AGENTS.md`）、写 `docs/releases/<tag>.md`，等待用户批准打标签。
+1. 在真机已装的 Beta3（SideStore 保留扩展）上验证小组件共享容器与各尺寸显示。
+2. 准备 1.8.4 正式发布时：核对版本号清单（见 `AGENTS.md`）、写 `docs/releases/<tag>.md`，等待用户批准打标签。
