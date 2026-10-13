@@ -14,6 +14,7 @@ on:
   pull_request:
     paths:
       - ".github/workflows/kmp-package.yml"
+      - "multiplatform/scripts/stage-actions-artifact.py"
       - "multiplatform/scripts/sign-ios-sideload-app.sh"
       - "multiplatform/iosApp/**"
   workflow_dispatch:
@@ -105,6 +106,7 @@ jobs:
           # Keep the signed APK contents intact; refresh only the output file mtime.
           touch "$NAME"
           echo "Packaged at $(date '+%Y-%m-%d %H:%M:%S %z') (Asia/Shanghai)"
+          python3 scripts/stage-actions-artifact.py "$NAME"
           echo "file=$NAME" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           ls -lh "$NAME"
@@ -113,7 +115,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kmp-android-apk
-          path: multiplatform/${{ steps.artifact.outputs.file }}
+          path: multiplatform/artifact-upload/${{ steps.artifact.outputs.file }}
           if-no-files-found: error
 
   windows:
@@ -185,6 +187,8 @@ jobs:
           # Store the real instant; the runner displays it in China Standard Time.
           (Get-Item $name).LastWriteTimeUtc = [DateTime]::UtcNow
           Write-Host "Packaged at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss zzz') (Asia/Shanghai)"
+          python scripts/stage-actions-artifact.py $name
+          if ($LASTEXITCODE -ne 0) { throw "Failed to stage MSI for Actions upload" }
           "file=$name" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           Get-Item $name | Format-List Name, Length, LastWriteTime
@@ -193,7 +197,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kmp-windows-msi
-          path: multiplatform/${{ steps.artifact.outputs.file }}
+          path: multiplatform/artifact-upload/${{ steps.artifact.outputs.file }}
           if-no-files-found: error
 
   macos:
@@ -241,6 +245,7 @@ jobs:
           cp "$DMG" "$NAME"
           touch "$NAME"
           echo "Packaged at $(date '+%Y-%m-%d %H:%M:%S %z') (Asia/Shanghai)"
+          python3 scripts/stage-actions-artifact.py "$NAME"
           echo "file=$NAME" >> "$GITHUB_OUTPUT"
           ls -lh "$NAME"
 
@@ -248,7 +253,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kmp-macos-dmg
-          path: multiplatform/${{ steps.artifact.outputs.file }}
+          path: multiplatform/artifact-upload/${{ steps.artifact.outputs.file }}
           if-no-files-found: error
 
   ios:
@@ -362,6 +367,7 @@ jobs:
           unzip -tq "$NAME"
           touch -t "$STAMP" "$NAME"
           echo "Packaged at $(date '+%Y-%m-%d %H:%M:%S %z') (Asia/Shanghai)"
+          python3 scripts/stage-actions-artifact.py "$NAME"
           echo "file=$NAME" >> "$GITHUB_OUTPUT"
           ls -lh "$NAME"
 
@@ -369,7 +375,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kmp-ios-ipa
-          path: multiplatform/${{ steps.artifact.outputs.file }}
+          path: multiplatform/artifact-upload/${{ steps.artifact.outputs.file }}
           if-no-files-found: error
 
   release:
