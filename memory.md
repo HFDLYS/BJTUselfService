@@ -9,6 +9,7 @@
 
 ## 已完成
 
+- 2026-10-13 云端签名排查：CI 在 IPA 压缩前为嵌套 framework、Widget、主 App 依次 ad-hoc 签名，保留两端 App Group Entitlements；新增 `sign-ios-sideload-app.sh` 校验实际可执行文件权限、签名结构及宿主/扩展版本。`kmp-package.yml` 新增 iOS 相关 PR 的 Debug IPA 构建，其他平台在 PR 打包流程跳过；正式标签仍用 Release，PR 不发 Release。静态检查已通过；Apple 签名/构建检查由 CI 执行，SideStore 安装后的共享权限仍待真机验证。应用版本保持 Build 33。
 - 版本改为 `1.8.4-Beta-SheetFix-Widget-fix2`（Build 33），推 `mine/main` 与标签 `debug-1.8.4-Beta-SheetFix-Widget-fix2`，仅 Actions 产物。
 - 小组件真机（SideStore「Keep App Extensions (Use Main Profile)」）显示“暂无课表”：SideStore 重签把 App Group 改名为 `原名.TeamID`（源码 `FetchProvisioningProfilesOperation.adjustedGroupIdentifier`），写死的原名打不开容器。App 与小组件改为从 `embedded.mobileprovision` 的 Entitlements 找“原名或原名.后缀”的组，再回退原名；小组件另分出“无法读取课表（App Group 未生效）”与“暂无课表（打开 App 同步）”。解析在本机真实描述文件与 iOS 单测（3 项）验证，真机待装 fix2 确认。
 - iOS「课表与周数」「筛选与计算」改为按内容定高（`fitContentHeight`），超出时由 sheet 滚动；Android/桌面仍全高。模拟器实测两者贴合内容，开关自选模式时平滑长高/缩回。
@@ -46,7 +47,7 @@
 ## 当前痛点
 
 - 小组件“正在上/还剩 N 分钟”状态只在代码层实现，未在上课时段实机观察；改版本号时须同时改 `iosApp/CourseScheduleWidget/Info.plist`。
-- 小组件 App Group 改名适配未在真机验证（需装 fix2，SideStore 保留扩展安装后打开一次 App）。
+- 用户反馈 fix2 真机小组件显示“无法读取课表”；当前 CI 未签名包可能丢失 App Group 声明。新增打包 ad-hoc 签名与权限门禁后，仍需用 SideStore 保留扩展覆盖安装、打开 App 同步，再验证共享容器。
 - 小窗↔全屏来回切换未实测（adb 无法切换窗口模式）。
 - Android 统一后的二维码弹窗（标题 + 关闭、可滚动正文）未在平板上看过。
 - 「保存并扫一扫」最新包未装到平板/iPhone：Android MediaStore 保存与去重、扫一扫后从相册识别进入小程序/缴费页，均待真机验证；iOS 每次保存会多一张（仅添加权限无法去重）。
