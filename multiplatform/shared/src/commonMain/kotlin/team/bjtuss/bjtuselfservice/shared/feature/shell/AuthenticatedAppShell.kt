@@ -211,6 +211,9 @@ import team.bjtuss.bjtuselfservice.shared.domain.home.HomeChangeRecord
  * 壳则为每个一级 Tab 建一个宿主；它们都会执行这个文件里的副作用，如果只判断
  * `forcedRouteId != null`，首页也会被排除，物理在线便只会在用户点进页面后才同步。
  */
+/** 同步期间课表、实验、校历、课程性质会接连到达，合并成一次小组件快照写入。 */
+internal const val COURSE_WIDGET_WRITE_DEBOUNCE_MILLIS = 1_500L
+
 internal fun shouldStartPhyVlabAutoSync(
     forcedRouteId: String?,
     nativeTabBarEnabled: Boolean,
@@ -300,29 +303,42 @@ fun AuthenticatedAppShell(
     }
     // iOS 课程小组件：课表、实验、校历或日期变化时重写快照；内容（不含生成时间）不变就不写，
     // 避免每次重组都让 WidgetKit 重新加载时间线。
+    // iOS 每个原生 Tab 都有一个壳宿主，只让主宿主写（否则同步期间每个宿主各算一遍、各写一遍、
+    // 各触发一次 WidgetKit 全量刷新）；同步时数据连续变化，先等一会儿合并成一次，计算放到后台线程。
     val widgetToday = homeworkState.now.date
     var lastWidgetDays by remember(session) { mutableStateOf<List<team.bjtuss.bjtuselfservice.shared.feature.widget.CourseWidgetDay>?>(null) }
     LaunchedEffect(courseState.courses, homeScheduleEvents, courseState.homeAcademicWeeks, courseState.currentWeek, widgetToday,
         gradeState.courseTypesByCode) {
+        if (!shouldStartPhyVlabAutoSync(forcedRouteId, nativeTabBarEnabled)) return@LaunchedEffect
         if (courseState.courses.isEmpty() && homeScheduleEvents.isEmpty()) return@LaunchedEffect
         if (courseState.homeAcademicWeeks.isEmpty() && courseState.currentWeek <= 0) return@LaunchedEffect
-        val (widgetStart, widgetDayCount) = team.bjtuss.bjtuselfservice.shared.feature.widget.courseWidgetRange(widgetToday)
-        val snapshot = team.bjtuss.bjtuselfservice.shared.feature.widget.buildCourseWidgetSnapshot(
-            schedule = team.bjtuss.bjtuselfservice.shared.feature.home.HomeSchedulePresentation(
-                courses = courseState.courses,
-                supplementalCourses = homeScheduleEvents,
-                academicWeeks = courseState.homeAcademicWeeks,
-                currentWeek = courseState.currentWeek,
-                today = widgetToday,
-            ),
-            startDate = widgetStart,
-            generatedAtEpochSeconds = kotlin.time.Clock.System.now().epochSeconds,
-            dayCount = widgetDayCount,
-            courseTypesByCode = gradeState.courseTypesByCode,
-        )
-        if (snapshot.days == lastWidgetDays) return@LaunchedEffect
-        lastWidgetDays = snapshot.days
-        team.bjtuss.bjtuselfservice.shared.feature.widget.writeCourseWidgetSnapshot(snapshot.encode())
+        delay(COURSE_WIDGET_WRITE_DEBOUNCE_MILLIS)
+        val courses = courseState.courses
+        val events = homeScheduleEvents
+        val weeks = courseState.homeAcademicWeeks
+        val currentWeek = courseState.currentWeek
+        val types = gradeState.courseTypesByCode
+        val previous = lastWidgetDays
+        val written = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            val (widgetStart, widgetDayCount) = team.bjtuss.bjtuselfservice.shared.feature.widget.courseWidgetRange(widgetToday)
+            val snapshot = team.bjtuss.bjtuselfservice.shared.feature.widget.buildCourseWidgetSnapshot(
+                schedule = team.bjtuss.bjtuselfservice.shared.feature.home.HomeSchedulePresentation(
+                    courses = courses,
+                    supplementalCourses = events,
+                    academicWeeks = weeks,
+                    currentWeek = currentWeek,
+                    today = widgetToday,
+                ),
+                startDate = widgetStart,
+                generatedAtEpochSeconds = kotlin.time.Clock.System.now().epochSeconds,
+                dayCount = widgetDayCount,
+                courseTypesByCode = types,
+            )
+            if (snapshot.days == previous) return@withContext null
+            team.bjtuss.bjtuselfservice.shared.feature.widget.writeCourseWidgetSnapshot(snapshot.encode())
+            snapshot.days
+        }
+        if (written != null) lastWidgetDays = written
     }
     val homeState by homeModel.state.collectAsState()
     val phyVlabEnabled = settingsState.preferences.isPhyVlabEnabled
@@ -560,32 +576,6 @@ fun AuthenticatedAppShell(
             onOpenNativeRoute(EXAM_DETAIL_ROUTE_ID)
         } else if (backStack.lastOrNull() != ExamDetailRoute) {
             backStack.add(ExamDetailRoute)
-        }
-    }
-    // 小组件点击：iOS 各 Tab 宿主共用会话模型，只让主宿主处理一次。
-    // 数据还在加载时先等着，课表/考试到位后再跳；找不到对应课程就退回课程表当天。
-    val pendingWidgetLink by team.bjtuss.bjtuselfservice.shared.feature.widget.WidgetLinkInbox.pending.collectAsState()
-    LaunchedEffect(pendingWidgetLink, courseState.courses, scheduleEvents, homeScheduleEvents, examState.exams,
-        courseState.isLoading, examState.isLoading) {
-        val link = pendingWidgetLink ?: return@LaunchedEffect
-        if (!shouldStartPhyVlabAutoSync(forcedRouteId, nativeTabBarEnabled)) return@LaunchedEffect
-        val inbox = team.bjtuss.bjtuselfservice.shared.feature.widget.WidgetLinkInbox
-        val target = resolveWidgetLink(link, courseState.courses + scheduleEvents + homeScheduleEvents, examState.exams)
-        if (target == null && (courseState.isLoading || examState.isLoading)) return@LaunchedEffect
-        inbox.consume(link)
-        when (target) {
-            is WidgetLinkTarget.Exam -> openExamDetail(target.examId)
-            is WidgetLinkTarget.Course -> {
-                navigateToSection(AppSection.SCHEDULE)
-                target.date?.let(courseScheduleModel::selectDate)
-                courseScheduleModel.showCourseDetails(target.courseId)
-            }
-            is WidgetLinkTarget.Schedule, null -> {
-                navigateToSection(AppSection.SCHEDULE)
-                ((target as? WidgetLinkTarget.Schedule)?.date
-                    ?: (link as? team.bjtuss.bjtuselfservice.shared.feature.widget.WidgetLink.Course)?.date)
-                    ?.let(courseScheduleModel::selectDate)
-            }
         }
     }
     suspend fun refreshAssignmentSource(source: AssignmentSource) {

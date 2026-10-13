@@ -104,7 +104,7 @@ class CourseWidgetSnapshotTest {
         assertTrue("\"slotTimes\":[\"08:00-09:50\"" in json)
     }
 
-    @Test fun colorsComeFromCategoryAndExamsAreIncludedWithLinks() {
+    @Test fun colorsComeFromCategoryAndExamsAreIncluded() {
         val exam = course("高等数学（考试）", 9).copy(id = -7, scheduleEventKind = "exam",
             scheduleEventDate = monday.toString(), scheduleEventTime = "14:00-16:00")
         val schedule = HomeSchedulePresentation(
@@ -120,16 +120,5 @@ class CourseWidgetSnapshotTest {
         assertEquals(0x16A4A4L, pe.color)
         assertEquals("exam", examSession.kind)
         assertEquals(CourseColorCategory.EXAM.tones.accent, examSession.color)
-        assertEquals("bjtuselfservice://widget/course?id=42&date=2026-10-12", pe.link)
-        assertEquals(WidgetLink.Course(-7, monday), WidgetLink.parse(examSession.link!!))
-    }
-
-    @Test fun widgetLinksRoundTripAndRejectForeignUrls() {
-        listOf(WidgetLink.Schedule(monday), WidgetLink.Schedule(null), WidgetLink.Course(5, null), WidgetLink.Course(-3, monday))
-            .forEach { assertEquals(it, WidgetLink.parse(it.toUrl())) }
-        assertNull(WidgetLink.parse("https://example.com/widget/course?id=1"))
-        assertNull(WidgetLink.parse("bjtuselfservice://widget/course?id=abc"))
-        assertNull(WidgetLink.parse("bjtuselfservice://widget/unknown"))
-        assertTrue(!WidgetLinkInbox.offer("weixin://scanqrcode"))
     }
 }

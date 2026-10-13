@@ -34,7 +34,6 @@ struct WeekWidgetView: View {
                 WeekGrid(layout: WeekLayout(model: model), now: model.now)
             }
             .padding(EdgeInsets(top: 14, leading: 8, bottom: 10, trailing: 12))
-            .widgetURL(CourseWidgetLinks.schedule(model.now))
         }
     }
 }
@@ -157,9 +156,7 @@ private struct WeekGrid: View {
                 ForEach(layout.blocks) { block in
                     let laneWidth = (columnWidth - gap * CGFloat(block.laneCount - 1)) / CGFloat(block.laneCount)
                     let rows = CGFloat(block.lastRow - block.firstRow + 1)
-                    CourseLink(occurrence: block.occurrence) {
-                        WeekCourseCell(occurrence: block.occurrence, now: now, narrow: block.laneCount > 1)
-                    }
+                    WeekCourseCell(occurrence: block.occurrence, now: now, narrow: block.laneCount > 1)
                         .frame(width: laneWidth, height: rows * rowHeight + (rows - 1) * gap)
                         .offset(
                             x: axisWidth + gap + CGFloat(block.column) * (columnWidth + gap) + CGFloat(block.lane) * (laneWidth + gap),

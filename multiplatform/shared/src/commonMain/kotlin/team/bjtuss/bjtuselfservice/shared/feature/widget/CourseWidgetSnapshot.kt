@@ -67,8 +67,6 @@ data class CourseWidgetSession(
      * 培养方案还没同步时普通课程为 unknown。
      */
     val kind: String = CourseColorCategory.UNKNOWN.widgetKind,
-    /** 点击这节课打开的应用内链接（见 WidgetLink）；旧快照没有。 */
-    val link: String? = null,
 )
 
 /** 默认展开两周：周末/假期前后打开一次 App，小组件也能撑到下周。 */
@@ -92,7 +90,7 @@ internal fun buildCourseWidgetSnapshot(
         val date = startDate.plus(offset, DateTimeUnit.DAY)
         val events = homePhysicsLabsOnDate(schedule, date) + homeExamsOnDate(schedule, date)
         val sessions = (homeCoursesOnDate(schedule, date) + events).mapNotNull { course ->
-            course.toWidgetSession(date, courseColorCategory(course, courseTypesByCode))
+            course.toWidgetSession(courseColorCategory(course, courseTypesByCode))
         }
         CourseWidgetDay(
             date = date.toString(),
@@ -111,7 +109,7 @@ private fun homeExamsOnDate(schedule: HomeSchedulePresentation, date: LocalDate)
     schedule.supplementalCourses.filter { it.scheduleEventKind == "exam" && date.toString() in it.eventDates }
         .distinctBy(Course::id)
 
-private fun Course.toWidgetSession(date: LocalDate, category: CourseColorCategory): CourseWidgetSession? {
+private fun Course.toWidgetSession(category: CourseColorCategory): CourseWidgetSession? {
     val isEvent = scheduleEventKind != null
     val range = if (isEvent) scheduleEventTime?.trim().orEmpty() else SLOT_TIME_RANGES.getOrNull(courseLocationIndex / 8).orEmpty()
     val (start, end) = parseHmRange(range) ?: return null
@@ -124,7 +122,6 @@ private fun Course.toWidgetSession(date: LocalDate, category: CourseColorCategor
         isLab = category == CourseColorCategory.LAB,
         color = category.tones.accent,
         kind = category.widgetKind,
-        link = WidgetLink.Course(id, date).toUrl(),
     )
 }
 

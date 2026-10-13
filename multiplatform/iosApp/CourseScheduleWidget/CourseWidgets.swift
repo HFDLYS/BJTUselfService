@@ -37,16 +37,12 @@ struct UpNextWidgetView: View {
         case .stale:
             WidgetMessage(title: "课表需要更新", detail: "打开 App 刷新课表", compact: family.isAccessory)
         case .ready(let model):
-            Group {
-                switch family {
-                case .accessoryInline: UpNextInline(model: model)
-                case .accessoryRectangular: UpNextRectangular(model: model)
-                case .systemMedium: UpNextMedium(model: model)
-                default: UpNextSmall(model: model)
-                }
+            switch family {
+            case .accessoryInline: UpNextInline(model: model)
+            case .accessoryRectangular: UpNextRectangular(model: model)
+            case .systemMedium: UpNextMedium(model: model)
+            default: UpNextSmall(model: model)
             }
-            // 小号与锁屏只有一个点击区：打开主课程详情；中号两栏各自再包 Link。
-            .widgetURL(model.upNext.map { CourseWidgetLinks.course($0.primary) } ?? CourseWidgetLinks.schedule(model.now))
         }
     }
 }
@@ -85,14 +81,10 @@ private struct UpNextMedium: View {
             UpNextHeader(model: model)
             if let upNext = model.upNext {
                 HStack(alignment: .top, spacing: 14) {
-                    CourseLink(occurrence: upNext.primary) {
-                        column(title: primaryTitle(upNext), occurrence: upNext.primary)
-                    }
+                    column(title: primaryTitle(upNext), occurrence: upNext.primary)
                     Divider()
                     if let secondary = upNext.secondary {
-                        CourseLink(occurrence: secondary) {
-                            column(title: Text("接下来"), occurrence: secondary)
-                        }
+                        column(title: Text("接下来"), occurrence: secondary)
                     } else {
                         VStack(alignment: .leading, spacing: 8) {
                             ColumnLabel(text: Text("接下来"))
@@ -291,12 +283,10 @@ struct TodayWidgetView: View {
                         .frame(maxWidth: .infinity)
                 }
                 ForEach(visible) { occurrence in
-                    CourseLink(occurrence: occurrence) {
-                        if compact {
-                            CompactTodayRow(occurrence: occurrence, now: model.now)
-                        } else {
-                            TodayRow(occurrence: occurrence, now: model.now, roomy: family == .systemLarge)
-                        }
+                    if compact {
+                        CompactTodayRow(occurrence: occurrence, now: model.now)
+                    } else {
+                        TodayRow(occurrence: occurrence, now: model.now, roomy: family == .systemLarge)
                     }
                 }
                 if !hiddenUpcoming.isEmpty || hiddenFinished > 0 {
@@ -310,8 +300,6 @@ struct TodayWidgetView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        // 点空白处打开课程表对应日期。
-        .widgetURL(CourseWidgetLinks.schedule(plan.date))
     }
 }
 
@@ -422,7 +410,6 @@ private struct NextDayPreview: View {
             }
             .foregroundStyle(.secondary)
             ForEach(rows) { occurrence in
-                CourseLink(occurrence: occurrence) {
                 HStack(spacing: 6) {
                     RoundedRectangle(cornerRadius: 1.5)
                         .fill(Color(hex: occurrence.session.color).opacity(0.7))
@@ -443,23 +430,7 @@ private struct NextDayPreview: View {
                 }
                 .foregroundStyle(.secondary)
                 .padding(.leading, 6)
-                }
             }
-        }
-    }
-}
-
-/// 点一节课打开它的详情（课程表 sheet / 考试详情）；中号、大号才支持多个点击区。
-struct CourseLink<Content: View>: View {
-    let occurrence: CourseOccurrence
-    @ViewBuilder let content: () -> Content
-
-    var body: some View {
-        if let url = CourseWidgetLinks.course(occurrence) {
-            Link(destination: url) { content() }
-                .foregroundStyle(.primary)
-        } else {
-            content()
         }
     }
 }

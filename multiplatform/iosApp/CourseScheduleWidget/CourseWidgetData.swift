@@ -31,8 +31,6 @@ struct CourseWidgetSession: Codable, Hashable {
     let color: Int64
     /// 课程类别：required/limited/elective/pe/unknown/lab/exam；旧快照没有这个字段。
     let kind: String?
-    /// 点击这节课打开的应用内链接；旧快照没有。
-    let link: String?
 }
 
 enum CourseWidgetStore {
@@ -271,20 +269,6 @@ enum CourseWidgetCalendar {
     }
 }
 
-// MARK: - 点击跳转
-
-/// 与 shared 的 WidgetLink 同一格式：bjtuselfservice://widget/…
-enum CourseWidgetLinks {
-    static func schedule(_ date: Date) -> URL? {
-        URL(string: "bjtuselfservice://widget/schedule?date=\(CourseWidgetCalendar.dayKey(date))")
-    }
-
-    /// 这节课的详情；旧快照没有链接时退回课程表当天。
-    static func course(_ occurrence: CourseOccurrence) -> URL? {
-        occurrence.session.link.flatMap(URL.init(string:)) ?? schedule(occurrence.start)
-    }
-}
-
 // MARK: - 时间线
 
 struct CourseWidgetEntry: TimelineEntry {
@@ -332,7 +316,7 @@ extension CourseWidgetSnapshot {
         let today = calendar.startOfDay(for: .now)
         func session(_ name: String, _ place: String, _ teacher: String, _ start: Int, _ end: Int, _ color: Int64, _ kind: String) -> CourseWidgetSession {
             CourseWidgetSession(name: name, place: place, teacher: teacher, startMinute: start, endMinute: end,
-                                isLab: kind == "lab", color: color, kind: kind, link: nil)
+                                isLab: kind == "lab", color: color, kind: kind)
         }
         let math = session("高等数学", "思源楼 101", "张老师", 8 * 60, 9 * 60 + 50, 0xD9574E, "required")
         let data = session("数据结构", "逸夫楼 302", "李老师", 10 * 60 + 10, 12 * 60, 0xD9574E, "required")
