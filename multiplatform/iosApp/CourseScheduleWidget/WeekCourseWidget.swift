@@ -31,7 +31,7 @@ struct WeekWidgetView: View {
             VStack(spacing: 6) {
                 WidgetHeader(plan: model.today)
                     .padding(.leading, 6)
-                WeekGrid(layout: WeekLayout(model: model), now: model.now)
+                WeekGrid(layout: WeekLayout(model: model), now: model.now, emptyTitle: restTitle(model))
             }
             .padding(EdgeInsets(top: 14, leading: 8, bottom: 10, trailing: 12))
         }
@@ -118,6 +118,8 @@ struct WeekLayout {
 private struct WeekGrid: View {
     let layout: WeekLayout
     let now: Date
+    /// 整周没课时网格中央的标题。
+    var emptyTitle = "本周没有课"
 
     private let axisWidth: CGFloat = 30
     private let headerHeight: CGFloat = 30
@@ -165,11 +167,13 @@ private struct WeekGrid: View {
                 }
 
                 if layout.blocks.isEmpty {
-                    Text("本周没有课")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .padding(.leading, axisWidth)
+                    // 与临近课程/今日课程的休息提示同一文案：“非教学周 / Enjoy🎉”。
+                    VStack(spacing: 4) {
+                        Text(emptyTitle).font(.title3.weight(.semibold))
+                        Text("Enjoy🎉").font(.headline).foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.leading, axisWidth)
                 }
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)
