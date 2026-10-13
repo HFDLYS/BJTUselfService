@@ -34,6 +34,7 @@ struct WeekWidgetView: View {
                 WeekGrid(layout: WeekLayout(model: model), now: model.now)
             }
             .padding(EdgeInsets(top: 14, leading: 8, bottom: 10, trailing: 12))
+            .widgetURL(CourseWidgetLinks.schedule(model.now))
         }
     }
 }
@@ -156,7 +157,9 @@ private struct WeekGrid: View {
                 ForEach(layout.blocks) { block in
                     let laneWidth = (columnWidth - gap * CGFloat(block.laneCount - 1)) / CGFloat(block.laneCount)
                     let rows = CGFloat(block.lastRow - block.firstRow + 1)
-                    WeekCourseCell(occurrence: block.occurrence, now: now, narrow: block.laneCount > 1)
+                    CourseLink(occurrence: block.occurrence) {
+                        WeekCourseCell(occurrence: block.occurrence, now: now, narrow: block.laneCount > 1)
+                    }
                         .frame(width: laneWidth, height: rows * rowHeight + (rows - 1) * gap)
                         .offset(
                             x: axisWidth + gap + CGFloat(block.column) * (columnWidth + gap) + CGFloat(block.lane) * (laneWidth + gap),
@@ -266,7 +269,7 @@ private struct WeekCourseCell: View {
     }
 }
 
-/// 与 shared 的 courseTypeColors / courseScheduleTypeColors / scheduleEventColors 保持一致。
+/// 与 shared 的 CourseCategoryPalette（课程表色块底色/文字色）保持一致。
 struct ScheduleKindColors {
     let container: Color
     let content: Color
@@ -278,8 +281,9 @@ struct ScheduleKindColors {
         case "required": ((0xF6D2D0, 0x7D1F1A), (0x4A1F1D, 0xF2B9B4))
         case "limited": ((0xF4D7E6, 0x9C3F70), (0x48243A, 0xF0B2D2))
         case "elective": ((0xDCE4FC, 0x2F4DB5), (0x223065, 0xC3CDFA))
-        case "pe": ((0xD8EFDD, 0x236B34), (0x1E3D28, 0xA9DDB8))
+        case "pe": ((0xD3F0EE, 0x0E6B69), (0x163B3B, 0x9EDDD9))
         case "lab": ((0xEADBFA, 0x64368E), (0x3B2858, 0xDEC6F6))
+        case "exam": ((0xFFE6C8, 0xAF641C), (0x3D2A12, 0xEAA04B))
         default: ((0xE7E7E9, 0x5F6368), (0x333438, 0xC6C7CB))
         }
         let (container, content) = dark ? pair.1 : pair.0

@@ -1187,11 +1187,15 @@ private fun courseAgendaMarkColor(): Color =
 /** 紫色实验标记与课程蓝、作业红绿和考试橙保持清楚区分。 */
 @Composable
 private fun labAgendaMarkColor(): Color =
-    if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFFDEC6F6) else Color(0xFF64368E)
+    team.bjtuss.bjtuselfservice.shared.feature.course.courseCategoryColors(
+        team.bjtuss.bjtuselfservice.shared.feature.course.CourseColorCategory.LAB,
+    ).onContainer
 
 @Composable
 private fun examAgendaMarkColor(): Color =
-    if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color(0xFFEAA04B) else Color(0xFFAF641C)
+    team.bjtuss.bjtuselfservice.shared.feature.course.courseCategoryColors(
+        team.bjtuss.bjtuselfservice.shared.feature.course.CourseColorCategory.EXAM,
+    ).onContainer
 
 /** 待提交作业用红色，与已提交的深绿区分。 */
 @Composable
@@ -1411,6 +1415,11 @@ private fun AgendaDayDetails(
                 val time = team.bjtuss.bjtuselfservice.shared.domain.classroomoccupancy.SLOT_TIME_RANGES.getOrNull(period).orEmpty()
                 AgendaEventRow(
                     type = "课程",
+                    markColor = team.bjtuss.bjtuselfservice.shared.feature.course.courseCategoryAccent(
+                        team.bjtuss.bjtuselfservice.shared.feature.course.courseColorCategory(
+                            course, LocalHomeSchedule.current.courseTypesByCode,
+                        ),
+                    ),
                     title = course.displayTitleWithTeacher(),
                     detail = listOf(time, team.bjtuss.bjtuselfservice.shared.domain.course.displayCoursePlace(course.coursePlace)).filter(String::isNotBlank).joinToString(" · "),
                     onClick = { selectedCourse = course },
@@ -1440,8 +1449,10 @@ private fun AgendaEventRow(
     onClick: () -> Unit,
     canNavigate: () -> Boolean,
     done: Boolean = false,
+    /** 课程行图标的类别色；为空时用分类默认色。 */
+    markColor: Color? = null,
 ) {
-    val typeColor = when {
+    val typeColor = markColor ?: when {
         type == "课程" -> courseAgendaMarkColor()
         type == "考试" -> examAgendaMarkColor()
         type == "实验" -> labAgendaMarkColor()

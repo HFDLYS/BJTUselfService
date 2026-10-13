@@ -21,6 +21,25 @@ class HomeSyncStatusTest {
         assertEquals("正在读取作业折扣与截止时间", item(true).detail)
     }
 
+    @Test fun physicsItemsSitTogetherAndAllNeedCampusNetwork() {
+        val items = buildHomeSyncItems(
+            isLoggingIn = false, homeBusy = false, homeFailed = false, homeReady = true,
+            gradeBusy = false, gradeFailed = false, gradeReady = true,
+            homeworkBusy = false, homeworkFailed = false, homeworkReady = true,
+            examBusy = false, examFailed = false, examReady = true,
+            courseBusy = false, courseFailed = false, courseReady = true,
+            phyVlabEnabled = true, phyVlabBusy = true, phyVlabFailed = false, phyVlabReady = false,
+            physicsLabEnabled = true, physicsLabBusy = true,
+            physicsDemoEnabled = true, physicsDemoBusy = true,
+            citelEnabled = true,
+        )
+        val titles = items.map { it.title }
+        val physics = listOf("物理实验", "演示实验", "物理在线")
+        val start = titles.indexOf("物理实验")
+        assertEquals(physics, titles.subList(start, start + 3))
+        assertTrue(items.filter { it.title in physics }.all { "需要校园网" in it.detail })
+    }
+
     @Test
     fun loginTakesPriorityOverSyncInDialogTitle() {
         assertEquals(

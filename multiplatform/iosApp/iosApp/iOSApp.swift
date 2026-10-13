@@ -1,3 +1,4 @@
+import BJTUShared
 import SwiftUI
 import WidgetKit
 
@@ -18,6 +19,10 @@ struct iOSApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                // 小组件点击：链接交给共享层，登录后的壳层跳到对应课程/考试详情。
+                .onOpenURL { url in
+                    _ = WidgetLinkInbox.shared.offer(url: url.absoluteString)
+                }
         }
     }
 }

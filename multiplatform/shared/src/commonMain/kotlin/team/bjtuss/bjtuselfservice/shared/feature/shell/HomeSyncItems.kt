@@ -294,10 +294,7 @@ internal fun buildHomeSyncItems(
         add(homeSyncItem("演示实验", physicsDemoBusy, physicsDemoFailed, physicsDemoReady,
             busyDetail = "正在读取已预约演示实验（需要校园网）"))
     }
-    if (citelEnabled) {
-        add(homeSyncItem("CITEL 作业", citelBusy, citelFailed, citelReady,
-            busyDetail = "正在读取作业折扣与截止时间"))
-    }
+    // 物理相关的三项（都需要校园网）排在一起。
     if (phyVlabEnabled) {
         add(
             homeSyncItem(
@@ -305,9 +302,13 @@ internal fun buildHomeSyncItems(
                 busy = phyVlabBusy,
                 failed = phyVlabFailed,
                 ready = phyVlabReady,
-                busyDetail = "正在同步物理在线安排",
+                busyDetail = "正在同步物理在线安排（需要校园网）",
             ),
         )
+    }
+    if (citelEnabled) {
+        add(homeSyncItem("CITEL 作业", citelBusy, citelFailed, citelReady,
+            busyDetail = "正在读取作业折扣与截止时间"))
     }
 }
 

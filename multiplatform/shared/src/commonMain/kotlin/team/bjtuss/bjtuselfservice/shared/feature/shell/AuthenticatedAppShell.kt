@@ -554,6 +554,40 @@ fun AuthenticatedAppShell(
             }
         }
     }
+    fun openExamDetail(examId: Int) {
+        examScheduleModel.showExamDetails(examId)
+        if (useNativeSecondaryRoutes) {
+            onOpenNativeRoute(EXAM_DETAIL_ROUTE_ID)
+        } else if (backStack.lastOrNull() != ExamDetailRoute) {
+            backStack.add(ExamDetailRoute)
+        }
+    }
+    // 小组件点击：iOS 各 Tab 宿主共用会话模型，只让主宿主处理一次。
+    // 数据还在加载时先等着，课表/考试到位后再跳；找不到对应课程就退回课程表当天。
+    val pendingWidgetLink by team.bjtuss.bjtuselfservice.shared.feature.widget.WidgetLinkInbox.pending.collectAsState()
+    LaunchedEffect(pendingWidgetLink, courseState.courses, scheduleEvents, homeScheduleEvents, examState.exams,
+        courseState.isLoading, examState.isLoading) {
+        val link = pendingWidgetLink ?: return@LaunchedEffect
+        if (!shouldStartPhyVlabAutoSync(forcedRouteId, nativeTabBarEnabled)) return@LaunchedEffect
+        val inbox = team.bjtuss.bjtuselfservice.shared.feature.widget.WidgetLinkInbox
+        val target = resolveWidgetLink(link, courseState.courses + scheduleEvents + homeScheduleEvents, examState.exams)
+        if (target == null && (courseState.isLoading || examState.isLoading)) return@LaunchedEffect
+        inbox.consume(link)
+        when (target) {
+            is WidgetLinkTarget.Exam -> openExamDetail(target.examId)
+            is WidgetLinkTarget.Course -> {
+                navigateToSection(AppSection.SCHEDULE)
+                target.date?.let(courseScheduleModel::selectDate)
+                courseScheduleModel.showCourseDetails(target.courseId)
+            }
+            is WidgetLinkTarget.Schedule, null -> {
+                navigateToSection(AppSection.SCHEDULE)
+                ((target as? WidgetLinkTarget.Schedule)?.date
+                    ?: (link as? team.bjtuss.bjtuselfservice.shared.feature.widget.WidgetLink.Course)?.date)
+                    ?.let(courseScheduleModel::selectDate)
+            }
+        }
+    }
     suspend fun refreshAssignmentSource(source: AssignmentSource) {
         when (source) {
             AssignmentSource.COURSE_PLATFORM -> SessionRefreshCoordinator(reauthenticate = reauthenticateSession,
@@ -1416,6 +1450,7 @@ fun AuthenticatedAppShell(
                             currentWeek = courseState.currentWeek,
                             today = homeworkState.now.date,
                             onOpenSchedule = { navigateToSection(AppSection.SCHEDULE) },
+                            courseTypesByCode = gradeState.courseTypesByCode,
                         ),
                 ) {
                     HomeWorkspace(
@@ -1450,14 +1485,7 @@ fun AuthenticatedAppShell(
                                 backStack.add(HomeworkDetailRoute)
                             }
                         },
-                        onOpenExams = { exam ->
-                            examScheduleModel.showExamDetails(exam.id)
-                            if (useNativeSecondaryRoutes) {
-                                onOpenNativeRoute(EXAM_DETAIL_ROUTE_ID)
-                            } else if (backStack.lastOrNull() != ExamDetailRoute) {
-                                backStack.add(ExamDetailRoute)
-                            }
-                        },
+                        onOpenExams = { exam -> openExamDetail(exam.id) },
                         onOpenPhyVlab = { event ->
                             if (event.id.startsWith("citel-")) {
                                 // 与作业/考试一致：直接进入该 CITEL 作业的二级详情页。

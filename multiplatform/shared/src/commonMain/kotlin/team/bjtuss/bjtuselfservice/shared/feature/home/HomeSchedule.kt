@@ -19,6 +19,8 @@ internal data class HomeSchedulePresentation(
     val today: LocalDate = LocalDate(2000, 1, 1),
     val supplementalCourses: List<Course> = emptyList(),
     val onOpenSchedule: () -> Unit = {},
+    /** 培养方案课程性质，决定课程配色；未同步时为 null，课程按“未知”着色。 */
+    val courseTypesByCode: Map<String, team.bjtuss.bjtuselfservice.shared.domain.grade.CourseType>? = null,
 )
 
 internal val LocalHomeSchedule = staticCompositionLocalOf { HomeSchedulePresentation() }

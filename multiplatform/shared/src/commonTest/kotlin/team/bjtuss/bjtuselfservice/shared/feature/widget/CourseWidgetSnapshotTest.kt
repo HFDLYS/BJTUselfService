@@ -9,6 +9,8 @@ import kotlin.test.assertTrue
 import team.bjtuss.bjtuselfservice.shared.domain.classroomoccupancy.OccupancyWeekDate
 import team.bjtuss.bjtuselfservice.shared.domain.course.Course
 import team.bjtuss.bjtuselfservice.shared.domain.grade.CourseType
+import team.bjtuss.bjtuselfservice.shared.feature.course.CourseColorCategory
+import team.bjtuss.bjtuselfservice.shared.feature.course.tones
 import team.bjtuss.bjtuselfservice.shared.feature.home.HomeSchedulePresentation
 
 class CourseWidgetSnapshotTest {
@@ -62,7 +64,6 @@ class CourseWidgetSnapshotTest {
         assertEquals("网络课", compactWidgetPlace("-,网络课"))
         assertEquals("网络课", compactWidgetPlace("海淀西校区,-,网络课"))
         assertEquals("主校区综合体育馆（篮排球馆）", compactWidgetPlace("主校区,新综合体育馆,主校区综合体育馆（篮排球馆）"))
-        assertEquals(courseWidgetColor("A"), courseWidgetColor("A"))
     }
 
     @Test fun encodesStableJsonWithoutAccountData() {
@@ -101,5 +102,34 @@ class CourseWidgetSnapshotTest {
         val schedule = HomeSchedulePresentation(courses = emptyList(), academicWeeks = weeks, today = monday)
         val json = buildCourseWidgetSnapshot(schedule, monday, 1L, dayCount = 1).encode()
         assertTrue("\"slotTimes\":[\"08:00-09:50\"" in json)
+    }
+
+    @Test fun colorsComeFromCategoryAndExamsAreIncludedWithLinks() {
+        val exam = course("高等数学（考试）", 9).copy(id = -7, scheduleEventKind = "exam",
+            scheduleEventDate = monday.toString(), scheduleEventTime = "14:00-16:00")
+        val schedule = HomeSchedulePresentation(
+            courses = listOf(course("M2002002", 1).copy(id = 42)),
+            supplementalCourses = listOf(exam, exam.copy(courseLocationIndex = 17)),
+            academicWeeks = weeks, today = monday,
+        )
+        val sessions = buildCourseWidgetSnapshot(schedule, monday, 1L, dayCount = 1,
+            courseTypesByCode = mapOf("M2002002" to CourseType.PHYSICAL_EDUCATION)).days.single().sessions
+        assertEquals(listOf("M2002002", "高等数学（考试）"), sessions.map { it.name })
+        val (pe, examSession) = sessions
+        assertEquals(CourseColorCategory.PHYSICAL_EDUCATION.tones.accent, pe.color)
+        assertEquals(0x16A4A4L, pe.color)
+        assertEquals("exam", examSession.kind)
+        assertEquals(CourseColorCategory.EXAM.tones.accent, examSession.color)
+        assertEquals("bjtuselfservice://widget/course?id=42&date=2026-10-12", pe.link)
+        assertEquals(WidgetLink.Course(-7, monday), WidgetLink.parse(examSession.link!!))
+    }
+
+    @Test fun widgetLinksRoundTripAndRejectForeignUrls() {
+        listOf(WidgetLink.Schedule(monday), WidgetLink.Schedule(null), WidgetLink.Course(5, null), WidgetLink.Course(-3, monday))
+            .forEach { assertEquals(it, WidgetLink.parse(it.toUrl())) }
+        assertNull(WidgetLink.parse("https://example.com/widget/course?id=1"))
+        assertNull(WidgetLink.parse("bjtuselfservice://widget/course?id=abc"))
+        assertNull(WidgetLink.parse("bjtuselfservice://widget/unknown"))
+        assertTrue(!WidgetLinkInbox.offer("weixin://scanqrcode"))
     }
 }

@@ -73,7 +73,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import team.bjtuss.bjtuselfservice.shared.domain.course.displayScheduleCourseName
 import team.bjtuss.bjtuselfservice.shared.domain.course.displayTitleWithTeacher
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -1894,34 +1893,12 @@ private fun CourseEmptyState(type: CourseScheduleType, onRefresh: () -> Unit) = 
 )
 
 @Composable
-private fun scheduleEventColors(kind: String): team.bjtuss.bjtuselfservice.shared.feature.grade.GradeTypeColors {
-    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    return if (kind == "physicslab" || kind == "phydemo") {
-        if (dark) team.bjtuss.bjtuselfservice.shared.feature.grade.GradeTypeColors(Color(0xFF3B2858), Color(0xFFDEC6F6))
-        else team.bjtuss.bjtuselfservice.shared.feature.grade.GradeTypeColors(Color(0xFFEADBFA), Color(0xFF64368E))
-    } else {
-        if (dark) team.bjtuss.bjtuselfservice.shared.feature.grade.GradeTypeColors(Color(0xFF3D2A12), Color(0xFFEAA04B))
-        else team.bjtuss.bjtuselfservice.shared.feature.grade.GradeTypeColors(Color(0xFFFFE6C8), Color(0xFFAF641C))
-    }
-}
+private fun scheduleEventColors(kind: String): team.bjtuss.bjtuselfservice.shared.feature.grade.GradeTypeColors =
+    courseCategoryColors(if (kind == "physicslab" || kind == "phydemo") CourseColorCategory.LAB else CourseColorCategory.EXAM)
 
 @Composable
-private fun courseScheduleTypeColors(type: CourseType): team.bjtuss.bjtuselfservice.shared.feature.grade.GradeTypeColors {
-    if (type != CourseType.LIMITED) return courseTypeColors(type)
-
-    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    return if (dark) {
-        team.bjtuss.bjtuselfservice.shared.feature.grade.GradeTypeColors(
-            container = Color(0xFF48243A),
-            onContainer = Color(0xFFF0B2D2),
-        )
-    } else {
-        team.bjtuss.bjtuselfservice.shared.feature.grade.GradeTypeColors(
-            container = Color(0xFFF4D7E6),
-            onContainer = Color(0xFF9C3F70),
-        )
-    }
-}
+private fun courseScheduleTypeColors(type: CourseType): team.bjtuss.bjtuselfservice.shared.feature.grade.GradeTypeColors =
+    courseCategoryColors(type.colorCategory())
 
 @Composable
 private fun scheduleCourseColors(course: Course, type: CourseType) =
