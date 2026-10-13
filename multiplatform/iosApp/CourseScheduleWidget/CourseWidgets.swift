@@ -14,7 +14,7 @@ struct CourseWidgetBundle: WidgetBundle {
 
 struct UpNextCourseWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "UpNextCourseWidget", provider: CourseWidgetProvider()) { entry in
+        StaticConfiguration(kind: "UpNextCourseWidget", provider: CourseWidgetProvider(minuteTicks: true)) { entry in
             UpNextWidgetView(entry: entry)
                 .containerBackground(for: .widget) { WidgetPalette.background }
         }
@@ -110,7 +110,7 @@ private struct UpNextMedium: View {
             return Text(model.today.occurrences.isEmpty ? "今天没有课 · 第一节" : "今天已上完 · 第一节")
         }
         if upNext.primary.isOngoing(at: model.now) {
-            return Text("当前 · 还剩 ") + Text(upNext.primary.end, style: .relative)
+            return Text("当前 · 还剩 \(remainingText(until: upNext.primary.end, now: model.now))")
         }
         return Text("下一节")
     }
@@ -126,7 +126,6 @@ private struct UpNextMedium: View {
                     Text(occurrence.session.name)
                         .font(.title3.weight(.bold))
                         .lineLimit(1)
-                        .minimumScaleFactor(0.8)
                     let detail = occurrence.session.place.isEmpty ? occurrence.session.teacher : occurrence.session.place
                     if !detail.isEmpty {
                         Text(detail)
@@ -227,26 +226,46 @@ struct TodayWidgetView: View {
         }
     }
 
+    /// 普通两行式卡片能放几节；还没上的课比这多时改用单行紧凑行，能放下更多。
     private var capacity: Int { family == .systemLarge ? 6 : 2 }
+    private var compactCapacity: Int { family == .systemLarge ? 10 : 4 }
 
     @ViewBuilder
     private func content(_ model: CourseWidgetModel) -> some View {
         // 今天的课都上完了：直接看下一个有课的日子，比一列灰掉的课更有用。
         let showsNextDay = model.remainingToday.isEmpty && model.nextDay != nil
         let plan = showsNextDay ? model.nextDay! : model.today
+        let firstActive = showsNextDay ? 0 : (plan.occurrences.firstIndex { !$0.isFinished(at: model.now) } ?? plan.occurrences.count)
+        let pending = plan.occurrences.count - firstActive
+        let compact = pending > capacity
+        let limit = compact ? compactCapacity : capacity
+        // 中号只看还没上的课，上完的在脚注右侧计数；大号保留上完的课（变灰）。
         // 空间不够时先丢掉已经下课的，保证正在上和接下来的课可见。
         let visible: [CourseOccurrence] = {
-            if showsNextDay || plan.occurrences.count <= capacity { return Array(plan.occurrences.prefix(capacity)) }
-            let firstActive = plan.occurrences.firstIndex { !$0.isFinished(at: model.now) } ?? plan.occurrences.count
-            let start = max(0, min(firstActive, plan.occurrences.count - capacity))
-            return Array(plan.occurrences[start..<min(start + capacity, plan.occurrences.count)])
+            if family != .systemLarge {
+                return Array(plan.occurrences[firstActive...].prefix(limit))
+            }
+            if plan.occurrences.count <= limit { return plan.occurrences }
+            let start = max(0, min(firstActive, plan.occurrences.count - limit))
+            return Array(plan.occurrences[start..<min(start + limit, plan.occurrences.count)])
         }()
         // 被挤掉的课分两类：已经下课的（不重要）和还没上的（必须提示）。
         let visibleIDs = Set(visible.map(\.id))
         let hiddenUpcoming = plan.occurrences.filter { !visibleIDs.contains($0.id) && !$0.isFinished(at: model.now) }
         let hiddenFinished = plan.occurrences.filter { !visibleIDs.contains($0.id) && $0.isFinished(at: model.now) }.count
+        // 大号卡片今天的课放完后还有空位：在下方用轻量单行预告下一个有课日，放得下几节显示几节。
+        let preview: (day: CourseDayPlan, rows: [CourseOccurrence])? = {
+            guard family == .systemLarge, !showsNextDay, let next = model.nextDay, !next.occurrences.isEmpty else { return nil }
+            // 估算行高单位：普通行≈2.4，紧凑行≈1，分区标题与脚注各≈1，大号总共约 15。
+            var used = Double(visible.count) * (compact ? 1 : 2.4)
+            if !hiddenUpcoming.isEmpty || hiddenFinished > 0 { used += 1 }
+            let room = Int(15 - used - 1.2)
+            guard room >= 1 else { return nil }
+            // 放不全时在小标题里写“剩余 N 节未显示”，不再单占一行。
+            return (next, Array(next.occurrences.prefix(room)))
+        }()
 
-        VStack(alignment: .leading, spacing: family == .systemLarge ? 8 : 6) {
+        VStack(alignment: .leading, spacing: compact ? 4 : (family == .systemLarge ? 8 : 6)) {
             WidgetHeader(
                 plan: plan,
                 prefix: showsNextDay ? dayLabel(plan.date, now: model.now) : nil,
@@ -258,11 +277,24 @@ struct TodayWidgetView: View {
                     .frame(maxWidth: .infinity)
                 Spacer(minLength: 0)
             } else {
+                if visible.isEmpty {
+                    Spacer(minLength: 0)
+                    EmptyDay(text: "今天的课已上完")
+                        .frame(maxWidth: .infinity)
+                }
                 ForEach(visible) { occurrence in
-                    TodayRow(occurrence: occurrence, now: model.now, roomy: family == .systemLarge)
+                    if compact {
+                        CompactTodayRow(occurrence: occurrence, now: model.now)
+                    } else {
+                        TodayRow(occurrence: occurrence, now: model.now, roomy: family == .systemLarge)
+                    }
                 }
                 if !hiddenUpcoming.isEmpty || hiddenFinished > 0 {
                     HiddenSummary(upcoming: hiddenUpcoming, finished: hiddenFinished)
+                }
+                if let preview {
+                    NextDayPreview(day: preview.day, rows: preview.rows, now: model.now)
+                        .padding(.top, 4)
                 }
                 Spacer(minLength: 0)
             }
@@ -316,6 +348,92 @@ private struct TodayRow: View {
     }
 }
 
+/// 还没上的课很多时用的单行：色条 + 课名 + 教室 + 起止时间。
+private struct CompactTodayRow: View {
+    let occurrence: CourseOccurrence
+    let now: Date
+
+    var body: some View {
+        let color = Color(hex: occurrence.session.color)
+        let ongoing = occurrence.isOngoing(at: now)
+        HStack(spacing: 6) {
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(color)
+                .frame(width: 3, height: 14)
+            Text(occurrence.session.name)
+                .font(.footnote.weight(.semibold))
+                .lineLimit(1)
+                .layoutPriority(1)
+            if ongoing { Badge(text: "进行中", color: color) }
+            Text(roomAndTeacher(occurrence.session))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Spacer(minLength: 4)
+            Text(clock(occurrence.start))
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(ongoing ? .primary : .secondary)
+                .fixedSize()
+        }
+        .padding(.vertical, 3)
+        .padding(.horizontal, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(color.opacity(ongoing ? 0.22 : 0.1))
+        )
+        .opacity(occurrence.isFinished(at: now) ? 0.45 : 1)
+    }
+}
+
+/// 大号卡片底部的下一个有课日预告：小标题 + 无底色单行，整体压暗，不和今天的课抢视线。
+private struct NextDayPreview: View {
+    let day: CourseDayPlan
+    let rows: [CourseOccurrence]
+    let now: Date
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                let label = dayLabel(day.date, now: now)
+                Text(label == weekday(day.date) ? label : "\(label) \(weekday(day.date))")
+                    .font(.caption.weight(.semibold))
+                Text(day.occurrences.count > rows.count
+                     ? "共 \(day.occurrences.count) 节 剩余 \(day.occurrences.count - rows.count) 节未显示"
+                     : "共 \(day.occurrences.count) 节")
+                    .font(.caption2)
+                    .lineLimit(1)
+                    .fixedSize()
+                Rectangle()
+                    .fill(.separator)
+                    .frame(height: 0.5)
+            }
+            .foregroundStyle(.secondary)
+            ForEach(rows) { occurrence in
+                HStack(spacing: 6) {
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .fill(Color(hex: occurrence.session.color).opacity(0.7))
+                        .frame(width: 3, height: 12)
+                    Text(occurrence.session.name)
+                        .font(.caption.weight(.medium))
+                        .lineLimit(1)
+                        .layoutPriority(1)
+                    Text(roomAndTeacher(occurrence.session))
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                    Spacer(minLength: 4)
+                    Text(timeRange(occurrence))
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .fixedSize()
+                }
+                .foregroundStyle(.secondary)
+                .padding(.leading, 6)
+            }
+        }
+    }
+}
+
 /// 列表放不下时的脚注：之后还有的课写出时间和名字，已下课的只计数。
 private struct HiddenSummary: View {
     let upcoming: [CourseOccurrence]
@@ -326,9 +444,9 @@ private struct HiddenSummary: View {
             if let first = upcoming.first {
                 Group {
                     if upcoming.count == 1 {
-                        Text("之后还有 1 节 · \(clock(first.start)) \(first.session.name)")
+                        Text("还有 1 节未显示 · \(clock(first.start)) \(first.session.name)")
                     } else {
-                        Text("之后还有 \(upcoming.count) 节 · \(clock(first.start)) 起")
+                        Text("还有 \(upcoming.count) 节未上")
                     }
                 }
                 .foregroundStyle(.primary)
@@ -449,7 +567,7 @@ private struct CourseBlock: View {
                     .lineLimit(style == .detailed ? 2 : 1)
                     .minimumScaleFactor(0.85)
                 if style == .detailed {
-                    let detail = detailLine(occurrence.session)
+                    let detail = roomAndTeacher(occurrence.session)
                     if !detail.isEmpty {
                         Text(detail)
                             .font(.caption)
@@ -459,7 +577,7 @@ private struct CourseBlock: View {
                     Text(timeRange(occurrence))
                         .font(.caption.monospacedDigit())
                     if occurrence.isOngoing(at: now) {
-                        (Text("还剩 ") + Text(occurrence.end, style: .relative))
+                        Text("还剩 \(remainingText(until: occurrence.end, now: now))")
                             .font(.caption2)
                             .foregroundStyle(Color(hex: occurrence.session.color))
                             .lineLimit(1)
@@ -557,6 +675,20 @@ private func dayLabel(_ date: Date, now: Date) -> String {
     case 2: return "后天"
     default: return weekday(date)
     }
+}
+
+/// 小空间只留教室号和老师：地点“楼宇 教室”取最后一段，如“YF403 刘一”。
+private func roomAndTeacher(_ session: CourseWidgetSession) -> String {
+    let room = session.place.split(separator: " ").last.map(String.init) ?? ""
+    return [room, session.teacher].filter { !$0.isEmpty }.joined(separator: " ")
+}
+
+/// “13 分钟”“1 小时 5 分钟”：按整分钟向上取整，不显示秒。
+func remainingText(until end: Date, now: Date) -> String {
+    let minutes = max(1, Int((end.timeIntervalSince(now) / 60).rounded(.up)))
+    if minutes < 60 { return "\(minutes) 分钟" }
+    let hours = minutes / 60, rest = minutes % 60
+    return rest == 0 ? "\(hours) 小时" : "\(hours) 小时 \(rest) 分钟"
 }
 
 private func detailLine(_ session: CourseWidgetSession) -> String {

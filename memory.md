@@ -9,6 +9,7 @@
 
 ## 已完成
 
+- 2026-10-13（分支 `fix/ios-widget-polish`）小组件打磨：倒计时改为按分钟“还剩 N 分钟/1 小时 5 分钟”（只有「临近课程」的时间线对 3 小时内正在上的课每分钟一条，之后 `.after` 重取；曾对全部小组件铺 24 小时逐分钟条目，导致真机周视图预渲染超预算退回灰色占位图）；中号两栏去掉课名缩放，左右字号一致；今日课程待上课程超过 2/6 节时改单行紧凑行（中号 4、大号 10 行，只显示开始时间）；中号不再列出已上完的课，只在脚注右侧计数，脚注“还有 1 节未显示 · 时间 课名”/“还有 N 节未上”，压暗单行只用于已上完的课和明日预告；小号只显示“教室 老师”；大号今日课程保留上过的灰色课，剩余空间用压暗单行预告下一个有课日（放不全写“还有 N 节”）。Swift 未本地编译，交 PR CI。
 - 2026-10-13（未提交）iOS 小组件三项：①「今日课程」放不下时脚注改为分开统计——“之后还有 N 节 · 时间 课名”与“已上完 M 节”（原“还有 2 节”把已下课的也算进去，且没写出被挤掉的后续课）；②「临近课程」中号按 WakeUp 两栏样式重做（头部日期 + 右侧“第 N 周”，“当前 · 还剩…/接下来”，大字课名、地点、时间）；③新增大号「本周课表」周视图（新文件 `WeekCourseWidget.swift`，已登记 pbxproj）：按大节行（1/2/4/5 固定，午间/晚上有课才显示）、周一到周日列（周末无课且非今天隐藏），色块用课程表页按课程性质的底色+描边，冲突课并排，已下课变淡、进行中加粗描边。所有卡片（小/中/大/周视图）统一用 `WidgetHeader`：左“[明天] 日期 星期（红）[共 N 节]”，右加粗周数胶囊；周视图顶部同样加这条头部，左上角只留月份。共享快照新增 `kind`（required/limited/elective/pe/unknown/lab，来自培养方案映射）与 `slotTimes`，快照改从本周一开始（往后仍 14 天）。Swift 只在 Linux 上静态编写；本地 Gradle 被 Maven Central 429 限流，单测与 iOS Debug IPA 交给分支 `feat/ios-widget-week-view` 的 PR 检查（kmp-security-check / kmp-package）。
 - 2026-10-13 云端签名排查：CI 在 IPA 压缩前为嵌套 framework、Widget、主 App 依次 ad-hoc 签名，保留两端 App Group Entitlements；新增 `sign-ios-sideload-app.sh` 校验实际可执行文件权限、签名结构及宿主/扩展版本。`kmp-package.yml` 新增 iOS 相关 PR 的 Debug IPA 构建，其他平台在 PR 打包流程跳过；正式标签仍用 Release，PR 不发 Release。静态检查已通过；Apple 签名/构建检查由 CI 执行，SideStore 安装后的共享权限仍待真机验证。应用版本保持 Build 33。
 - 版本改为 `1.8.4-Beta-SheetFix-Widget-fix2`（Build 33），推 `mine/main` 与标签 `debug-1.8.4-Beta-SheetFix-Widget-fix2`，仅 Actions 产物。

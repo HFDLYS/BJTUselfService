@@ -235,8 +235,13 @@ enum CourseWidgetCalendar {
         return parsed.isEmpty && times != nil ? slots(nil) : parsed
     }
 
-    /// 小组件需要重新排版的时刻：每节课开始/结束、每天零点。
-    static func refreshDates(snapshot: CourseWidgetSnapshot?, from now: Date) -> [Date] {
+    /// 逐分钟条目只覆盖这么久，之后让系统重新取时间线。
+    /// 条目越多 WidgetKit 预渲染越重，超出预算会退回灰色占位图。
+    static let minuteTickWindow: TimeInterval = 3 * 3600
+
+    /// 小组件需要重新排版的时刻：每节课开始/结束、每天零点；
+    /// `minuteTicks` 时，接下来 3 小时内正在上的课每分钟一条，“还剩 N 分钟”按分钟走而不显示秒。
+    static func refreshDates(snapshot: CourseWidgetSnapshot?, from now: Date, minuteTicks: Bool = false) -> [Date] {
         var dates: Set<Date> = [now]
         let startOfToday = calendar.startOfDay(for: now)
         for offset in 1...2 {
@@ -245,11 +250,18 @@ enum CourseWidgetCalendar {
             }
         }
         let horizon = now.addingTimeInterval(48 * 3600)
+        let minuteHorizon = now.addingTimeInterval(minuteTickWindow)
         for day in snapshot?.days ?? [] {
             guard let plan = plan(for: day) else { continue }
             for occurrence in plan.occurrences {
                 for moment in [occurrence.start, occurrence.end] where moment > now && moment < horizon {
                     dates.insert(moment)
+                }
+                guard minuteTicks, occurrence.end > now, occurrence.start < minuteHorizon else { continue }
+                var tick = occurrence.start
+                while tick < min(occurrence.end, minuteHorizon) {
+                    if tick > now { dates.insert(tick) }
+                    tick = tick.addingTimeInterval(60)
                 }
             }
         }
@@ -265,6 +277,9 @@ struct CourseWidgetEntry: TimelineEntry {
 }
 
 struct CourseWidgetProvider: TimelineProvider {
+    /// 只有显示“还剩 N 分钟”的临近课程需要逐分钟刷新；周视图等重视图保持稀疏时间线。
+    var minuteTicks = false
+
     func placeholder(in context: Context) -> CourseWidgetEntry {
         CourseWidgetEntry(date: .now, state: CourseWidgetCalendar.state(snapshot: .preview, now: .now))
     }
@@ -282,10 +297,14 @@ struct CourseWidgetProvider: TimelineProvider {
         let load = CourseWidgetStore.load()
         var snapshot: CourseWidgetSnapshot?
         if case .loaded(let loaded) = load { snapshot = loaded }
-        let entries = CourseWidgetCalendar.refreshDates(snapshot: snapshot, from: now).map { date in
+        let entries = CourseWidgetCalendar.refreshDates(snapshot: snapshot, from: now, minuteTicks: minuteTicks).map { date in
             CourseWidgetEntry(date: date, state: CourseWidgetCalendar.state(load: load, now: date))
         }
-        completion(Timeline(entries: entries, policy: .atEnd))
+        // 逐分钟条目只排到 3 小时后，到点重新生成，避免一次塞进几百条。
+        let policy: TimelineReloadPolicy = minuteTicks
+            ? .after(now.addingTimeInterval(CourseWidgetCalendar.minuteTickWindow))
+            : .atEnd
+        completion(Timeline(entries: entries, policy: policy))
     }
 }
 
