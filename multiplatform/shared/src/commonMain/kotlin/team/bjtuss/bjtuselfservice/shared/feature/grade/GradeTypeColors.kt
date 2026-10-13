@@ -40,11 +40,10 @@ internal fun courseTypeColors(type: CourseType): GradeTypeColors {
             GradeTypeColors(container = Color(0xFFDCE4FC), onContainer = Color(0xFF2F4DB5))
         }
 
-        CourseType.PHYSICAL_EDUCATION -> if (dark) {
-            GradeTypeColors(container = Color(0xFF1E3D28), onContainer = Color(0xFFA9DDB8))
-        } else {
-            GradeTypeColors(container = Color(0xFFD8EFDD), onContainer = Color(0xFF236B34))
-        }
+        // 体育与课程表、首页、小组件共用青绿（CourseCategoryPalette）。
+        CourseType.PHYSICAL_EDUCATION -> team.bjtuss.bjtuselfservice.shared.feature.course.courseCategoryColors(
+            team.bjtuss.bjtuselfservice.shared.feature.course.CourseColorCategory.PHYSICAL_EDUCATION,
+        )
 
         CourseType.UNKNOWN -> if (dark) {
             GradeTypeColors(container = Color(0xFF333438), onContainer = Color(0xFFC6C7CB))

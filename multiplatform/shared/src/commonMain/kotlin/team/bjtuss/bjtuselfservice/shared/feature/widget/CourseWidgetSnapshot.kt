@@ -10,8 +10,11 @@ import kotlinx.serialization.json.Json
 import team.bjtuss.bjtuselfservice.shared.domain.classroomoccupancy.SLOT_TIME_RANGES
 import team.bjtuss.bjtuselfservice.shared.domain.course.Course
 import team.bjtuss.bjtuselfservice.shared.domain.course.displayScheduleCourseName
+import team.bjtuss.bjtuselfservice.shared.domain.course.eventDates
 import team.bjtuss.bjtuselfservice.shared.domain.grade.CourseType
-import team.bjtuss.bjtuselfservice.shared.domain.grade.courseTypeForCourseName
+import team.bjtuss.bjtuselfservice.shared.feature.course.CourseColorCategory
+import team.bjtuss.bjtuselfservice.shared.feature.course.courseColorCategory
+import team.bjtuss.bjtuselfservice.shared.feature.course.tones
 import team.bjtuss.bjtuselfservice.shared.domain.home.parseHmRange
 import team.bjtuss.bjtuselfservice.shared.feature.home.HomeSchedulePresentation
 import team.bjtuss.bjtuselfservice.shared.feature.home.homeCoursesOnDate
@@ -57,25 +60,14 @@ data class CourseWidgetSession(
     val startMinute: Int,
     val endMinute: Int,
     val isLab: Boolean = false,
-    /** 与首页“正在上”卡片同一调色板，0xRRGGBB。 */
+    /** 课程类别强调色（CourseCategoryPalette.accent），0xRRGGBB；色条、进行中描边用。 */
     val color: Long,
     /**
-     * 课表色块的分类，与课程表页图例一致：required/limited/elective/pe/unknown/lab。
-     * 培养方案还没同步时课程为 unknown。
+     * 课程类别，与课程表页图例一致：required/limited/elective/pe/unknown/lab/exam。
+     * 培养方案还没同步时普通课程为 unknown。
      */
-    val kind: String = KIND_UNKNOWN,
+    val kind: String = CourseColorCategory.UNKNOWN.widgetKind,
 )
-
-internal const val KIND_UNKNOWN = "unknown"
-internal const val KIND_LAB = "lab"
-
-internal fun CourseType.widgetKind(): String = when (this) {
-    CourseType.REQUIRED -> "required"
-    CourseType.LIMITED -> "limited"
-    CourseType.ELECTIVE -> "elective"
-    CourseType.PHYSICAL_EDUCATION -> "pe"
-    CourseType.UNKNOWN -> KIND_UNKNOWN
-}
 
 /** 默认展开两周：周末/假期前后打开一次 App，小组件也能撑到下周。 */
 const val COURSE_WIDGET_DAYS = 14
@@ -96,11 +88,10 @@ internal fun buildCourseWidgetSnapshot(
     generatedAt = generatedAtEpochSeconds,
     days = (0 until dayCount).map { offset ->
         val date = startDate.plus(offset, DateTimeUnit.DAY)
-        val sessions = homeCoursesOnDate(schedule, date).mapNotNull { course ->
-            val type = courseTypesByCode?.let { courseTypeForCourseName(course.courseId, it) } ?: CourseType.UNKNOWN
-            course.toWidgetSession(isLab = false, kind = type.widgetKind())
-        } +
-            homePhysicsLabsOnDate(schedule, date).mapNotNull { it.toWidgetSession(isLab = true, kind = KIND_LAB) }
+        val events = homePhysicsLabsOnDate(schedule, date) + homeExamsOnDate(schedule, date)
+        val sessions = (homeCoursesOnDate(schedule, date) + events).mapNotNull { course ->
+            course.toWidgetSession(courseColorCategory(course, courseTypesByCode))
+        }
         CourseWidgetDay(
             date = date.toString(),
             week = homeTeachingWeekOn(schedule, date),
@@ -113,8 +104,14 @@ private val widgetJson = Json { encodeDefaults = true }
 
 fun CourseWidgetSnapshot.encode(): String = widgetJson.encodeToString(CourseWidgetSnapshot.serializer(), this)
 
-private fun Course.toWidgetSession(isLab: Boolean, kind: String): CourseWidgetSession? {
-    val range = if (isLab) scheduleEventTime?.trim().orEmpty() else SLOT_TIME_RANGES.getOrNull(courseLocationIndex / 8).orEmpty()
+/** 考试与实验一样按实际日期出现；网格片段共用 id，只取一条。 */
+private fun homeExamsOnDate(schedule: HomeSchedulePresentation, date: LocalDate): List<Course> =
+    schedule.supplementalCourses.filter { it.scheduleEventKind == "exam" && date.toString() in it.eventDates }
+        .distinctBy(Course::id)
+
+private fun Course.toWidgetSession(category: CourseColorCategory): CourseWidgetSession? {
+    val isEvent = scheduleEventKind != null
+    val range = if (isEvent) scheduleEventTime?.trim().orEmpty() else SLOT_TIME_RANGES.getOrNull(courseLocationIndex / 8).orEmpty()
     val (start, end) = parseHmRange(range) ?: return null
     return CourseWidgetSession(
         name = displayScheduleCourseName(courseName.trim()),
@@ -122,9 +119,9 @@ private fun Course.toWidgetSession(isLab: Boolean, kind: String): CourseWidgetSe
         teacher = courseTeacher.trim(),
         startMinute = start,
         endMinute = end,
-        isLab = isLab,
-        color = courseWidgetColor(courseId.ifBlank { courseName }),
-        kind = kind,
+        isLab = category == CourseColorCategory.LAB,
+        color = category.tones.accent,
+        kind = category.widgetKind,
     )
 }
 
@@ -143,11 +140,3 @@ internal fun compactWidgetPlace(place: String): String {
     return tail.joinToString(" ")
 }
 
-/** 与 HomeNowCard 的 courseAccentPalette 保持一致。 */
-private val courseWidgetPalette = listOf(
-    0x4C8BF5L, 0x2E9E6BL, 0xE8A33DL, 0x9B59B6L,
-    0xE0674FL, 0x16A4A4L, 0x6C7A89L, 0xD4658EL,
-)
-
-internal fun courseWidgetColor(key: String): Long =
-    courseWidgetPalette[key.hashCode().and(0x7fffffff) % courseWidgetPalette.size]

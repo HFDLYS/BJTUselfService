@@ -9,6 +9,7 @@ import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpMethod
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpRequest
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpTransport
 import team.bjtuss.bjtuselfservice.shared.network.looksLikeSessionExpired
+import team.bjtuss.bjtuselfservice.shared.network.parseOffMain
 
 private const val AA_PROGRAM_URL = "https://aa.bjtu.edu.cn/training/training/program/"
 
@@ -27,7 +28,7 @@ class SchoolTrainingProgramRemoteDataSource(
 ) : TrainingProgramRemoteDataSource {
     override suspend fun fetchCourseTypes(): Map<String, CourseType> {
         val listResponse = executeGet(AA_PROGRAM_URL)
-        val detailUrls = parseProgramLinks(listResponse.bodyText())
+        val detailUrls = parseOffMain { parseProgramLinks(listResponse.bodyText()) }
         if (detailUrls.isEmpty()) {
             throw GradeRemoteException(GradeRemoteFailure.MALFORMED_RESPONSE)
         }
@@ -35,7 +36,7 @@ class SchoolTrainingProgramRemoteDataSource(
         val merged = linkedMapOf<String, CourseType>()
         detailUrls.forEach { url ->
             val detailResponse = executeGet(url)
-            when (val parsed = parseProgramCourseTypes(detailResponse.bodyText())) {
+            when (val parsed = parseOffMain { parseProgramCourseTypes(detailResponse.bodyText()) }) {
                 is TrainingProgramParseResult.Failure ->
                     throw GradeRemoteException(GradeRemoteFailure.MALFORMED_RESPONSE)
                 is TrainingProgramParseResult.Success ->
@@ -68,7 +69,7 @@ class SchoolTrainingProgramRemoteDataSource(
         if (response.statusCode !in 200..299) {
             throw GradeRemoteException(GradeRemoteFailure.NETWORK)
         }
-        if (response.looksLikeSessionExpired() || !response.finalUrl.startsWith(SchoolEndpoints.AA_ORIGIN)) {
+        if (parseOffMain { response.looksLikeSessionExpired() } || !response.finalUrl.startsWith(SchoolEndpoints.AA_ORIGIN)) {
             throw GradeRemoteException(GradeRemoteFailure.SESSION_EXPIRED)
         }
         response

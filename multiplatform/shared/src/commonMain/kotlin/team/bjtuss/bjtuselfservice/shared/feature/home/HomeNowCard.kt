@@ -40,19 +40,10 @@ import team.bjtuss.bjtuselfservice.shared.domain.course.displayScheduleCourseNam
 import team.bjtuss.bjtuselfservice.shared.domain.home.HomeNowSession
 import team.bjtuss.bjtuselfservice.shared.domain.home.pickHomeNowSessions
 import team.bjtuss.bjtuselfservice.shared.feature.course.CourseDetailContent
+import team.bjtuss.bjtuselfservice.shared.feature.course.courseCategoryAccent
+import team.bjtuss.bjtuselfservice.shared.feature.course.courseColorCategory
 import team.bjtuss.bjtuselfservice.shared.feature.scroll.desktopTouchScroll
 import team.bjtuss.bjtuselfservice.shared.feature.shell.AppleSheet
-
-private val courseAccentPalette = listOf(
-    Color(0xFF4C8BF5),
-    Color(0xFF2E9E6B),
-    Color(0xFFE8A33D),
-    Color(0xFF9B59B6),
-    Color(0xFFE0674F),
-    Color(0xFF16A4A4),
-    Color(0xFF6C7A89),
-    Color(0xFFD4658E),
-)
 
 @Composable
 internal fun HomeNowSection(
@@ -83,7 +74,11 @@ internal fun HomeNowSection(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         sessions.forEach { session ->
-            HomeNowCard(session, onClick = { selected = session.course })
+            HomeNowCard(
+                session,
+                accent = courseCategoryAccent(courseColorCategory(session.course, schedule.courseTypesByCode)),
+                onClick = { selected = session.course },
+            )
         }
     }
     selected?.let { course ->
@@ -101,10 +96,11 @@ internal fun HomeNowSection(
 @Composable
 internal fun HomeNowCard(
     session: HomeNowSession,
+    /** 课程类别强调色（CourseCategoryPalette），与课程表、小组件一致。 */
+    accent: Color,
     onClick: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val accent = accentFor(session.course.courseId.ifBlank { session.course.courseName })
     val status = when {
         session.ongoing && session.isLab -> "进行中"
         session.ongoing -> "正在上"
@@ -202,11 +198,6 @@ private fun StatusChip(label: String, ongoing: Boolean, accent: Color) {
             maxLines = 1,
         )
     }
-}
-
-private fun accentFor(key: String): Color {
-    val index = key.hashCode().and(0x7fffffff) % courseAccentPalette.size
-    return courseAccentPalette[index]
 }
 
 /** 校区/楼宇/教室拆开，方便窄屏换行，不再挤成一行被裁掉。 */

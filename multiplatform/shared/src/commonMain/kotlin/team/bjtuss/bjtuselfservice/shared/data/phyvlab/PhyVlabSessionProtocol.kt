@@ -10,6 +10,7 @@ import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpMethod
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpRequest
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpResponse
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpTransport
+import team.bjtuss.bjtuselfservice.shared.network.parseOffMain
 
 private val PHYVLAB_LOGIN_URL = "${SchoolEndpoints.PHYVLAB_ORIGIN}/login/index.php"
 private val PHYVLAB_HOME_URL = "${SchoolEndpoints.PHYVLAB_ORIGIN}/"
@@ -58,23 +59,23 @@ class PhyVlabSessionProtocol(
                 detail = "login-page-http-error",
             )
         }
-        val body = loginPage.bodyText()
+        val marks = parseOffMain { loginPage.pageMarks() }
         phyVlabDebug(
-            "login page auth=${isPhyVlabAuthenticatedPage(loginPage.finalUrl, body)} " +
-                "casForm=${looksLikeCasLoginForm(body)} oauth=${parsePhyVlabOauthUrl(body) != null}",
+            "login page auth=${marks.authenticated} " +
+                "casForm=${marks.casLoginForm} oauth=${marks.oauthUrl != null}",
         )
 
         // 已登录：页面显示“退出登录”或包含个人主页导航，Moodle 会话已存在。
-        if (isPhyVlabAuthenticatedPage(loginPage.finalUrl, body)) {
+        if (marks.authenticated) {
             return PhyVlabSessionResult.Ready(PHYVLAB_HOME_URL)
         }
 
         // 如果 CAS 会话已失效，初始入口也可能直接落在 CAS 登录表单。
-        if (loginPage.finalUrl.startsWith(SchoolEndpoints.CAS_ORIGIN) && looksLikeCasLoginForm(body)) {
+        if (loginPage.finalUrl.startsWith(SchoolEndpoints.CAS_ORIGIN) && marks.casLoginForm) {
             return PhyVlabSessionResult.CasLoginRequired
         }
 
-        val oauthUrl = parsePhyVlabOauthUrl(body) ?: return PhyVlabSessionResult.Failed(
+        val oauthUrl = marks.oauthUrl ?: return PhyVlabSessionResult.Failed(
             PhyVlabRemoteFailure.SESSION_EXPIRED,
             detail = "login-page-oauth-link-missing",
         )
@@ -108,12 +109,11 @@ class PhyVlabSessionProtocol(
 
     private suspend fun SchoolHttpResponse.toSessionResult(): PhyVlabSessionResult {
         val url = finalUrl
-        if (url.startsWith(SchoolEndpoints.CAS_ORIGIN) && looksLikeCasLoginForm(bodyText())) {
+        if (url.startsWith(SchoolEndpoints.CAS_ORIGIN) && parseOffMain { looksLikeCasLoginForm(bodyText()) }) {
             return PhyVlabSessionResult.CasLoginRequired
         }
         if (url.startsWith(SchoolEndpoints.PHYVLAB_ORIGIN)) {
-            val body = bodyText()
-            if (isPhyVlabAuthenticatedPage(url, body)) {
+            if (parseOffMain { isPhyVlabAuthenticatedPage(url, bodyText()) }) {
                 return PhyVlabSessionResult.Ready(PHYVLAB_HOME_URL)
             }
 
@@ -121,24 +121,22 @@ class PhyVlabSessionProtocol(
             // 只有页面出现登录态标记才算建立了 Moodle 会话，避免把访客/登录页误判为成功。
             val probe = executeRaw(PHYVLAB_COURSES_URL, referer = url)
             val settled = if (probe.statusCode in 300..399) followHandshake(probe) else probe
-            val settledBody = settled.bodyText()
+            val settledMarks = parseOffMain { settled.pageMarks() }
             phyVlabDebug(
                 "oauth landing ${safePhyVlabEndpoint(settled.finalUrl)} " +
-                    "auth=${isPhyVlabAuthenticatedPage(settled.finalUrl, settledBody)} " +
-                    "casForm=${looksLikeCasLoginForm(settledBody)} " +
-                    "loginPage=${looksLikePhyVlabLoginPage(settledBody)}",
+                    "auth=${settledMarks.authenticated} " +
+                    "casForm=${settledMarks.casLoginForm} " +
+                    "loginPage=${settledMarks.phyVlabLoginPage}",
             )
-            if (settled.finalUrl.startsWith(SchoolEndpoints.CAS_ORIGIN) && looksLikeCasLoginForm(settledBody)) {
+            if (settled.finalUrl.startsWith(SchoolEndpoints.CAS_ORIGIN) && settledMarks.casLoginForm) {
                 return PhyVlabSessionResult.CasLoginRequired
             }
-            if (settled.finalUrl.startsWith(SchoolEndpoints.PHYVLAB_ORIGIN) &&
-                isPhyVlabAuthenticatedPage(settled.finalUrl, settledBody)
-            ) {
+            if (settled.finalUrl.startsWith(SchoolEndpoints.PHYVLAB_ORIGIN) && settledMarks.authenticated) {
                 return PhyVlabSessionResult.Ready(PHYVLAB_HOME_URL)
             }
             return PhyVlabSessionResult.Failed(
                 PhyVlabRemoteFailure.SESSION_EXPIRED,
-                detail = if (looksLikePhyVlabLoginPage(settledBody)) {
+                detail = if (settledMarks.phyVlabLoginPage) {
                     "phyvlab-login-session-missing"
                 } else {
                     "phyvlab-session-unconfirmed"
@@ -234,6 +232,24 @@ private fun isPhyVlabOauthUrl(url: String): Boolean {
         parsed.host == "phyvlab.bjtu.edu.cn" &&
         (parsed.port == 443 || parsed.port == 0) &&
         parsed.encodedPath == "/auth/oauth2/login.php"
+}
+
+/** 握手页面的登录态标记：一次在后台算齐，调试日志与判断共用，不再逐项重复解析整页。 */
+private class PhyVlabPageMarks(
+    val authenticated: Boolean,
+    val casLoginForm: Boolean,
+    val oauthUrl: String?,
+    val phyVlabLoginPage: Boolean,
+)
+
+private fun SchoolHttpResponse.pageMarks(): PhyVlabPageMarks {
+    val body = bodyText()
+    return PhyVlabPageMarks(
+        authenticated = isPhyVlabAuthenticatedPage(finalUrl, body),
+        casLoginForm = looksLikeCasLoginForm(body),
+        oauthUrl = parsePhyVlabOauthUrl(body),
+        phyVlabLoginPage = looksLikePhyVlabLoginPage(body),
+    )
 }
 
 private fun isPhyVlabAuthenticatedPage(url: String, html: String): Boolean {

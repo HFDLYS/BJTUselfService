@@ -210,6 +210,7 @@ private final class NativeChromeBinding {
     private var usesSystemBars: Bool { (controller?.navigationController as? TabRootNavigationController)?.usesSystemBars == true }
     private var lastActionLayoutKey: NativeBarActionLayoutKey?
     private var lastActionVertical: Bool?
+    private var lastActionVisualKey: [String]?
     private var pendingTitle: String?
     private var pendingAction: NativeBarAction?
     private var hasPendingAction = false
@@ -367,6 +368,12 @@ private final class NativeChromeBinding {
     }
 
     private func updateActionVisuals(_ action: NativeBarAction) {
+        // Compose reports the bar on every recomposition (many per second while syncing).
+        // Re-assigning identical images/titles to bar items relayouts UINavigationBar each
+        // time; on device that cost ~40% of the main thread during sync.
+        let visualKey = [action.status, action.label, action.extraLabel ?? ""]
+        guard visualKey != lastActionVisualKey else { return }
+        lastActionVisualKey = visualKey
         systemActionItems[.status]?.image = UIImage(systemName: symbolName(for: action.status, kind: .status))
         systemActionItems[.status]?.accessibilityLabel = action.status
         systemActionItems[.status]?.title = action.status
@@ -412,6 +419,7 @@ private final class NativeChromeBinding {
             actionButtons.removeAll()
             systemActionItems.removeAll()
             lastActionLayoutKey = nil
+            lastActionVisualKey = nil
             UIView.performWithoutAnimation {
                 controller.navigationItem.leftBarButtonItems = nil
                 controller.navigationItem.leftItemsSupplementBackButton = false
@@ -433,6 +441,7 @@ private final class NativeChromeBinding {
         }
         lastActionLayoutKey = layoutKey
         lastActionVertical = vertical
+        lastActionVisualKey = nil
         retainedActionTargets.removeAll()
         actionTargets.removeAll()
         actionButtons.removeAll()
@@ -577,7 +586,12 @@ private final class NativeChromeBinding {
         let reachesEndpoint = progress == 0 || progress == 1
         if progress != lastGlassProgress && (reachesEndpoint || abs(progress - lastGlassProgress) > 0.005) {
             lastGlassProgress = progress
-            (navigationController as? TabRootNavigationController)?.setTopGlassProgress(progress, for: controller)
+            if let host = controller as? SafeAreaComposeHost {
+                // The host merges this with UIKit rubber-band displacement Compose never sees.
+                host.setComposeGlassProgress(progress)
+            } else {
+                (navigationController as? TabRootNavigationController)?.setTopGlassProgress(progress, for: controller)
+            }
         }
     }
 
@@ -632,6 +646,7 @@ private enum NativeBarActionItemKind {
 }
 
 private final class NativeBarIconButton: UIButton {
+    private var currentSymbolName: String?
     init(title: String) {
         super.init(frame: .zero)
         setTitle(title, for: .normal)
@@ -651,9 +666,11 @@ private final class NativeBarIconButton: UIButton {
             pointSize: 18,
             weight: .semibold,
         )
-        let image = UIImage(systemName: symbolName, withConfiguration: symbolConfiguration)
-        setImage(image, for: .normal)
-        if let accessibilityLabel {
+        if symbolName != currentSymbolName {
+            currentSymbolName = symbolName
+            setImage(UIImage(systemName: symbolName, withConfiguration: symbolConfiguration), for: .normal)
+        }
+        if let accessibilityLabel, self.accessibilityLabel != accessibilityLabel {
             self.accessibilityLabel = accessibilityLabel
         }
     }
@@ -802,7 +819,36 @@ private final class SafeAreaComposeHost: UIViewController, UIScrollViewDelegate 
     private var nativeRange: CGFloat = 0
     private var updatingRange = false
     private var aligningToStart = false
+    /// Glass is driven by the larger of Compose's scroll progress and the UIKit
+    /// rubber-band displacement. A page that fits the viewport never scrolls in
+    /// Compose, yet pulling it up still slides content under the bar.
+    private var composeGlassProgress: CGFloat = 0
+    private var overscrollGlassProgress: CGFloat = 0
+    private var pushedGlassProgress: CGFloat = -1
     var hasNativeScroller: Bool { scrollController != nil }
+
+    func setComposeGlassProgress(_ progress: CGFloat) {
+        composeGlassProgress = progress
+        pushTopGlassProgress()
+    }
+
+    private func pushTopGlassProgress() {
+        let progress = max(composeGlassProgress, overscrollGlassProgress)
+        guard progress != pushedGlassProgress else { return }
+        pushedGlassProgress = progress
+        (navigationController as? TabRootNavigationController)?.setTopGlassProgress(progress, for: self)
+    }
+
+    private func updateOverscrollGlass(_ scrollView: UIScrollView) {
+        // Same 52pt ramp as Compose's topBarTransitionHeight.
+        let band = max(0, scrollView.contentOffset.y - renderedOffset)
+        let progress = hasNativeScroller ? min(1, band / 52) : 0
+        let reachesEndpoint = progress == 0 || progress == 1
+        guard progress != overscrollGlassProgress,
+              reachesEndpoint || abs(progress - overscrollGlassProgress) > 0.005 else { return }
+        overscrollGlassProgress = progress
+        pushTopGlassProgress()
+    }
 
     init(content: UIViewController, session: AuthenticatedSession) {
         self.content = content
@@ -861,6 +907,8 @@ private final class SafeAreaComposeHost: UIViewController, UIScrollViewDelegate 
                 scroller.contentSize = scroller.bounds.size
                 content.view.transform = .identity
                 updatingRange = false
+                overscrollGlassProgress = 0
+                pushTopGlassProgress()
             }
             if let navigationController = navigationController as? TabRootNavigationController {
                 navigationController.configureScrollMinimization(for: self, enabled: hasNativeScroller)
@@ -883,7 +931,9 @@ private final class SafeAreaComposeHost: UIViewController, UIScrollViewDelegate 
         // minimization under UIKit's control. Negative rubber-band offsets
         // must remain clear as well.
         if #available(iOS 26.0, *), let scroller = nativeScrollView {
-            scroller.topEdgeEffect.isHidden = !hasNativeScroller || renderedOffset <= 0.5 || scroller.contentOffset.y <= 0
+            // Content is under the bar whenever UIKit's offset is positive, including an
+            // upward rubber band on a page too short to scroll in Compose.
+            scroller.topEdgeEffect.isHidden = !hasNativeScroller || scroller.contentOffset.y <= 0.5
         }
     }
 
@@ -972,6 +1022,7 @@ private final class SafeAreaComposeHost: UIViewController, UIScrollViewDelegate 
         // easing curve, accumulated gesture translation or independent animation.
         content.view.transform = CGAffineTransform(translationX: 0, y: -(scrollView.contentOffset.y - renderedOffset))
         updateTopEdgeEffect()
+        updateOverscrollGlass(scrollView)
         if controller.maxOffsetPx < 0 && controller.canScrollForward && renderedOffset > nativeRange - scrollView.bounds.height {
             updateNativeRange()
         }
@@ -1194,9 +1245,10 @@ private final class TabRootNavigationController: UINavigationController, UINavig
             ])
             centeredTitleLabel = label
         }
-        label.text = title
-        label.isHidden = false
-        navigationBar.bringSubviewToFront(label)
+        // Same-value writes and subview reordering both invalidate the bar's layout.
+        if label.text != title { label.text = title }
+        if label.isHidden { label.isHidden = false }
+        if navigationBar.subviews.last !== label { navigationBar.bringSubviewToFront(label) }
     }
 
     override func viewDidLayoutSubviews() {

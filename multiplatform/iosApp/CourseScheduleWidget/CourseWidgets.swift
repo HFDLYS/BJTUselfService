@@ -323,6 +323,7 @@ private struct TodayRow: View {
                         .lineLimit(1)
                     if ongoing { Badge(text: "进行中", color: color) }
                     if occurrence.session.isLab { Badge(text: "实验", color: .secondary) }
+                    if occurrence.session.kind == "exam" { Badge(text: "考试", color: .secondary) }
                 }
                 Text(detailLine(occurrence.session))
                     .font(.caption)

@@ -5,6 +5,7 @@ import team.bjtuss.bjtuselfservice.shared.auth.Credentials
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpMethod
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpRequest
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpTransport
+import team.bjtuss.bjtuselfservice.shared.network.parseOffMain
 
 /** Read-only integration. The login POST is the only write request. */
 class PhysicsDemoRemote(private val transport: SchoolHttpTransport) {
@@ -30,6 +31,7 @@ class PhysicsDemoRemote(private val transport: SchoolHttpTransport) {
         fields["username"] = credentials.username
         fields["password"] = credentials.password
         request(SchoolHttpMethod.POST, "login", fields)
-        return parsePhysicsDemoBookings(request(SchoolHttpMethod.GET, "appointment/"))
+        val appointments = request(SchoolHttpMethod.GET, "appointment/")
+        return parseOffMain { parsePhysicsDemoBookings(appointments) }
     }
 }

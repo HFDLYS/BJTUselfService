@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import team.bjtuss.bjtuselfservice.shared.domain.grade.CourseType
 import team.bjtuss.bjtuselfservice.shared.domain.grade.Grade
@@ -157,6 +158,28 @@ class GradeRepositoryTest {
         )
 
         assertEquals(null, repository.load().courseTypesByCode)
+    }
+
+    @Test
+    fun unchangedProgramMappingKeepsSameInstanceAcrossLoads() = runBlocking {
+        val local = FakeLocal(
+            storedGrades = listOf(grade(id = 1)),
+            storedCourseTypes = mapOf("C312009B" to CourseType.REQUIRED),
+        )
+        val repository = DefaultGradeRepository(
+            accountScope = "student-a",
+            local = local,
+            remote = FakeRemote(emptyList()),
+            programRemote = FakeProgramRemote(),
+        )
+
+        val first = repository.load().courseTypesByCode
+        // 缓存每次读出新实例：内容相同就沿用旧实例，界面层的 remember 键不必整表比较。
+        local.storedCourseTypes = mapOf("C312009B" to CourseType.REQUIRED)
+        assertSame(first, repository.load().courseTypesByCode)
+
+        local.storedCourseTypes = mapOf("C312009B" to CourseType.ELECTIVE)
+        assertEquals(mapOf("C312009B" to CourseType.ELECTIVE), repository.load().courseTypesByCode)
     }
 
     @Test

@@ -31,10 +31,13 @@ const val COURSE_WIDGET_DID_CHANGE_NOTIFICATION = "BJTUCourseWidgetSnapshotDidCh
 
 private var lastWrittenJson: String? = null
 
+/** 共享容器在安装后不会变；解析描述文件只做一次。 */
+private var cachedContainer: NSURL? = null
+
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 internal actual fun writeCourseWidgetSnapshot(json: String?) {
     if (json == lastWrittenJson && json != null) return
-    val container = resolveCourseWidgetContainer()
+    val container = cachedContainer ?: resolveCourseWidgetContainer()?.also { cachedContainer = it }
     if (container == null) {
         AppLog.d("CourseWidget", "App Group container unavailable")
         return

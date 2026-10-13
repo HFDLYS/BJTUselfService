@@ -18,6 +18,9 @@ internal data class HomeSchedulePresentation(
     val currentWeek: Int = 0,
     val today: LocalDate = LocalDate(2000, 1, 1),
     val supplementalCourses: List<Course> = emptyList(),
+    /** 培养方案课程性质，决定课程配色；未同步时为 null，课程按“未知”着色。 */
+    val courseTypesByCode: Map<String, team.bjtuss.bjtuselfservice.shared.domain.grade.CourseType>? = null,
+    // 保持最后一个：探针页用尾随 lambda 传入。
     val onOpenSchedule: () -> Unit = {},
 )
 

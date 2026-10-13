@@ -509,7 +509,13 @@ class GradeScreenModel(
         mutableState.value = current.copy(
             grades = grades,
             selectedGradeIds = selectedIds,
-            courseTypesByCode = courseTypesByCode,
+            // 内容相同就沿用当前实例：界面以它作 remember/LaunchedEffect 键，Compose 判等后不替换旧键，
+            // 实例一旦换成“等值不同对象”，之后每次重组都要整表比较（iOS 真机同步期间占主线程约 1.6 秒）。
+            courseTypesByCode = if (courseTypesByCode == current.courseTypesByCode) {
+                current.courseTypesByCode
+            } else {
+                courseTypesByCode
+            },
             selectedSemesters = nextSemesters,
             selectedGradeId = current.selectedGradeId?.takeIf { id -> grades.any { it.id == id } },
             isLoading = false,

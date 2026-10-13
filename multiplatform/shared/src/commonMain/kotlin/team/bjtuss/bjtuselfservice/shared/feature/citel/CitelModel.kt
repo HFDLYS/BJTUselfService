@@ -184,7 +184,10 @@ class CitelModel(
                 val time = Clock.System.now().epochSeconds
                 cache.putMetadata(scope, "citel.tasks", json.encodeToString(tasks))
                 cache.putMetadata(scope, "citel.lastSync", time.toString())
-                mutableState.value = mutableState.value.copy(tasks = tasks, fromCache = false, lastSync = time, message = "已同步 ${tasks.size} 项作业。")
+                // 内容没变就沿用旧列表实例：首页/聚合作业以它作 remember 键，等值的新实例会让每次重组都逐项比较。
+                val current = mutableState.value
+                mutableState.value = current.copy(tasks = if (tasks == current.tasks) current.tasks else tasks,
+                    fromCache = false, lastSync = time, message = "已同步 ${tasks.size} 项作业。")
             } catch (e: TimeoutCancellationException) {
                 fail("CITEL 连接超时，保留上次同步结果。")
             } catch (e: CancellationException) {

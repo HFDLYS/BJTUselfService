@@ -13,6 +13,7 @@ import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpMethod
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpRequest
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpResponse
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpTransport
+import team.bjtuss.bjtuselfservice.shared.network.parseOffMain
 
 private val PHYVLAB_COURSES_URL = "${SchoolEndpoints.PHYVLAB_ORIGIN}/my/courses.php"
 private val PHYVLAB_COURSE_VIEW_URL = "${SchoolEndpoints.PHYVLAB_ORIGIN}/course/view.php"
@@ -60,7 +61,7 @@ class SchoolPhyVlabRemoteDataSource(
 
     override suspend fun fetchCourses(): List<PhyVlabCourse> {
         val response = fetchPage(PHYVLAB_COURSES_URL, referer = "${SchoolEndpoints.PHYVLAB_ORIGIN}/?redirect=0")
-        return when (val parsed = parsePhyVlabCourses(response.bodyText())) {
+        return when (val parsed = parseOffMain { parsePhyVlabCourses(response.bodyText()) }) {
             is PhyVlabParseResult.Failure -> parse()
             is PhyVlabParseResult.Success -> parsed.value.also {
                 phyVlabDebug("courses parsed count=${it.size}")
@@ -73,7 +74,7 @@ class SchoolPhyVlabRemoteDataSource(
             url = "$PHYVLAB_COURSE_VIEW_URL?id=${course.id}",
             referer = course.courseUrl,
         )
-        return when (val parsed = parsePhyVlabActivities(response.bodyText(), course.id, course.name)) {
+        return when (val parsed = parseOffMain { parsePhyVlabActivities(response.bodyText(), course.id, course.name) }) {
             is PhyVlabParseResult.Failure -> parse()
             is PhyVlabParseResult.Success -> parsed.value
         }
@@ -84,7 +85,7 @@ class SchoolPhyVlabRemoteDataSource(
             url = "$PHYVLAB_CALENDAR_URL?view=month&time=$monthTimestampSeconds",
             referer = PHYVLAB_CALENDAR_URL,
         )
-        return when (val parsed = parsePhyVlabEvents(response.bodyText())) {
+        return when (val parsed = parseOffMain { parsePhyVlabEvents(response.bodyText()) }) {
             is PhyVlabParseResult.Failure -> parse()
             is PhyVlabParseResult.Success -> parsed.value
         }
@@ -92,7 +93,7 @@ class SchoolPhyVlabRemoteDataSource(
 
     override suspend fun fetchAssignmentDetail(activity: PhyVlabActivity): PhyVlabAssignmentDetail {
         val response = fetchPage(activity.activityUrl, referer = "${SchoolEndpoints.PHYVLAB_ORIGIN}/course/view.php?id=${activity.courseId}")
-        return when (val parsed = parsePhyVlabAssignmentPage(response.bodyText(), activity)) {
+        return when (val parsed = parseOffMain { parsePhyVlabAssignmentPage(response.bodyText(), activity) }) {
             is PhyVlabParseResult.Failure -> parse()
             is PhyVlabParseResult.Success -> {
                 var page = parsed.value
@@ -179,7 +180,7 @@ class SchoolPhyVlabRemoteDataSource(
         if (response.body.isEmpty()) parse()
         // 某些反向代理会在原请求地址直接返回登录页（不发生 HTTP 跳转）。
         // 不能把这类页面误判成“已登录但没有课程”。
-        if (looksLikePhyVlabLoginPage(response.bodyText())) {
+        if (parseOffMain { looksLikePhyVlabLoginPage(response.bodyText()) }) {
             phyVlabDebug("page classified as login")
             sessionExpired()
         }

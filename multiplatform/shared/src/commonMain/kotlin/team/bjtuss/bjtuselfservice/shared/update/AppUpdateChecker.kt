@@ -22,7 +22,7 @@ object AppUpdateChecker {
     const val REPO = "JasonZhang1225/BJTUselfService-KMP-Refreshed"
 
     /** 当前构建版本。与 androidApp versionName / 设置页展示一致。 */
-    const val CURRENT_VERSION = "1.8.4-Beta-SheetFix-Widget-fix2"
+    const val CURRENT_VERSION = "1.8.4-Beta3"
 
     private const val RELEASES_URL = "https://api.github.com/repos/$REPO/releases"
 

@@ -56,16 +56,19 @@ class CitelRemote(private val transport: SchoolHttpTransport) : CitelDataSource 
         val courses = courses(credentials)
         coroutineScope {
             courses.map { course -> async {
-                val courseTasks = parseCitelTasks(page("$CITEL_BASE/course/view.php?id=${course.id}", credentials).bodyText(), course)
+                val coursePage = page("$CITEL_BASE/course/view.php?id=${course.id}", credentials)
+                val courseTasks = parseOffMain { parseCitelTasks(coursePage.bodyText(), course) }
                 val results = if (courseTasks.any { it.programming }) {
-                    parseCitelProgrammingResults(page("$CITEL_BASE/mod/programming/index.php?id=${course.id}", credentials).bodyText())
+                    val programmingPage = page("$CITEL_BASE/mod/programming/index.php?id=${course.id}", credentials)
+                    parseOffMain { parseCitelProgrammingResults(programmingPage.bodyText()) }
                 } else emptyMap()
                 coroutineScope {
                     courseTasks.map { task -> async {
                         val result = results[task.id]
                         val indexed = if (result != null) task.copy(status = result.status, submitted = result.accepted,
                             openTime = result.times[0], discountTime = result.times[1], dueTime = result.times[2], allowLate = result.allowLate) else task
-                        parseCitelTaskDetail(page(task.url, credentials).bodyText(), indexed)
+                        val detailPage = page(task.url, credentials)
+                        parseOffMain { parseCitelTaskDetail(detailPage.bodyText(), indexed) }
                     } }.awaitAll()
                 }
             } }.awaitAll().flatten().distinctBy { it.id }
@@ -106,7 +109,7 @@ class CitelRemote(private val transport: SchoolHttpTransport) : CitelDataSource 
             "$CITEL_BASE/lib/ajax/service.php?sesskey=$key&info=$method",
             rawBodyContentType = "application/json",
             rawBody = """[{"index":0,"methodname":"$method","args":{"offset":$offset,"limit":50,"classification":"all","sort":"fullname","customfieldname":"","customfieldvalue":""}}]""".encodeToByteArray()))
-        if (response.looksLikeSessionExpired()) return null
+        if (parseOffMain { response.looksLikeSessionExpired() }) return null
         validate(response)
         val item = try { Json.parseToJsonElement(response.bodyText()).jsonArray.single().jsonObject }
             catch (_: Exception) { throw CitelFailure("CITEL 课程接口格式发生变化。") }
@@ -128,7 +131,8 @@ class CitelRemote(private val transport: SchoolHttpTransport) : CitelDataSource 
     private suspend fun page(url: String, credentials: Credentials): SchoolHttpResponse = readRequests.withPermit {
         val generation = recoveryMutex.withLock { recoveryGeneration }
         var response = request(SchoolHttpRequest(SchoolHttpMethod.GET, url))
-        if (response.looksLikeSessionExpired()) {
+        // 每个作业详情页都要判一次：整页解码 + 关键字查找放后台，真机同步时这里曾占主线程 2.7 秒。
+        if (parseOffMain { response.looksLikeSessionExpired() }) {
             recoveryMutex.withLock {
                 // A failed read can share another read's confirmed recovery. Keep
                 // login sequential and retry this read once with the resulting cookie.
@@ -139,7 +143,8 @@ class CitelRemote(private val transport: SchoolHttpTransport) : CitelDataSource 
                 response = request(SchoolHttpRequest(SchoolHttpMethod.GET, url))
             }
         }
-        if (response.looksLikeSessionExpired()) throw CitelFailure("CITEL 登录已失效，请检查账号密码后重试。", true)
+        val retried = response
+        if (parseOffMain { retried.looksLikeSessionExpired() }) throw CitelFailure("CITEL 登录已失效，请检查账号密码后重试。", true)
         validate(response)
         response
     }

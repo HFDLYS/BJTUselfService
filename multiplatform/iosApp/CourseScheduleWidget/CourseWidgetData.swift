@@ -29,7 +29,7 @@ struct CourseWidgetSession: Codable, Hashable {
     let endMinute: Int
     let isLab: Bool
     let color: Int64
-    /// 课表色块分类：required/limited/elective/pe/unknown/lab；旧快照没有这个字段。
+    /// 课程类别：required/limited/elective/pe/unknown/lab/exam；旧快照没有这个字段。
     let kind: String?
 }
 
@@ -318,12 +318,12 @@ extension CourseWidgetSnapshot {
             CourseWidgetSession(name: name, place: place, teacher: teacher, startMinute: start, endMinute: end,
                                 isLab: kind == "lab", color: color, kind: kind)
         }
-        let math = session("高等数学", "思源楼 101", "张老师", 8 * 60, 9 * 60 + 50, 0x4C8BF5, "required")
-        let data = session("数据结构", "逸夫楼 302", "李老师", 10 * 60 + 10, 12 * 60, 0x2E9E6B, "required")
-        let physics = session("大学物理", "思源西楼 205", "王老师", 14 * 60 + 10, 16 * 60, 0xE0674F, "limited")
+        let math = session("高等数学", "思源楼 101", "张老师", 8 * 60, 9 * 60 + 50, 0xD9574E, "required")
+        let data = session("数据结构", "逸夫楼 302", "李老师", 10 * 60 + 10, 12 * 60, 0xD9574E, "required")
+        let physics = session("大学物理", "思源西楼 205", "王老师", 14 * 60 + 10, 16 * 60, 0xC9558A, "limited")
         let sports = session("排球", "体育馆", "赵老师", 8 * 60, 9 * 60 + 50, 0x16A4A4, "pe")
-        let lab = session("物理实验", "物理实验中心", "", 13 * 60 + 30, 15 * 60 + 20, 0x9B59B6, "lab")
-        let film = session("电影赏析", "第八教学楼 8202", "钱老师", 19 * 60, 20 * 60 + 50, 0xD4658E, "elective")
+        let lab = session("物理实验", "物理实验中心", "", 13 * 60 + 30, 15 * 60 + 20, 0x9B6BCF, "lab")
+        let film = session("电影赏析", "第八教学楼 8202", "钱老师", 19 * 60, 20 * 60 + 50, 0x4F6FD8, "elective")
         // 周一到周日轮换几种组合，让周视图预览像一张真实的课表。
         let rotation: [[CourseWidgetSession]] = [
             [math, data, physics], [sports, data, film], [math, lab], [data, physics], [math, film], [], [],
