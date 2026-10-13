@@ -1,247 +1,232 @@
 # BJTUselfService 协作与实现指南
 
-本文件适用于参与本仓库的 AI 编码代理和开发者。项目的长期迁移目标、范围与里程碑见 `goal.md`，当前工作状态与近期计划见 `memory.md`，完整历史与已归档的验收证据见 `history_full.md`；四者冲突时，先核对当前代码和用户最新要求，再向用户说明冲突，不自行扩大范围。
+本文件适用于参与本仓库的 AI 编码代理和开发者。KMP 迁移（M0–M17）已经收口，项目进入**按需迭代**阶段：每次改动是一个修复、一个小功能或一次发版，不再按大里程碑规划。当前工作状态见 `memory.md`，已完成工作的日志见 `history_full.md`；文档与当前代码或用户最新要求冲突时，以代码和用户为准，并向用户说明冲突，不自行扩大范围。
 
 ## 文档分工与读写规则
 
-| 文档                | 角色         | 写谁                   | 写什么                                                                    | 不写什么                                 |
-| ------------------- | ------------ | ---------------------- | ------------------------------------------------------------------------- | ---------------------------------------- |
-| `AGENTS.md`       | 原则         | 人工维护               | 协作方式、架构边界、平台能力、安全红线、设计、测试验证、交付规则          | 任何动态进度、里程碑状态、验证结果、日期 |
-| `goal.md`         | 规划         | 人工维护               | 长期目标、范围、里程碑范围与验收标准、技术方向、完成定义                  | 已完成细节、历史命令结果、实机现象       |
-| `memory.md`       | 实时工作记忆 | 每轮任务结束时自动更新 | 顶部摘要、本阶段已做到（≤10 行）、当前痛点（≤8 条）、接下来 1～3 个阶段 | 超过一个阶段的已完成细节                 |
-| `history_full.md` | 完整历史     | 里程碑/阶段完成时归档  | 按里程碑归档的已完成验证、命令结果、构建证据、实机现象、决策              | 当前未完成的事项、待办                   |
+| 文档                | 角色         | 谁写                   | 写什么                                                                 | 不写什么                               |
+| ------------------- | ------------ | ---------------------- | ---------------------------------------------------------------------- | -------------------------------------- |
+| `AGENTS.md`       | 原则         | 人工维护               | 协作方式、仓库事实、架构边界、平台能力、安全红线、设计、测试、交付规则 | 进度、版本状态、验证结果、日期性事件   |
+| `memory.md`       | 实时工作记忆 | 每次任务结束时更新     | 顶部摘要、进行中的事项、当前痛点、接下来要做的事                       | 已经合入/发布的完成细节（移入日志）    |
+| `history_full.md` | 工作日志     | 一项工作合入或发版时追加 | 按日期追加的条目：做了什么、为什么、验证命令与结果、实机现象、未验证边界、决策 | 待办与计划                             |
 
-**读写顺序（强约束）**：
+**读写顺序**：
 
-- 每个任务开始前：读 `AGENTS.md`（原则）→ `goal.md`（当前里程碑范围与验收）→ `memory.md`（当前状态与近期计划）→ `history_full.md` **只查**“是否已有同类证据”，不整篇通读。
-- 每个任务结束前：**只更新 `memory.md`**；里程碑/阶段真正完成时才向 `history_full.md` 追加归档段（追加新子节，不重写旧节），并把对应内容从 `memory.md` 删除。
-- 目标模式任务需要完整历史时，优先让子代理读取 `history_full.md`，避免把完整历史灌进主上下文。
-- `goal.md` 与 `AGENTS.md` 由人工维护；AI 只在用户要求时修改，改动前后向用户说明。
+- 任务开始前：读 `AGENTS.md` → `memory.md`；`history_full.md` 不通读，只用 `rg` 查同类问题、同一功能的既往结论与证据。
+- 任务进行中：未合入的改动只记在 `memory.md`“进行中”。
+- 一项工作合入 `main`（PR 合并）或发出版本后：把对应内容从 `memory.md` 移出，在 `history_full.md` **末尾**追加一条日志；不改写旧条目（事实错误时追加更正条目）。
+- `AGENTS.md` 由人工维护；AI 只在用户要求时修改，改动前后向用户说明。
+- `docs/migration/`、`docs/security/` 等是当时的专题报告，可作参考，但不代表当前状态。
+
+**日志条目格式**（`history_full.md`）：
+
+```markdown
+## 2026-10-13 课程类别色统一与同步卡顿修复（PR #11，1.8.4-Beta3）
+
+- 改动：……（用户可见行为 + 关键实现位置）
+- 原因/决策：……
+- 验证：实际命令与结果、模拟器/真机现象。
+- 未验证：……
+```
+
+同一天多项工作可分条；条目要写清分支/PR/标签/版本，方便以后检索。
 
 ## 开始任何任务前
 
-1. 按上表读取四个文档（`history_full.md` 只查同类证据）。
-2. 运行 `git status --short`，识别并保护用户已有改动。
+1. 按上表读 `AGENTS.md`、`memory.md`，按需检索 `history_full.md`。
+2. 运行 `git status --short` 和 `git branch --show-current`，识别并保护用户已有改动；需要最新代码时先 `git pull --ff-only`。
 3. 阅读即将修改文件的调用链和对应测试，不只阅读目标函数。
-4. 明确本次属于哪个里程碑、涉及哪些平台、验收命令是什么。
-5. 多文件或行为变化先给出具体计划；只有用户已经明确批准当前里程碑时才继续实施。
+4. 明确本次涉及哪些平台、验收命令是什么。
+5. 多文件或行为变化先给出简短计划；用户已明确要求直接做时可以直接实施。
 
 默认使用中文沟通。解释新概念时先说用途和行为，再给术语与实现细节。
 
-## 当前事实
+## 仓库事实
 
-- `main` 是长期集成基线；本轮邮箱开发按用户要求在 `maildev` 分支承接，未经明确要求不得把本轮改动提交、合并或推送到 `main`。分支创建点是 `9d8da18`；不要擅自 rebase 或从 Release 标签重新开工。
-- 当前仓库根部是单模块 Android 项目，入口模块为 `:app`。该现有工程现在是冻结的只读参考。
-- 主要语言是 Kotlin，登录、HTML 解析和模型相关仍有部分 Java。
-- UI 使用 Jetpack Compose/Material 3。
-- 网络主要使用 OkHttp，解析使用 Jsoup，数据格式库存在多套并存。
-- 持久化使用 Room 和 DataStore。
-- 验证码使用 `pytorch_android` 加载 `app/src/main/assets/model.pt`。
-- 目标架构是 Kotlin Multiplatform + Compose Multiplatform，支持 Android、iOS、macOS。
-- 新实现必须放在独立 `multiplatform/` Gradle 工程中；不要修改 `app/`、现有根 `build.gradle.kts`、`settings.gradle.kts`、`gradle/`、Android Manifest、资源或现有测试。
-- 当前 KMP 调试构建版本为 `1.7.6-debug-1`；上一发布 `v1.7.4-KMP` 保留。功能源代码基线为 `v1.7.3-KMP-B@a342615`，上游 Android 对照基线保留 `v1.7.0@419313d`；`ZJG@9d8da18` 只是迁移分支创建点。
-- 当前冻结 Android 工作树不是完整的 1.7.0 源码参考。需要查看 1.7.0 时使用隔离的只读参考目录或独立工作树，不把发布提交混入冻结根工程或 `multiplatform/`。
-
-> 动态进度（当前做到哪一步、近期计划）见 `memory.md`；历史验收与验证证据见 `history_full.md`；本文件只讲原则与边界。
+- 仓库根部是冻结的原 Android 工程（`:app`，只读参考，旧 CI `release.yml`/`debug.yml` 仍在）。所有实际开发都在独立的 `multiplatform/` Gradle 工程里：`shared`（共享业务与 Compose UI）、`androidApp`、`desktopApp`（macOS）、`windowsApp`、`iosApp`（Xcode 宿主 + `CourseScheduleWidget` 小组件扩展）。
+- 不修改 `app/`、根 `build.gradle.kts`、`settings.gradle.kts`、`gradle/`、Android Manifest、资源或现有测试；不把 KMP 模块 include 到根 `settings.gradle.kts`。
+- 远端：`mine` = `JasonZhang1225/BJTUselfService-KMP-Refreshed`（日常推送、PR、Release 都在这里）；`origin` = 上游 `HFDLYS/BJTUselfService`，**不推送**。
+- 分支流程：`main` 跟踪 `mine/main`。每项改动在 `feat/…`、`fix/…`、`perf/…` 分支开发，用户要求时推到 `mine` 并开 PR 合入 `mine/main`；合并由用户决定。PR 由 `kmp-security-check`（共享测试/编译）和 `kmp-package`（iOS 相关改动时打 Debug IPA）检查。
+- 标签：`debug-*` 只触发 Actions 打包、不建 Release；`v*`（如 `v1.8.3-KMP`）打四端包并发 GitHub Release，发布说明放 `docs/releases/<tag>.md`。
+- 改版本号要同步修改：`multiplatform/androidApp/build.gradle.kts`（versionName/versionCode）、`desktopApp/build.gradle.kts`（数值版本）、`windowsApp/build.gradle.kts`、`iosApp/iosApp/Info.plist`、`iosApp/CourseScheduleWidget/Info.plist`（版本与 Build 必须与宿主一致），以及 `shared/.../update/AppUpdateChecker.kt` 的 `CURRENT_VERSION` 和 `AppUpdateCheckerTest`。
+- 技术栈：Kotlin Multiplatform + Compose Multiplatform/Material 3；Ktor；Ksoup 解析 HTML；`kotlinx.serialization`；SQLDelight 缓存；凭据走 Android Keystore / Apple Keychain / macOS `MacOsSecretBag` / Windows DPAPI；验证码 Android/Windows 用 PyTorch 模型，Apple 用 Core ML。
+- 本机验证产物（截图、导出、诊断日志）放忽略目录 `.artifacts/`，不进 Git。
 
 ## 工作方式
 
 ### 检查优先
 
 - 优先使用 `rg`、Gradle、`xcodebuild` 等只读或可复现命令检查工程。
-- 命令行负责可复现的源码、构建和测试证据；Computer Use 与截图负责真实界面、交互和 IDE/模拟器状态证据。涉及用户可见行为时必须同时考虑两类证据，不能只看编译结果。
-- 使用 Computer Use 时先读取应用当前状态；每次操作后重新读取状态，不复用旧的元素索引。
-- 不用 GUI 替代本可由源码、构建任务或测试证明的结论。
-- 不根据源码或函数名猜测原 App 的全部能力。开始 KMP 功能实现前，必须登录原 Android App，逐页查看所有可达入口并形成行为与视觉基线；Apple 端实现后必须用同一清单逐页复测 iOS 和 macOS。
+- 命令行负责源码、构建和测试证据；Computer Use 与截图负责真实界面、交互和模拟器状态证据。涉及用户可见行为时两类证据都要考虑，不能只看编译结果。
+- 使用 Computer Use 时先读取应用当前状态；每次操作后重新读取，不复用旧的元素索引。
+- 性能问题先采样（Instruments/Time Profiler、`--sync-timing` 等）再改，改后复采对比，不凭猜测优化。
+- 不根据函数名猜测学校接口或页面能力；协议问题用浏览器开发者工具或真实响应取证。
 
 ### 变更边界
 
-- 每次只推进一个可验证的纵向切片或一个基础设施里程碑。
-- 不在迁移功能 A 时顺手重写无关功能 B。
-- 现有 Android 文件一律不修改、不删除、不移动、不格式化；需要复用时在新 KMP 工程重新实现，并保留来源与行为对照说明。
-- 不把 KMP 模块 include 到现有根 `settings.gradle.kts`；`multiplatform/` 使用自己的 wrapper 和构建配置。
+- 每次只推进一个可验证的改动；不在修 A 时顺手重写无关的 B。
 - 保留用户指定的机制、文字、目录名和未提交改动。
-- 不擅自安装依赖、修改系统设置、登录其他账号、创建证书或接受协议；唯一预先授权的登录范围是本文件“Computer Use 使用规则”中限定的 MIS 验证流程。
-- 不擅自 commit、tag、push、force-push、创建 PR 或发布；需要时先提供完整草稿。
+- 不擅自安装依赖、修改系统设置、登录其他账号、创建证书或接受协议；唯一预先授权的登录范围见下文“Computer Use 使用规则”。
+- 不擅自 commit、tag、push、创建 PR 或发布；用户明确要求时才做。
 
 ### 计划与记录
 
-- 计划必须列出将修改/新增的文件、行为变化、平台差异、测试和回退方案。
-- 不用“已完成”描述仅能编译但没有运行验证的功能。
+- 计划写清：将修改/新增的文件、行为变化、平台差异、测试和回退方案。
+- 不用“已完成”描述只编译、未运行验证的功能；本地无法构建而交给 CI 的，要写明。
 - 遇到真实服务器、真机、签名或账号阻塞时，记录已经验证的边界，不伪造成功。
-- 完成里程碑后更新 `goal.md` 勾选状态，并记录关键架构决定及其原因；同时把已完成细节归档进 `history_full.md`，动态状态更新到 `memory.md`。
-- `memory.md` 是动态工作记忆，不是只追加日志。每次目标模式任务结束时必须增删改：已经完成的事情、仍未完成或新增的痛点、接下来 1～3 个阶段的近期计划。
-- 已解决的痛点应删除或改写；已经完成的计划应移入“本阶段已做到”，不能让同一事项长期同时出现在“已做”和“待做”。
-- 分支、功能基线、最新 Release、未提交文件或验证状态变化时，立即同步 `memory.md` 顶部摘要和相关章节。
+- `memory.md` 是动态记忆，不是只追加日志：每次任务结束都要增删改。已解决的痛点删除或改写；已合入的事项移进日志；同一事项不能同时出现在“进行中”和“接下来”。
+- 分支、版本号、最新 Release、未提交文件或验证状态变化时，立即同步 `memory.md` 顶部摘要。
 
 ## KMP 架构规则
 
 ### commonMain 允许的内容
 
-- 纯 Kotlin 数据模型和业务规则。
-- Coroutines、Flow/StateFlow。
-- 跨平台网络协议、序列化和解析逻辑。
-- Repository 接口和用例。
-- 可跨平台数据库定义。
+- 纯 Kotlin 数据模型和业务规则；Coroutines、Flow/StateFlow。
+- 跨平台网络协议、序列化和解析逻辑；Repository 接口和用例；SQLDelight 定义。
 - 共享 Compose UI、主题 token 和响应式布局逻辑。
 
 ### commonMain 禁止的内容
 
 - `android.*`、Android `Context`、Activity、Intent、WebView、DownloadManager。
-- JVM-only Java API，例如 `CompletableFuture`、`java.io.File` 作为公共模型、Java 反射依赖。
-- 直接调用 UIKit、AppKit、Swing/AWT。
-- 在共享业务对象中保存全局平台单例。
-- 依赖平台文件绝对路径。
+- JVM-only API（`CompletableFuture`、`java.io.File` 作为公共模型、Java 反射）。
+- 直接调用 UIKit、AppKit、Swing/AWT；在共享业务对象中保存全局平台单例；依赖平台文件绝对路径。
 
-平台差异使用接口、依赖注入或 `expect/actual` 隔离。只在真正的平台原语上使用 `expect/actual`；业务策略尽量通过普通接口表达，便于测试。
+平台差异使用接口、依赖注入或 `expect/actual` 隔离。只在真正的平台原语上使用 `expect/actual`；业务策略尽量用普通接口表达，便于测试。
 
-### 状态与生命周期
+### 状态、线程与生命周期
 
-- 页面状态应是不可变数据，事件是明确输入，副作用集中处理。
-- 网络请求不能直接从 Composable 的普通重组路径启动。
-- 共享状态不持有 Activity、UIViewController、Window 或文件选择器实例。
-- 所有长生命周期协程必须有明确所有者和取消路径。
-- macOS 关闭窗口与退出应用是不同生命周期；不要把关闭最后一个窗口默认等同于清空会话或退出。
+- 页面状态是不可变数据，事件是明确输入，副作用集中处理。
+- 网络请求不能从 Composable 的普通重组路径启动。
+- 学校响应的解码、HTML/JSON 解析和会话过期判断放后台调度器（参见 `network/ParseOffMain.kt`），不占主线程；网络请求本身保持原有串行语义。
+- 内容不变时沿用旧实例，避免 Compose 因“等值新对象”反复整表比较或重组。
+- 共享状态不持有 Activity、UIViewController、Window 或文件选择器实例；长生命周期协程必须有明确所有者和取消路径。
+- macOS 关闭窗口与退出应用是不同生命周期；关闭最后一个窗口不等于清空会话或退出。
 
 ### 依赖收敛
 
-- 新共享 JSON 模型优先使用 `kotlinx.serialization`。
-- 新共享网络代码优先使用经验证的 KMP HTTP 客户端。
-- 不继续增加 Gson、Moshi、`org.json` 的使用面；迁移旧代码时逐步收敛。
-- 引入库前检查 Android、iOS arm64、iOS simulator arm64、macOS/desktop 目标是否真实可构建。
-- 不凭印象锁版本；先核对 Kotlin、Compose Multiplatform、AGP、Gradle、Xcode 的兼容矩阵。
+- 新共享 JSON 模型用 `kotlinx.serialization`；不增加 Gson、Moshi、`org.json`。
+- 引入库前检查 Android、iOS arm64、iOS simulator arm64、macOS、Windows 目标是否真实可构建；不凭印象锁版本，先核对 Kotlin、Compose Multiplatform、AGP、Gradle、Xcode 兼容矩阵。
 
 ## 平台能力规则
 
 ### WebView 与 Cookie
 
-- Android、iOS、macOS 网页组件分别实现，共享导航策略和 Cookie 数据协议。
-- Cookie 同步必须限定域名、路径、安全属性和时机；不把所有 Cookie 注入任意网页。
-- 外部链接与应用内网页要有明确边界，避免用户被困在 WebView。
-- 不绕过浏览器或系统的 TLS 安全警告。
+- 各平台网页组件分别实现，共享导航策略和 Cookie 数据协议。
+- Cookie 同步限定域名、路径、安全属性和时机；不把所有 Cookie 注入任意网页。
+- 外部链接与应用内网页边界明确；不绕过系统 TLS 安全警告。
 
 ### 文件与下载
 
 - 共享层使用字节流、数据源/数据槽和元数据，不把 Android `Uri` 或 JVM `File` 暴露为公共 API。
-- iOS 通过系统文档选择、分享或导出流程；macOS 使用保存/打开面板并支持键盘操作。
-- 写文件前处理重名、取消、失败恢复、剩余空间和临时文件清理。
-- 测试不能向用户真实 Downloads/Documents 写垃圾文件；优先使用临时目录。
+- iOS 走系统文档选择/分享/导出；macOS 用保存/打开面板并支持键盘操作。
+- 写文件前处理重名、取消、失败恢复、剩余空间和临时文件清理；测试不向用户真实 Downloads/Documents 写垃圾文件。
 
 ### 数据库和设置
 
-- 普通设置可以使用跨平台 DataStore 或等价抽象。
-- 用户名、密码、令牌和敏感 Cookie 必须使用 Android Keystore/Apple Keychain 支持的实现。
-- 数据库 schema 变化必须有迁移测试，不以 `fallbackToDestructiveMigration` 代替正式迁移策略。
-- 退出登录时区分“清除敏感会话”和“清除全部离线数据”，界面文字必须说清后果。
+- 用户名、密码、令牌和敏感 Cookie 必须进系统安全存储，不进 SQLite 或普通偏好。
+- schema 变化必须有迁移测试，不以破坏性重建代替迁移。
+- 退出登录区分“清除敏感会话”和“清除全部离线数据”，界面文字说清后果。
+
+### iOS 小组件
+
+- 小组件与主 App 通过 App Group 共享快照；SideStore 等侧载工具会改写 App Group 名称，因此组名必须从描述文件 Entitlements 动态解析并回退原名，不能写死。
+- 快照只由主宿主生成，防抖并在后台线程构建与写入；不在每次重组或每个原生 Tab 宿主里各写一遍。
+- 时间线条目数量要克制（真机有预渲染预算，超预算会退回占位图）。
 
 ### 验证码模型
 
-- Android 保留 PyTorch 实现直到 Apple 模型验证通过。
-- Apple 平台优先使用 Core ML；预处理、输入形状、通道顺序、归一化、类别表和 CTC 解码必须与 Android 对齐。
-- 首版必须提供显示图片、刷新和手动填写答案的路径；自动识别不是其他功能的前置条件。
-- 使用固定且脱敏的验证码测试集比较输出与正确率；样本不得包含账号、Cookie 或可复用会话信息。
-- 对同一图片依次比较：解码后的 `130×42` 像素、RGB/CHW 输入张量、模型原始 logits、argmax 类别序列、CTC 解码字符串和最终算式答案。
-- 重点排查图片方向、缩放插值、颜色空间、alpha 合成、RGB/BGR、CHW/NHWC 和 Core ML 输出轴顺序。
-- 仅成功加载或执行 Core ML 模型不等于迁移成功；没有端到端正确率证据时不得默认开启。
-- 自动识别失败应回到手动输入，不无限重试登录。
+- 首版路径永远是“显示图片 → 刷新 → 手动填写”；自动识别失败回到手动，最多 3 次，不无限重试。
+- Apple Core ML 与 Android PyTorch 的预处理（`130×42`、RGB、CHW、`[0,1]`）、输出轴顺序、类别表和 CTC 解码必须对齐；改模型或预处理时，用同一份脱敏测试集逐层比较（像素、输入张量、logits、argmax、解码字符串、算式答案）。
+- 仅能加载或执行模型不等于识别正确，没有正确率证据不得改变默认开关。
 
 ## 网络与安全红线
 
-- 禁止新增“信任所有证书”或无条件 `hostnameVerifier = true` 的实现。
-- 不将当前绕过 TLS 校验视为必须保持的功能行为。
-- 对 HTTP 明文接口逐个登记用途、数据敏感性、可替代 HTTPS 地址和 Apple ATS 影响。
-- 不在日志、异常、截图、测试 fixture 或提交中保存真实学号、密码、Cookie、令牌。
-- 调试日志必须可在 release 中关闭，并对 URL 查询参数和响应体做脱敏。
-- 不把真实账号数据发送给第三方服务来帮助调试。
-- 如学校接口只能通过不安全方式工作，先报告阻塞和风险，由用户决定下一步，不能静默降低安全性。用户已于 2026-07-31 授权 macOS、并于 2026-08-01 授权 iOS 智慧教学会话使用旧 HTTP；该授权只覆盖 `123.121.147.7:88/ve/` 和教学日历 `123.121.147.7:1936/kk/rp/`，必须保持端点/路径白名单、内存会话脱敏，以及宽屏侧栏/相关页面/紧凑全局顶部不可关闭的 UI 风险提示，不得扩大到 Android、MIS、AA、邮箱或任意其他 HTTP。
+- 禁止新增“信任所有证书”或无条件 `hostnameVerifier = true`。
+- HTTP 明文接口逐个登记用途、数据敏感性、可替代 HTTPS 地址和 Apple ATS 影响。
+- 不在日志、异常、截图、测试 fixture 或提交中保存真实学号、密码、Cookie、令牌；调试日志在 release 可关闭，URL 查询参数和响应体脱敏。
+- 不把真实账号数据发给第三方服务来帮助调试。
+- 学校接口只能以不安全方式工作时，先报告阻塞和风险，由用户决定，不静默降低安全性。用户已于 2026-07-31 授权 macOS、并于 2026-08-01 授权 iOS 智慧教学会话使用旧 HTTP；该授权只覆盖 `123.121.147.7:88/ve/` 和教学日历 `123.121.147.7:1936/kk/rp/`，必须保持端点/路径白名单、内存会话脱敏和不可关闭的 UI 风险提示，不得扩大到 Android、MIS、AA、邮箱或其他 HTTP。
 
 ## Compose Multiplatform UI 规则
 
 ### 共享而不强求相同
 
-- 共享设计语言、状态和核心组件，但根据窗口宽度、输入方式和平台习惯调整导航。
-- iPhone 优先单列、触控和单手可达；iPad/宽窗口优先列表—详情或侧栏。
-- macOS 支持可调整窗口、工具栏、菜单、鼠标悬停、滚动、右键和键盘快捷键。
-- 不用固定手机尺寸，不把底部导航强行放到所有 macOS 窗口。
+- 共享设计语言、状态和核心组件，按窗口宽度、输入方式和平台习惯调整导航。
+- iPhone 单列、触控、单手可达；iPad/宽窗口用列表—详情或侧栏；macOS 支持可调整窗口、菜单、悬停、滚动、右键和快捷键。
+- 紧凑端二/三级页走平台原生容器（Android Activity、iOS `UINavigationController`）；iOS 弹层走 UIKit sheet，按内容定高的用 `fitContentHeight`。
+- 颜色语义集中定义（例如课程类别色只来自 `CourseCategoryPalette`），不在各页面另起调色板。
 
 ### Apple Design 验收要求
 
-- **响应**：按下立即出现视觉反馈，不等待网络请求完成才反馈。
-- **可打断**：手势驱动的动画可以在运动中被重新抓取或反向，不锁住输入。
-- **空间一致**：进入与退出沿同一路径；弹层、菜单和详情与触发源保持空间联系。
-- **克制弹性**：普通出现/消失默认无弹跳；只有甩动、拖拽释放等带动量操作允许轻微弹性。
-- **反馈完整**：状态、完成、警告、错误各有明确且不过度的反馈；错误尽量就地说明。
-- **材料有层级**：半透明只用于需要表达浮层层级的区域，不堆叠玻璃效果，不牺牲文字对比度。
-- **排版可伸缩**：使用系统字体与动态字体，标题和正文分别控制字重、行高，不以固定高度截断文字。
-- **辅助功能**：支持减少动态效果、减少透明度、更高对比度、语义标签、键盘导航和足够点击区域。
+- **响应**：按下立即有视觉反馈，不等网络请求完成。
+- **可打断**：手势驱动的动画可在运动中被重新抓取或反向。
+- **空间一致**：进入与退出沿同一路径；弹层、菜单、详情与触发源保持空间联系。
+- **克制弹性**：普通出现/消失无弹跳；只有带动量的拖拽释放允许轻微弹性。
+- **反馈完整**：状态、完成、警告、错误各有明确且不过度的反馈，错误尽量就地说明。
+- **材料有层级**：半透明只用于表达浮层层级，不堆叠玻璃，不牺牲文字对比度。
+- **排版可伸缩**：系统字体与动态字体，不以固定高度截断文字。
+- **辅助功能**：减少动态效果、减少透明度、更高对比度、语义标签、键盘导航、足够点击区域。
 
-推荐的默认动效倾向：临界阻尼、无过冲、响应约 0.3–0.4 秒；只有真实动量交互使用约 0.8 的阻尼倾向。实现时应映射到 Compose 的 spring 参数并通过真机/模拟器观察，而不是机械复制数字。
+默认动效倾向临界阻尼、无过冲、响应约 0.3–0.4 秒；映射到 Compose spring 参数后在模拟器/真机观察，不机械复制数字。
 
 ## 测试与验证
 
 ### 每次改动至少执行
 
-- 修改纯业务逻辑：相关 JVM 测试和 `commonTest`。
-- 修改 Android：对应单元测试，并至少完成 debug 编译。
-- 修改共享代码：编译所有受影响目标，不能只跑 Android。
-- 修改 iOS：运行 iOS Simulator 构建；涉及原生 API 时在模拟器实际打开页面。
-- 修改 macOS：构建并启动桌面应用，检查窄/宽窗口。
-- 修改 UI：至少检查浅色/深色、加载/空/错误/正常状态和文字放大。
-- 修改网络/解析：使用脱敏 fixture 测试正常、字段缺失、登录过期和服务错误响应。
-- 修改模型：运行同一测试集对比 Android 与 Apple 输出。
+- 业务逻辑/解析：`./gradlew :shared:desktopTest`（必要时加 `:shared:iosSimulatorArm64Test`，需 Java 21）。
+- 共享代码：编译所有受影响目标（Android、iOS、macOS、Windows），不能只跑一个。
+- Android：`:androidApp:assembleDebug`。
+- iOS：签名的模拟器构建（见下文），涉及原生 API 或 UI 时在模拟器实际打开页面；Swift 改动必须经 Xcode 编译或明确交给 PR CI。
+- macOS：构建并启动桌面应用，检查窄/宽窗口。
+- UI：至少检查浅色/深色、加载/空/错误/正常状态和文字放大。
+- 网络/解析：脱敏 fixture 覆盖正常、字段缺失、登录过期和服务错误响应。
+- 本地 Gradle 因依赖源限流等原因无法构建时，说明原因，把验证交给 PR CI，并在结论中注明“仅 CI 验证”。
 
-课程表相关改动必须验证：首次取得当前周、缓存当前周、切换当前/下学期、用户手动选周后不被异步结果意外覆盖。成绩相关改动必须验证：选择课程、按账号恢复、筛选和排序、清空选择、退出/切换账号、窄窗口按钮换行以及异常成绩不参与错误计算。
+### 高风险区域的回归要点
 
-1.7.0 新增基线还必须验证：作业附件下载与失败恢复、同名作业同步区分、底部导航和壁纸/玻璃态设置、教室人数评估中的教室安排展示。小组件周视图延后到三端公版完成后，不纳入当前完成门禁。
-
-登录页 UI 相关改动还必须验证：验证码加载中/失败/可刷新状态、表单校验反馈、紧凑与宽窗口布局、错误就地说明。
+- 课程表：首次取得当前周、缓存当前周、切换本学期/选课学期、手动选周后不被异步结果覆盖、非教学周、前往日期。
+- 成绩：选择课程、按账号恢复、筛选和排序、清空选择、切换账号、窄窗口换行、异常成绩不参与计算。
+- 登录：验证码加载中/失败/刷新、表单校验、紧凑与宽窗口、错误就地说明、静默自动登录与会话恢复。
+- 同步：同步期间滑动不卡顿、部分失败时保留缓存并就地提示、校园网限定数据源（物理实验/演示实验/物理在线）的失败态。
+- 小组件：快照内容与课表一致、浅/深色、各尺寸放不下时的计数文案、版本号与宿主一致、侧载后 App Group 可读。
 
 ### 结果表述
 
 - “测试通过”必须附实际命令和结果。
-- Mock/fixture 通过只能证明解析和业务逻辑，不证明真实服务器登录。
-- 模拟器通过不能自动证明真机文件权限、Keychain、网络或模型表现。
-- debug 构建不能自动证明 release 签名和 App Store 合规。
+- Mock/fixture 通过只证明解析和业务逻辑，不证明真实服务器登录。
+- 模拟器通过不能自动证明真机文件权限、Keychain、网络、小组件或性能表现。
+- debug 构建不能自动证明 release 签名和侧载安装。
 
 ## Computer Use 使用规则
 
-- 适用场景：Android Studio Gradle 同步状态、Xcode target/signing 页面、模拟器视觉与交互、系统权限弹窗。
-- 不适用场景：读取源码、修改文件、运行 Gradle/xcodebuild、检查 Git；这些优先使用终端和补丁工具。
-- 用户已于 2026-07-29 明确授权：实际验证登录时，可以读取仓库根目录 `MisSecret.md`，直接填入本机原 Android App，以及本机 iOS/macOS 移植版复现的既有北交大登录流程；凭据登录无需再次索取或让用户接管。
-- 读取 `MisSecret.md` 时只把内容保存在执行所需的内存变量中，不在终端使用会回显内容的命令，不输出、复制到普通剪贴板、截图、记录或提交该文件；不得把凭据填入浏览器、第三方服务或与原 App 无关的目标。
-- 上述授权不包含修改密码、创建新账号、扩大权限或接受协议。遇到意外权限、证书、签名、安装、协议或不同登录目标，仍须在动作发生前请求确认。
-- 在本机原 Android App，以及本机 iOS/macOS 移植版所复现的同一北交大登录流程中，后续获取、识别、填写和提交 CAPTCHA 自动进行。
+- 适用：Android Studio/Xcode 状态、模拟器视觉与交互、系统权限弹窗。不适用：读源码、改文件、跑 Gradle/xcodebuild、查 Git。
+- 用户已于 2026-07-29 明确授权：实际验证登录时，可以读取仓库根目录 `MisSecret.md`，直接填入本机原 Android App 以及本机 KMP 各端复现的既有北交大登录流程；凭据登录无需再次索取或让用户接管。
+- 读取 `MisSecret.md` 时只把内容保存在执行所需的内存变量中，不用会回显内容的命令，不输出、复制到普通剪贴板、截图、记录或提交；不得填入浏览器、第三方服务或与本 App 无关的目标。
+- 该授权不包含修改密码、创建新账号、扩大权限或接受协议。遇到意外权限、证书、签名、安装、协议或不同登录目标，仍须先请求确认。
+- 在上述同一登录流程中，CAPTCHA 的获取、识别、填写和提交自动进行。
+- 默认只执行只读或本地可恢复操作。提交作业、删除远端数据、充值、发送邮件等会改变外部状态的动作，必须针对该动作单独获得授权。
+- 截图和录屏必须避开学号、姓名、成绩、邮件、Cookie、验证码等个人信息；未脱敏原图只保存在 `.artifacts/`，不进 Git。
 
 ### macOS 源码运行与多窗口隔离
 
-- `multiplatform/desktopApp/src/main/kotlin/team/bjtuss/bjtuselfservice/desktop/Main.kt` 当前只有一个 `Window`；`AppReopenedListener` 只负责显示并聚焦已有窗口，不得改成在重开事件中创建新窗口。涉及窗口生命周期的改动必须补 `DesktopWindowLifecycle` 测试。
-- `./gradlew :desktopApp:run` 会启动独立的源码 JVM。终端 `Ctrl-C` 可能只结束 Gradle 前台进程，子 JVM 仍会留在后台；禁止并行或连续启动多个 `:desktopApp:run`，也不能把多个源码实例误判为应用内重复窗口。
-- 启动前先用 `ps -axo pid,ppid,command` 检查精确的源码可执行路径；验证期间最多保留一个源码实例。源码路径是 `multiplatform/desktopApp/build/compose/binaries/main/app/BJTUselfServiceKMP.app`，`/Applications/交大自由行 KMP.app` 属于用户已打开的安装版，不得为了排查而关闭或结束它。
-- Computer Use/`sky.get_app_state` 能在目标未运行时自动启动应用，因此必须在“Gradle 启动源码实例”和“Computer Use 自动启动应用”之间二选一，不能两套启动方式叠加。操作前先读取状态，操作后重新读取状态；源码版与安装版同名/同 Bundle ID 同时存在时，优先做状态/截图验证，交互验证前先解决实例歧义。
-- 验证结束时先结束 Gradle，再检查精确源码路径是否仍有子进程；必要时只结束经过路径核验的源码 PID。禁止 `killall`、宽匹配 `pkill` 或任何可能命中安装版的批量结束命令。交付前必须确认没有遗留源码实例。
+- `desktopApp/.../desktop/Main.kt` 只有一个 `Window`；`AppReopenedListener` 只显示并聚焦已有窗口，不得改成在重开事件中新建窗口。涉及窗口生命周期的改动必须补 `DesktopWindowLifecycle` 测试。
+- `./gradlew :desktopApp:run` 会启动独立 JVM；终端 `Ctrl-C` 可能只结束 Gradle，子 JVM 仍在后台。禁止并行或连续启动多个 `:desktopApp:run`。
+- 启动前用 `ps -axo pid,ppid,command` 检查精确源码路径（`multiplatform/desktopApp/build/compose/binaries/main/app/BJTUselfServiceKMP.app`），验证期间最多一个源码实例。`/Applications/交大自由行 KMP.app` 是用户的安装版，不得关闭或结束。
+- Computer Use 可能在目标未运行时自动启动应用，因此“Gradle 启动源码实例”与“Computer Use 自动启动”二选一；源码版与安装版同时存在时，交互验证前先解决实例歧义。
+- 验证结束先结束 Gradle，再按精确路径检查并结束遗留源码 PID。禁止 `killall`、宽匹配 `pkill` 等可能命中安装版的命令。
 
-### 强制视觉与行为盘点
+## iOS 打包与安装
 
-- 原 Android App 盘点必须在成功登录后进行，覆盖所有一级导航、核心二级页、设置项、弹窗和可安全进入的 WebView/文件流程。
-- 每页记录：入口、用途、主要信息、关键操作、数据来源、加载/空/错误/成功状态、导航/返回行为、Android 专属依赖、iOS/macOS 预期适配。
-- 使用真实页面确认控件含义和交互顺序；不能只根据 Composable、ViewModel 或网络方法推断。
-- 盘点默认只执行只读或本地可恢复操作。提交作业、订阅、删除远端数据、充值、发送邮件等会改变外部状态的动作，必须另行获得针对该动作的明确授权。
-- 截图和录屏必须脱敏，避开学号、姓名、成绩、邮件、Cookie、验证码和其他个人信息；未脱敏原图只能保存在本机忽略目录，不进入 Git。
-- iOS 和 macOS 完成后，使用同一功能清单分别登录复测；每项明确标记功能等价、合理的平台差异、缺失或阻塞，并实际检查窄/宽窗口、触控/鼠标键盘和系统辅助功能。
+- iOS **模拟器**构建必须启用签名（`CODE_SIGNING_ALLOWED=YES`、`CODE_SIGNING_REQUIRED=YES`，团队 `34S53DC6T6`），否则丢钥匙串、每次重新登录；配置在 `multiplatform/iosApp/Configuration/Config.xcconfig`，`scripts/require-ios-signing.sh` 只拦截模拟器构建。
+- 真机包是未签名 IPA（`generic/platform=iOS` + `CODE_SIGNING_ALLOWED=NO`），由用户用 SideStore 自签安装；CI 打包前用 `scripts/sign-ios-sideload-app.sh` 对嵌套 framework、小组件、主 App 依次 ad-hoc 签名并保留 App Group Entitlements。
+- 安装前检查实际安装包的签名；安装后验证 Keychain 保存/读取/清除（使用独立测试项，不读取、修改或输出用户凭据）。仅构建成功或进程启动不能证明登录信息保存正常。
+- 用户要求“这次不改／不重装”时，不重新打包、安装或替换正在运行的应用；附着采样（如 xctrace attach）不算重装。
+- 新版 Xcode 的模拟器是 Device Hub.app，不是 Simulator.app。
 
 ## Git 与交付
 
-- 不使用 `git reset --hard`、`git checkout --` 覆盖用户改动。
-- 不修改无关文件，不格式化整个仓库制造噪声。
-- 用户要求提交时，先展示完整提交信息草稿和将包含的文件。
-- 未经明确授权，不 commit、tag、push、force-push、创建 PR 或 Release。
-- 不把“KMP 迁移分支”与后续 Android Release 混成一个操作。`v1.7.0` 已正式发布；未来版本仍须单独核对版本号、提交范围、测试、构建矩阵和 Release 文案，并等待用户批准。
-- 每次交付说明：完成的行为、修改文件、验证命令、未验证边界和下一安全步骤。
-
-# iOS  Xcode 打包与安装要求
-
-- iOS **模拟器**构建必须启用签名（`CODE_SIGNING_ALLOWED=YES`、`CODE_SIGNING_REQUIRED=YES`，团队 `34S53DC6T6`），否则会丢钥匙串、每次都要重新登录；`require-ios-signing.sh` 只拦截模拟器构建。配置位于 `multiplatform/iosApp/Configuration/Config.xcconfig`。
-- 真机未签名 IPA（本地或 CI，`generic/platform=iOS` 加 `CODE_SIGNING_ALLOWED=NO`）用于自签安装，允许打包。
-- 安装前检查实际安装包的签名。安装后必须验证 Keychain 的保存、读取和清除（使用独立测试项，不读取、修改或输出用户凭据）；仅构建成功或进程启动不能证明登录信息保存正常。
-- 用户要求“这次不改／不重装”时，不重新打包、安装或替换当前运行的应用；允许按其要求固定后续打包配置。
-- 新版Xcode的模拟器为Device Hub.app，不是以前的 Simulator.app
+- 不使用 `git reset --hard`、`git checkout --` 覆盖用户改动；不修改无关文件，不格式化整个仓库。
+- 用户要求提交时，先给出提交信息草稿和将包含的文件；提交信息用中文，`feat:`/`fix:`/`perf:`/`docs:` 等前缀。
+- 未经明确授权，不 commit、tag、push、force-push、创建 PR、合并或发 Release；不向 `origin` 推送。
+- 发版时单独核对版本号（见“仓库事实”中的清单）、提交范围、测试、构建矩阵和发布说明，等待用户批准。
+- 每次交付说明：完成的行为、修改文件、验证命令、未验证边界和下一步。

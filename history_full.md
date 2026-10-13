@@ -1,12 +1,13 @@
-# BJTUselfService KMP 迁移完整历史
+# BJTUselfService KMP 工作日志
 
-> 本文件是**只读归档**，按里程碑记录已完成的验证事实与决策。它不是工作记忆：当前状态、待办和近期计划见 `memory.md`；原则与边界见 `CLAUDE.md`；规划与验收标准见 `goal.md`。
+> 本文件是**只追加的工作日志**，记录已经合入 `main` 或已发版的工作：做了什么、为什么、验证命令与结果、实机现象、未验证边界和决策。它不是待办清单：当前状态与计划见 `memory.md`，原则与边界见 `AGENTS.md`。
 >
-> 写入规则：只在里程碑/阶段真正完成时追加新子节（如 `### M5-9 登录页 UI 与验证码（2026-08-01）`），不重写旧子节，保持不可变历史。细节完整保留（日期、真实命令与结果、字节数、SHA、实机现象、验收边界），但原则性叙述归 `CLAUDE.md`，不再重复。
->
-> 本文件不含账号、密码、Cookie、令牌、真实验证码会话或任何敏感信息。
->
-> 个别归档条目保留了当时的"待办/待复验/待登录"句式，其中多数随后在本文件内被闭环（如 2026-08-01 风控解除、明文链路打通）；仍未闭环的事项不在本文件展开，统一见 `memory.md` 当前痛点。
+> - **写入**：一项工作合入 `main`（PR 合并）或发出版本后，在文件**末尾**追加 `## YYYY-MM-DD 标题（分支/PR/版本）` 条目；不改写旧条目，事实有误时追加更正条目。
+> - **检索**：不要通读，用 `rg` 按功能名、类名、版本号、PR 号查同类问题与既往证据。
+> - **结构**：2026-10-09 之前是迁移期（M0–M17）按里程碑整理的归档，其中“决策记录”一节集中了迁移期决策；之后严格按日期顺序记录。
+> - 本文件不含账号、密码、Cookie、令牌、真实验证码会话或任何敏感信息。迁移期条目里残留的“待办/待复验”句式只代表当时状态。
+
+# 第一部分：迁移期归档（2026-07-29～2026-10-09）
 
 ## 未拆分的历史基线（M0 之前）
 
@@ -635,3 +636,88 @@
 
 分支清理：删除本地/远端 `codex/CITEL`、`codex/Duo`，以及本地已合入的 `NewMigration`。备份分支 `backup/readme-before-squash-20261007` 与 `codex/Duo-before-cleanup-20261009` 含未进主线的独立提交，予以保留。
 
+
+# 第二部分：日志（2026-10-10 起，按日期追加）
+
+## 2026-10-10 教务限流、邮箱附件与 v1.8.3-KMP 正式发布
+
+- 改动：修复教务限流导致首次登录同步失败；邮箱新增附件下载与预览（`4dffbab`）；宽屏邮件详情窗格恢复滚轮/触控板滚动；Android 附件“打开方式”与完美校园微信跳转修复（`d53c630`）；登录失败弹窗文案调整。Windows CI 安装器改用中文名。
+- 调试包：`debug-1.8.3-Beta-ci`、`.2`（Windows 安装器名）、`.3`（邮件滚动），只出 Actions 产物。
+- 发布：版本 `1.8.3-KMP` / Build 29，标签 `v1.8.3-KMP`（`7985a25`），CI run `38033203351`，发布说明 `docs/releases/v1.8.3-KMP.md`，设为 Latest。冻结 Android 的 `release.yml` 对该标签 skip，属预期。README 加入宣传图。
+
+## 2026-10-11～12 物理演示实验、首页日程跳转与课件“未开放下载”（1.8.4-Alpha-phydemo-fix，Build 30）
+
+- 演示实验（`f21744b`、`b91f20b`）：首页“当天实验”和“正在上”并入演示实验；登录后自动刷新改用与物理实验相同的门控，修复 iOS 原生 Tab 壳下从不自动刷新；查询页按日期排序，进入时本次会话未同步过则补刷一次。
+- 首页日程跳转统一：物理在线跨课程查找活动后进二级详情（原只查当前课程，找不到就开网页）；CITEL 进对应作业二级详情（原聚合模式下跳作业一级页）。模拟器只验证了演示实验跳转。
+- 课件下载（`56f8799`）：解析智慧教学 `stu_download`（网页端只有 "2" 显示下载）。未开放下载的文件在列表/详情标“未开放下载”并禁用按钮，不再发请求；批量导出跳过并列出被跳过文件，不再整体中止。课件、作业附件下载/上传整体超时放宽到 15 分钟（socket 仍 30 秒）。`--sync-timing` 失败时记录异常类名。Mac 源码版实测“国际议题”整课导出 28 个 M4A（85 MB），跳过 9 个。
+- 未验证：15 分钟超时未用 >30 秒的真实下载验证；iOS/Android 的“未开放下载”标记只验证了编译。
+- 标签 `debug-1.8.4-Alpha-phydemo-fix`，只出 Actions 产物。
+
+## 2026-10-12 二维码入口重做、HyperOS 小窗与模拟器强制签名（1.8.4-Alpha-phydemo-fix2，Build 31）
+
+- 完美校园入口：wxaurl 加密链接从 App 唤起微信会被“一人一链”绑定（平板换号实测），微信内点开/扫码不受限；明文 Scheme（appid `wx081d27880a575cb3`）运营方未开放。改为弹窗：二维码 + “保存二维码并打开微信扫一扫” + 复制链接，Android 另有“打开完美校园 App”。校园网缴费弹窗同样加“保存并扫一扫”。扫一扫入口：Android `LauncherUI.From.Scaner.Shortcut`（平板实测进 BaseScanUI），iOS `weixin://scanqrcode`（iPhone 实测进扫一扫）。iOS 模拟器实测只申请“添加照片”权限、保存成功、两张图 CIDetector 解码正确。
+- 弹窗统一：两个二维码弹窗统一为“标题 + 关闭”+ 说明/二维码(200dp)/按钮/提示。`AppleSheet(OrAlert)` 新增 `fitContentHeight`：iOS 用自定义 detent 按正文高度展开（`BJTUSetSheetFittedHeight`，高度回报推迟到下一轮主线程，否则测量中改尺寸会崩溃），Android 对话框正文可滚动。顶栏“同步状态”sheet 也改用 `fitContentHeight`（原规则 >6 行直接全高）。iOS 模拟器浅/深色实测按内容定高、出提示后平滑长高，8 行同步状态刚好包住。`shared/build.gradle.kts` cinterop 改用 `includeDirs`，改 .h 会重新生成绑定。
+- HyperOS 小窗遮挡：小窗下拖动条/手势条报告为 captionBar（顶 108px、底 57px），statusBars/navigationBars 为 0。新增 `topSystemBars`/`bottomSystemBars`（并上 captionBar），顶栏、底栏、AppleSheet、首页变更弹窗改用；iOS/桌面 captionBar 恒为 0。直接以小窗启动已实测正常；临时诊断日志已删除。
+- 构建：iOS 模拟器构建强制签名以保留钥匙串（`cc0706f`，`require-ios-signing.sh`）。
+- 文档：协作指南迁到 `AGENTS.md`，删除 `CLAUDE.md`。
+- 未验证：小窗↔全屏来回切换（adb 无法切换窗口模式）；Android 二维码弹窗未在平板上看；“保存并扫一扫”的 Android MediaStore 保存/去重和扫码后进入小程序/缴费页未真机验证；iOS 每次保存会多一张（只有添加权限无法去重）。
+- 标签 `debug-1.8.4-Alpha-phydemo-fix2`，只出 Actions 产物。
+
+## 2026-10-12 课表 JSON 导出（本机数据操作，未改代码）
+
+- 按用户要求运行 debug `:desktopApp:run --args=--sync-timing`，自动恢复登录并同步后，导出刷新版 JSON 到忽略目录 `.artifacts/schedule-export-2026-10-12/`：15 门课程、21 条排课规则、4 项物理实验/6 次实验、2 项演示实验，共 234 条实际日程（旧版 232 条保留）。实时读取 bksy 公开校历逐周映射，10 月 12 日为第 5 教学周；JSON 回读、唯一 ID、时间/周次映射和敏感字段排除校验通过，无缺失警告/时间冲突。源码 JVM 已按精确路径结束，安装版保留；`:desktopApp:createDistributable` 成功。
+- 个人调整版（同一目录）：移除周六上午“改革开放史”网络课（8 次），把逸夫教学楼/思源西楼 10:10–12:00 的 5 条规则/56 次课改为 10:20–12:20；共 226 条日程，实验与教学周映射保留，统计与冲突重算，回读断言通过。不改应用或学校数据。
+
+## 2026-10-12 弹窗竞态、前往日期半屏与 iOS 课程小组件（1.8.4-Beta-SheetFix-Widget，Build 32）
+
+- iOS 弹窗偶发点不开：`IosNativeSheetPresenter` 同页共用一个呈现器，关闭动画中再 present 会被 UIKit 静默拒绝，而 Compose 状态已是“打开”，之后入口失效。现在关闭中收到的 present 等关闭完成再弹，打开动画中的 dismiss 等打开完成再关，present 被拒时重试（最多 10 次后复位）。模拟器实测“课表与周数”选周后立即重开正常。
+- 课表“前往日期”iOS 改为 `fitContentHeight`（约半屏，按日历实际高度），Android 不变。
+- iOS 课程小组件（用户要求重启小组件开发，取代 2026-08-01“小组件移出范围”的决定）：新 target `CourseScheduleWidget`（`…kmp.ios.widget`，iOS 17+），App Group `group.team.bjtuss.bjtuselfservice.kmp`，主 App 加 `iosApp.entitlements`。共享层 `feature/widget/` 生成 14 天快照 JSON（课程 + 物理/演示实验，去校区/`[本]`），会话壳随课表变化写入、退出登录清空；Swift 宿主收通知刷新 WidgetCenter。两款：“临近课程”小/中/锁屏矩形/行内，“今日课程”中/大；当天课上完后显示下一个有课日。模拟器真实数据浅/深色检查通过；`verify-apple-release-metadata.sh` 改为要求扩展存在且版本与宿主一致。
+- 标签 `debug-1.8.4-Beta-SheetFix-Widget`（`090d7e0`），只出 Actions 产物。
+
+## 2026-10-13 小组件适配 SideStore App Group、sheet 按内容定高（1.8.4-Beta-SheetFix-Widget-fix2，Build 33）
+
+- 真机（SideStore“Keep App Extensions (Use Main Profile)”）小组件显示“暂无课表”：SideStore 重签把 App Group 改名为 `原名.TeamID`（源码 `FetchProvisioningProfilesOperation.adjustedGroupIdentifier`），写死的原名打不开容器。App 与小组件改为从 `embedded.mobileprovision` 的 Entitlements 找“原名或原名.后缀”的组，再回退原名；小组件区分“无法读取课表（App Group 未生效）”与“暂无课表（打开 App 同步）”。解析在本机真实描述文件与 iOS 单测（3 项）验证。
+- iOS“课表与周数”“筛选与计算”改为 `fitContentHeight`，超出时由 sheet 滚动；Android/桌面仍全高。模拟器实测贴合内容，开关自选模式时平滑长高/缩回。
+- 标签 `debug-1.8.4-Beta-SheetFix-Widget-fix2`（`a117ba6`），只出 Actions 产物。
+
+## 2026-10-13 侧载 IPA 保留小组件 App Group 签名（PR #8，`fix/ios-widget-sideload-entitlements`）
+
+- 用户反馈 fix2 真机仍显示“无法读取课表”，判断 CI 未签名包丢失了 App Group 声明。CI 在 IPA 压缩前对嵌套 framework、小组件、主 App 依次 ad-hoc 签名并保留两端 App Group Entitlements；新增 `scripts/sign-ios-sideload-app.sh`，校验实际可执行文件的权限、签名结构和宿主/扩展版本。`kmp-package.yml` 对 iOS 相关 PR 构建 Debug IPA，其他平台在 PR 中跳过；正式标签仍用 Release 配置，PR 不发 Release。
+- 验证：静态检查通过，Apple 签名/构建由 PR CI 执行。
+- 未验证：SideStore 保留扩展覆盖安装后共享容器是否可读。
+
+## 2026-10-13 本周课表周视图小组件与统一头部（PR #9，`feat/ios-widget-week-view`）
+
+- “今日课程”放不下时脚注分开统计“之后还有 N 节 · 时间 课名”与“已上完 M 节”。
+- “临近课程”中号按 WakeUp 两栏样式重做（头部日期 + 右侧“第 N 周”，“当前 · 还剩…/接下来”，大字课名、地点、时间）。
+- 新增大号“本周课表”周视图（`WeekCourseWidget.swift`）：按大节分行（1/2/4/5 固定，午间/晚上有课才显示）、周一到周日分列（周末无课且非今天时隐藏），色块用课程表页的课程性质底色 + 描边，冲突课并排，已下课变淡、进行中加粗描边。
+- 所有尺寸统一 `WidgetHeader`：左“[明天] 日期 星期（红）[共 N 节]”，右加粗周数胶囊；周视图左上角只留月份。共享快照新增 `kind`（required/limited/elective/pe/unknown/lab，来自培养方案映射）与 `slotTimes`，快照改从本周一开始（往后仍 14 天）。
+- 验证：本地 Gradle 被 Maven Central 429 限流，单测与 iOS Debug IPA 交给 PR 检查（`kmp-security-check` / `kmp-package`）。未在模拟器浅/深色下查看。
+
+## 2026-10-13 小组件打磨（PR #10，`fix/ios-widget-polish`）
+
+- 倒计时改为按分钟显示“还剩 N 分钟/1 小时 5 分钟”：只有“临近课程”对 3 小时内正在上的课每分钟一个时间线条目，之后用 `.after` 重取。曾对全部小组件铺 24 小时逐分钟条目，导致真机周视图预渲染超预算、退回灰色占位图。
+- 中号两栏去掉课名缩放、左右字号一致；今日课程待上课程超过 2 节（中号）/6 节（大号）时改单行紧凑行（中号 4 行、大号 10 行，只显示开始时间）；中号不再列出已上完的课，只在脚注计数（“还有 1 节未显示 · 时间 课名”/“还有 N 节未上”）；压暗单行只用于已上完的课和明日预告。
+- 小号只显示“教室 老师”；大号今日课程保留上过的灰色课，剩余空间用压暗单行预告下一个有课日，放不全时小标题写“剩余 N 节未显示”。
+- 验证：Swift 未本地编译，交 PR CI。“正在上/还剩 N 分钟”未在上课时段实机观察。
+
+## 2026-10-13 课程类别色统一与同步卡顿修复（PR #11，`feat/category-colors-widget-links`，1.8.4-Beta3 / Build 35）
+
+- 课程配色：新增 `feature/course/CourseCategoryPalette.kt` 作为唯一来源（必修/限选/任选/体育/未知/实验/考试，浅深两套 + accent）。课程表色块、成绩页体育、首页“正在上”卡片、当天课表书本图标、小组件色条/色块全部改用类别色，删除按课程名哈希的调色板；体育改青绿 `#16A4A4`。
+- 小组件点击跳转到对应详情做了又按用户要求撤回（仍只打开 App），保留考试显示与考试色/标记。同步状态里物理实验/演示实验/物理在线相邻，物理在线也标“需要校园网”。
+- 小组件快照：`LaunchedEffect` 原先在 iOS 每个原生 Tab 宿主各跑一遍、在主线程构建约 20 天日程并编码写文件，同步期间随数据到达反复触发 WidgetKit 全量刷新。改为只在主宿主运行、1.5 秒防抖、构建与写入放 `Dispatchers.Default`，iOS 共享容器路径缓存。
+- 同步期间滑动卡顿（第一轮）：iOS 模拟器 Debug + Time Profiler 采样，主线程约 45% 在解析学校响应（校历 `parseAcademicWeeks` 正则 14.8%、物理在线 Ksoup 约 14%、培养方案 4%，另有成绩/课表/考试），重组只占约 6%。新增 `network/ParseOffMain.kt`，各数据源的解码 + 解析和教务 `looksLikeSessionExpired` 放 `Dispatchers.Default`，网络请求仍在原调度器保持串行；物理在线握手页标记一次算齐。`LocalHomeSchedule`、首页事件列表、聚合作业改 remember，首页日程 `now` 截到分钟；成绩仓库课程性质表内容不变时沿用旧实例。复测 Ksoup 主线程样本 2142→3。
+- 顶栏玻璃：作业二级页内容不满一屏时上拉回弹，内容滑到顶栏下却没有玻璃（玻璃只跟 Compose 滚动偏移，回弹位移只在 UIKit）。`SafeAreaComposeHost` 合并两者取大（52pt 渐变），系统顶边效果改按 contentOffset 判断。模拟器实测拖动中出现玻璃、松手清除；“应用”页正常滚动行为不变。
+- 卡顿第二、三轮（真机 iPhone 17 Pro，SideStore 版，xctrace 附着不重装）：主线程还卡在 ①CITEL 每个作业详情页的 `looksLikeSessionExpired`（2.7 秒）与 `parseCitelTaskDetail`（1.8 秒），模拟器账号未开 CITEL 没覆盖到；②课程性质表整表比较 1.6 秒（Compose 判键相等时不替换旧键，表实例一旦换成等值新对象，之后每次重组都整表比较）；③GC 停顿约 1.4 秒。修复：CITEL 解析与会话判断放后台；成绩 `applySnapshot`、CITEL 刷新结果内容相同沿用旧实例；`looksLikeSessionExpired` 不再整页 trim/lowercase 复制（补用例）。Beta2 后复采：同步期主线程四成在 Core Animation 提交（UINavigationBar 重布局）；原生栏动作每次重组都重设相同图标/文字、标题每次 bringSubviewToFront，已在 `ContentView.swift` 去重。剩余栏布局主要随原生手指滚动（setContentOffset → 滚动边缘效果/最小化）发生，平均每帧主线程约 3~4ms。≥16ms 长帧剩 11 个：MIS `checkSession` 整页判断（30~40ms ×3，已改后台）、同步详情 sheet 弹出约 40~54ms、进入作业页约 49ms。
+- 验证：`:shared:desktopTest` 808 项通过、`:androidApp:assembleDebug` 成功；版本经 Beta2（Build 34）到 `1.8.4-Beta3` / Build 35，本地 Release 未签名 IPA 已装真机。用户确认 Beta3 卡顿已到可接受范围。
+- 未验证：`checkSession` 改后台后未再复采；壳层仍随任一状态流整体重组（约 0.4 秒/次同步）。
+
+## 2026-10-13 迁移期收口：删除 goal.md，文档改为日志式
+
+- 决策：KMP 迁移（M0–M17）已收口，项目转入按需迭代，不再按里程碑规划。按用户要求删除 `goal.md`；`AGENTS.md` 改写为当前协作规则（仓库事实、分支/PR/标签流程、版本号同步清单、小组件与主线程解析等新原则），去掉迁移期过时内容（`maildev` 分支、旧版本基线、开工前逐页盘点原 Android App 等）；`history_full.md` 改为只追加的工作日志；`memory.md` 只保留当前状态。
+- `goal.md` 删除时各里程碑的最终状态（快照）：
+  - 已完成：M0–M3、M5（首页与八个业务切片）、M5.5 登录页与验证码自动识别、M5.6 全部 UI 用户确认、M6 平台能力、M7 三端真实登录验收、M9 成绩课程性质映射、M10 平台原生导航、M11 教室占用查询、M12 课程表体验整合、M14 Windows 移植、M17 Liquid 玻璃壳。M18 macOS 原生外观已取消。
+  - 主体完成但留有边界：M4（合法签名下 iOS Keychain 往返未做）；M13 物理在线（移动端登录后运行、真实账号上传、Windows 触摸屏未验收）；M15 邮箱（真实发送、删除、移动、附件上传和 iOS 真实登录后邮箱页未验收）；验证码自动识别默认开启，24 张冒烟集 Apple/Android 表达式 21/24、argmax 24/24 一致，发布级还需至少 300 张独立留出集。
+  - 未开始/外部条件：M8 正式签名发布（Apple Developer Team、Archive、公证、隐私问卷）；M16 校园网 VPN 只做了入口可达性确认；真实数据变化样本、真实作业上传、退出账号往返等学校侧条件。
+  - 当时已调整的旧决策：小组件已于 2026-10-12 重新启动开发（见上文）；进一步无障碍专项仍不作为门禁。
