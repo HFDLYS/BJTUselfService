@@ -224,14 +224,23 @@ class DefaultGradeRepository(
         null
     }
 
+    // 每次读快照都会从缓存重建课程性质表；内容没变就沿用上一份实例。界面层多处以它为
+    // remember/LaunchedEffect 键，实例一换每次重组都要整表比较（iOS 同步期间实测占主线程）。
+    private var lastCourseTypes: Map<String, CourseType>? = null
+
     private fun snapshot(
         grades: List<Grade>,
         records: List<GradeSelectionRecord>,
-    ): GradeSnapshot = GradeSnapshot(
-        grades = grades,
-        selectedGradeIds = gradeIdsForSelectionRecords(grades, records),
-        courseTypesByCode = local.courseTypes(accountScope),
-    )
+    ): GradeSnapshot {
+        val loaded = local.courseTypes(accountScope)
+        val courseTypes = if (loaded == lastCourseTypes) lastCourseTypes else loaded
+        lastCourseTypes = courseTypes
+        return GradeSnapshot(
+            grades = grades,
+            selectedGradeIds = gradeIdsForSelectionRecords(grades, records),
+            courseTypesByCode = courseTypes,
+        )
+    }
 }
 
 private fun GradeRemoteFailure.toSyncFailure(): GradeSyncFailure = when (this) {

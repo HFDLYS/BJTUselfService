@@ -14,6 +14,7 @@ import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpRequest
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpResponse
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpTransport
 import team.bjtuss.bjtuselfservice.shared.network.looksLikeSessionExpired
+import team.bjtuss.bjtuselfservice.shared.network.parseOffMain
 
 private const val CALENDAR_PAGE_URL = "https://bksy.bjtu.edu.cn/Admin/SemesterTranPage.aspx?noRemark=1"
 
@@ -83,17 +84,19 @@ class SchoolClassroomOccupancyRemoteDataSource(
             append("&page=1&perpage=500")
         }
         val response = executeWithAaSession(url)
-        val body = response.bodyText()
-        val rooms = when (val parsed = parseClassroomOccupancyTable(body)) {
+        val (parsed, semesterOptions) = parseOffMain {
+            val body = response.bodyText()
+            // 同页自带 zxjxjhh 下拉：顺带解析，单独预取失败时弹层仍能列出学期。
+            parseClassroomOccupancyTable(body) to try {
+                parseSemesterOptions(body)
+            } catch (_: Exception) {
+                null
+            }
+        }
+        val rooms = when (parsed) {
             is ClassroomOccupancyParseResult.Failure ->
                 throw ClassroomOccupancyRemoteException(ClassroomOccupancyRemoteFailure.MALFORMED_RESPONSE)
             is ClassroomOccupancyParseResult.Success -> parsed.rooms
-        }
-        // 同页自带 zxjxjhh 下拉：顺带解析，单独预取失败时弹层仍能列出学期。
-        val semesterOptions = try {
-            parseSemesterOptions(body)
-        } catch (_: Exception) {
-            null
         }
         return ClassroomOccupancyPage(rooms = rooms, semesterOptions = semesterOptions)
     }
@@ -101,7 +104,7 @@ class SchoolClassroomOccupancyRemoteDataSource(
     override suspend fun fetchSemesters(): SemesterOptions {
         // 下拉在列表页本身就渲染出来，按最小参数取一次页面即可。
         val response = executeWithAaSession("${SchoolEndpoints.ROOM_VIEW_URL}?zc=1&jxlh=1&page=1&perpage=5")
-        return parseSemesterOptions(response.bodyText())
+        return parseOffMain { parseSemesterOptions(response.bodyText()) }
             ?: throw ClassroomOccupancyRemoteException(ClassroomOccupancyRemoteFailure.MALFORMED_RESPONSE)
     }
 
@@ -124,7 +127,7 @@ class SchoolClassroomOccupancyRemoteDataSource(
             return emptyMap()
         }
         if (response.statusCode !in 200..299) return emptyMap()
-        return parseAcademicWeeks(response.bodyText())
+        return parseOffMain { parseAcademicWeeks(response.bodyText()) }
     }
 
     /** room_view 请求公共部分：限速 + 会话校验（bksy 公开页不走这里）。 */
@@ -147,7 +150,7 @@ class SchoolClassroomOccupancyRemoteDataSource(
         if (response.statusCode !in 200..299) {
             throw ClassroomOccupancyRemoteException(ClassroomOccupancyRemoteFailure.NETWORK)
         }
-        if (response.looksLikeSessionExpired() || !response.finalUrl.startsWith(SchoolEndpoints.AA_ORIGIN)) {
+        if (parseOffMain { response.looksLikeSessionExpired() } || !response.finalUrl.startsWith(SchoolEndpoints.AA_ORIGIN)) {
             throw ClassroomOccupancyRemoteException(ClassroomOccupancyRemoteFailure.SESSION_EXPIRED)
         }
         return response

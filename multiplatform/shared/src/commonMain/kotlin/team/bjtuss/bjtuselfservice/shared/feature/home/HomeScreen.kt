@@ -88,6 +88,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.minus
@@ -202,6 +203,11 @@ fun HomeWorkspace(
         }
     }
 
+    // 作业模型每发一次状态都会重取秒级 now；日程只需要分钟精度。截到分钟后，同步期间
+    // now 不再每次都变，各周日程的 remember 才不会在每次重组时整周重算。
+    val agendaNow = remember(now.date, now.hour, now.minute) {
+        LocalDateTime(now.date, LocalTime(now.hour, now.minute))
+    }
     val status = state.status
     Box(
         modifier = modifier.fillMaxSize(),
@@ -241,7 +247,7 @@ fun HomeWorkspace(
                         phyVlabEvents = phyVlabEvents,
                         currentWeek = currentWeek,
                         academicWeeks = academicWeeks,
-                        now = now,
+                        now = agendaNow,
                         timeZone = timeZone,
                         isLoading = isAgendaLoading,
                         expanded = expanded,
@@ -269,7 +275,7 @@ fun HomeWorkspace(
                         phyVlabEvents = phyVlabEvents,
                         currentWeek = currentWeek,
                         academicWeeks = academicWeeks,
-                        now = now,
+                        now = agendaNow,
                         timeZone = timeZone,
                         isLoading = isAgendaLoading,
                         expanded = expanded,

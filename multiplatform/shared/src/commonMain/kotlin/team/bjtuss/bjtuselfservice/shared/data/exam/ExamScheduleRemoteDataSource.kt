@@ -9,6 +9,7 @@ import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpMethod
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpRequest
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpTransport
 import team.bjtuss.bjtuselfservice.shared.network.looksLikeSessionExpired
+import team.bjtuss.bjtuselfservice.shared.network.parseOffMain
 
 private const val EXAM_URL = "https://aa.bjtu.edu.cn/examine/examplanstudent/stulist/"
 
@@ -48,10 +49,10 @@ class SchoolExamScheduleRemoteDataSource(
         if (response.statusCode !in 200..299) {
             throw ExamScheduleRemoteException(ExamScheduleRemoteFailure.NETWORK)
         }
-        if (response.looksLikeSessionExpired() || !response.finalUrl.startsWith(SchoolEndpoints.AA_ORIGIN)) {
+        if (parseOffMain { response.looksLikeSessionExpired() } || !response.finalUrl.startsWith(SchoolEndpoints.AA_ORIGIN)) {
             throw ExamScheduleRemoteException(ExamScheduleRemoteFailure.SESSION_EXPIRED)
         }
-        return when (val parsed = parseExamScheduleTable(response.bodyText())) {
+        return when (val parsed = parseOffMain { parseExamScheduleTable(response.bodyText()) }) {
             is ExamScheduleParseResult.Failure -> {
                 throw ExamScheduleRemoteException(ExamScheduleRemoteFailure.MALFORMED_RESPONSE)
             }

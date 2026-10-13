@@ -342,9 +342,13 @@ fun AuthenticatedAppShell(
     }
     val homeState by homeModel.state.collectAsState()
     val phyVlabEnabled = settingsState.preferences.isPhyVlabEnabled
-    val aggregatedAssignments = aggregateAssignments(homeworkState.homework,
-        if (phyVlabEnabled) phyVlabModel.allActivities() else emptyList(),
-        if (citelEnabled) citelState.tasks else emptyList(), homeworkState.timeZone)
+    // 同步期间壳层随任一状态流重组；只在来源数据变化时重新聚合，作业页才能跳过无关重组。
+    val aggregatedAssignments = remember(homeworkState.homework, phyVlabState, phyVlabEnabled,
+        citelState.tasks, citelEnabled, homeworkState.timeZone) {
+        aggregateAssignments(homeworkState.homework,
+            if (phyVlabEnabled) phyVlabModel.allActivities() else emptyList(),
+            if (citelEnabled) citelState.tasks else emptyList(), homeworkState.timeZone)
+    }
     val assignmentSync = buildList {
         add(AssignmentSourceSync(AssignmentSource.COURSE_PLATFORM, homeworkState.isLoading || homeworkState.isRefreshing,
             homeworkState.failure != null, homeworkState.source == HomeworkContentSource.NETWORK,
@@ -570,6 +574,9 @@ fun AuthenticatedAppShell(
             }
         }
     }
+    // 首页课表入口的回调只建一次：LocalHomeSchedule 是 static 局部值，回调换实例就会让整个首页重组。
+    val latestNavigateToSection = rememberUpdatedState<(AppSection) -> Unit> { navigateToSection(it) }
+    val openScheduleFromHome = remember { { latestNavigateToSection.value(AppSection.SCHEDULE) } }
     fun openExamDetail(examId: Int) {
         examScheduleModel.showExamDetails(examId)
         if (useNativeSecondaryRoutes) {
@@ -1431,17 +1438,24 @@ fun AuthenticatedAppShell(
                 syncFailureItems = homeSyncFailureItems,
                 scrollUnderTopBar = true,
             ) {
+                val homeToday = homeworkState.now.date
+                val homeSchedulePresentation = remember(courseState.courses, homeScheduleEvents,
+                    courseState.homeAcademicWeeks, courseState.currentWeek, homeToday, gradeState.courseTypesByCode) {
+                    team.bjtuss.bjtuselfservice.shared.feature.home.HomeSchedulePresentation(
+                        courses = courseState.courses,
+                        supplementalCourses = homeScheduleEvents,
+                        academicWeeks = courseState.homeAcademicWeeks,
+                        currentWeek = courseState.currentWeek,
+                        today = homeToday,
+                        courseTypesByCode = gradeState.courseTypesByCode,
+                        onOpenSchedule = openScheduleFromHome,
+                    )
+                }
+                val homeAgendaEvents = remember(phyVlabEnabled, phyVlabState.agendaEvents, citelEvents) {
+                    (if (phyVlabEnabled) phyVlabState.agendaEvents else emptyList()) + citelEvents
+                }
                 CompositionLocalProvider(
-                    team.bjtuss.bjtuselfservice.shared.feature.home.LocalHomeSchedule provides
-                        team.bjtuss.bjtuselfservice.shared.feature.home.HomeSchedulePresentation(
-                            courses = courseState.courses,
-                            supplementalCourses = homeScheduleEvents,
-                            academicWeeks = courseState.homeAcademicWeeks,
-                            currentWeek = courseState.currentWeek,
-                            today = homeworkState.now.date,
-                            onOpenSchedule = { navigateToSection(AppSection.SCHEDULE) },
-                            courseTypesByCode = gradeState.courseTypesByCode,
-                        ),
+                    team.bjtuss.bjtuselfservice.shared.feature.home.LocalHomeSchedule provides homeSchedulePresentation,
                 ) {
                     HomeWorkspace(
                         todayRequest = homeTodayRequest,
@@ -1453,7 +1467,7 @@ fun AuthenticatedAppShell(
                         holdNetwork = entryLoggingIn,
                         homework = homeworkState.homework,
                         exams = examState.exams,
-                        phyVlabEvents = (if (phyVlabEnabled) phyVlabState.agendaEvents else emptyList()) + citelEvents,
+                        phyVlabEvents = homeAgendaEvents,
                         currentWeek = courseState.currentWeek,
                         academicWeeks = courseState.homeAcademicWeeks,
                         // 周数只在被校历确认后显示：确认前统一「日程加载中」，

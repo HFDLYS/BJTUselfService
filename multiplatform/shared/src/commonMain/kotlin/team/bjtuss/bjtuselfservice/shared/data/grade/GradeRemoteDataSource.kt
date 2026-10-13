@@ -9,6 +9,7 @@ import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpMethod
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpRequest
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpTransport
 import team.bjtuss.bjtuselfservice.shared.network.looksLikeSessionExpired
+import team.bjtuss.bjtuselfservice.shared.network.parseOffMain
 
 private const val AA_GRADE_URL =
     "https://aa.bjtu.edu.cn/score/scores/stu/view/?page=1&perpage=500&ctype="
@@ -57,10 +58,10 @@ class SchoolGradeRemoteDataSource(
             if (response.statusCode !in 200..299) {
                 throw GradeRemoteException(GradeRemoteFailure.NETWORK)
             }
-            if (response.looksLikeSessionExpired() || !response.finalUrl.startsWith(SchoolEndpoints.AA_ORIGIN)) {
+            if (parseOffMain { response.looksLikeSessionExpired() } || !response.finalUrl.startsWith(SchoolEndpoints.AA_ORIGIN)) {
                 throw GradeRemoteException(GradeRemoteFailure.SESSION_EXPIRED)
             }
-            when (val parsed = parseGradeTable(response.bodyText())) {
+            when (val parsed = parseOffMain { parseGradeTable(response.bodyText()) }) {
                 is GradeTableParseResult.Failure -> {
                     throw GradeRemoteException(GradeRemoteFailure.MALFORMED_RESPONSE)
                 }

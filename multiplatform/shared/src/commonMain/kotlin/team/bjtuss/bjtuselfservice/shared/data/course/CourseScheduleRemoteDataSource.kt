@@ -11,6 +11,7 @@ import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpMethod
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpRequest
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpTransport
 import team.bjtuss.bjtuselfservice.shared.network.looksLikeSessionExpired
+import team.bjtuss.bjtuselfservice.shared.network.parseOffMain
 
 private const val TEACHER_URL =
     "https://aa.bjtu.edu.cn/course_selection/courseselectabsent/absent_list/"
@@ -46,23 +47,27 @@ class SchoolCourseScheduleRemoteDataSource(
 ) : CourseScheduleRemoteDataSource {
     override suspend fun fetchSchedule(): RemoteCourseScheduleSnapshot {
         val teacherResponse = request(TEACHER_URL)
-        val teachers = when (val parsed = parseTeacherTable(teacherResponse.bodyText())) {
+        val teachers = when (val parsed = parseOffMain { parseTeacherTable(teacherResponse.bodyText()) }) {
             is TeacherTableParseResult.Failure -> malformed()
             is TeacherTableParseResult.Success -> parsed.teachersByCourse
         }
 
         val currentResponse = request(CURRENT_SCHEDULE_URL)
-        val currentCourses = parseSchedule(
-            html = currentResponse.bodyText(),
-            isSelectionSchedule = false,
-            teachers = teachers,
-        )
+        val currentCourses = parseOffMain {
+            parseSchedule(
+                html = currentResponse.bodyText(),
+                isSelectionSchedule = false,
+                teachers = teachers,
+            )
+        }
         val selectionResponse = request(SELECTION_SCHEDULE_URL)
-        val selectionCourses = parseSchedule(
-            html = selectionResponse.bodyText(),
-            isSelectionSchedule = true,
-            teachers = teachers,
-        )
+        val selectionCourses = parseOffMain {
+            parseSchedule(
+                html = selectionResponse.bodyText(),
+                isSelectionSchedule = true,
+                teachers = teachers,
+            )
+        }
 
         return RemoteCourseScheduleSnapshot(
             courses = (currentCourses + selectionCourses).distinctBy { course ->
@@ -152,7 +157,7 @@ class SchoolCourseScheduleRemoteDataSource(
             if (response.statusCode !in 200..299) {
                 throw CourseScheduleRemoteException(CourseScheduleRemoteFailure.NETWORK)
             }
-            if (response.looksLikeSessionExpired() || !response.finalUrl.startsWith(SchoolEndpoints.AA_ORIGIN)) {
+            if (parseOffMain { response.looksLikeSessionExpired() } || !response.finalUrl.startsWith(SchoolEndpoints.AA_ORIGIN)) {
                 throw CourseScheduleRemoteException(CourseScheduleRemoteFailure.SESSION_EXPIRED)
             }
         }
