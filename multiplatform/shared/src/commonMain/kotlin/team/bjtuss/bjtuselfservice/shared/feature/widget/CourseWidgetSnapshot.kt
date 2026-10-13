@@ -2,12 +2,16 @@ package team.bjtuss.bjtuselfservice.shared.feature.widget
 
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import team.bjtuss.bjtuselfservice.shared.domain.classroomoccupancy.SLOT_TIME_RANGES
 import team.bjtuss.bjtuselfservice.shared.domain.course.Course
 import team.bjtuss.bjtuselfservice.shared.domain.course.displayScheduleCourseName
+import team.bjtuss.bjtuselfservice.shared.domain.grade.CourseType
+import team.bjtuss.bjtuselfservice.shared.domain.grade.courseTypeForCourseName
 import team.bjtuss.bjtuselfservice.shared.domain.home.parseHmRange
 import team.bjtuss.bjtuselfservice.shared.feature.home.HomeSchedulePresentation
 import team.bjtuss.bjtuselfservice.shared.feature.home.homeCoursesOnDate
@@ -27,6 +31,8 @@ data class CourseWidgetSnapshot(
     /** 生成时刻（Unix 秒），小组件据此提示“数据较旧”。 */
     val generatedAt: Long,
     val days: List<CourseWidgetDay>,
+    /** 课表的大节时间（"HH:mm-HH:mm"），周视图小组件按它画行。 */
+    val slotTimes: List<String> = SLOT_TIME_RANGES,
 ) {
     companion object {
         const val VERSION = 1
@@ -53,22 +59,48 @@ data class CourseWidgetSession(
     val isLab: Boolean = false,
     /** 与首页“正在上”卡片同一调色板，0xRRGGBB。 */
     val color: Long,
+    /**
+     * 课表色块的分类，与课程表页图例一致：required/limited/elective/pe/unknown/lab。
+     * 培养方案还没同步时课程为 unknown。
+     */
+    val kind: String = KIND_UNKNOWN,
 )
+
+internal const val KIND_UNKNOWN = "unknown"
+internal const val KIND_LAB = "lab"
+
+internal fun CourseType.widgetKind(): String = when (this) {
+    CourseType.REQUIRED -> "required"
+    CourseType.LIMITED -> "limited"
+    CourseType.ELECTIVE -> "elective"
+    CourseType.PHYSICAL_EDUCATION -> "pe"
+    CourseType.UNKNOWN -> KIND_UNKNOWN
+}
 
 /** 默认展开两周：周末/假期前后打开一次 App，小组件也能撑到下周。 */
 const val COURSE_WIDGET_DAYS = 14
+
+/** 快照从本周一开始，周视图小组件才能画出今天之前的几天；往后仍保证 [COURSE_WIDGET_DAYS] 天。 */
+internal fun courseWidgetRange(today: LocalDate): Pair<LocalDate, Int> {
+    val pastDays = today.dayOfWeek.isoDayNumber - 1
+    return today.minus(pastDays, DateTimeUnit.DAY) to (pastDays + COURSE_WIDGET_DAYS)
+}
 
 internal fun buildCourseWidgetSnapshot(
     schedule: HomeSchedulePresentation,
     startDate: LocalDate,
     generatedAtEpochSeconds: Long,
     dayCount: Int = COURSE_WIDGET_DAYS,
+    courseTypesByCode: Map<String, CourseType>? = null,
 ): CourseWidgetSnapshot = CourseWidgetSnapshot(
     generatedAt = generatedAtEpochSeconds,
     days = (0 until dayCount).map { offset ->
         val date = startDate.plus(offset, DateTimeUnit.DAY)
-        val sessions = homeCoursesOnDate(schedule, date).mapNotNull { it.toWidgetSession(isLab = false) } +
-            homePhysicsLabsOnDate(schedule, date).mapNotNull { it.toWidgetSession(isLab = true) }
+        val sessions = homeCoursesOnDate(schedule, date).mapNotNull { course ->
+            val type = courseTypesByCode?.let { courseTypeForCourseName(course.courseId, it) } ?: CourseType.UNKNOWN
+            course.toWidgetSession(isLab = false, kind = type.widgetKind())
+        } +
+            homePhysicsLabsOnDate(schedule, date).mapNotNull { it.toWidgetSession(isLab = true, kind = KIND_LAB) }
         CourseWidgetDay(
             date = date.toString(),
             week = homeTeachingWeekOn(schedule, date),
@@ -81,7 +113,7 @@ private val widgetJson = Json { encodeDefaults = true }
 
 fun CourseWidgetSnapshot.encode(): String = widgetJson.encodeToString(CourseWidgetSnapshot.serializer(), this)
 
-private fun Course.toWidgetSession(isLab: Boolean): CourseWidgetSession? {
+private fun Course.toWidgetSession(isLab: Boolean, kind: String): CourseWidgetSession? {
     val range = if (isLab) scheduleEventTime?.trim().orEmpty() else SLOT_TIME_RANGES.getOrNull(courseLocationIndex / 8).orEmpty()
     val (start, end) = parseHmRange(range) ?: return null
     return CourseWidgetSession(
@@ -92,6 +124,7 @@ private fun Course.toWidgetSession(isLab: Boolean): CourseWidgetSession? {
         endMinute = end,
         isLab = isLab,
         color = courseWidgetColor(courseId.ifBlank { courseName }),
+        kind = kind,
     )
 }
 
