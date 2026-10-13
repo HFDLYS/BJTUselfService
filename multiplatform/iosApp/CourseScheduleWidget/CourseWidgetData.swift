@@ -235,7 +235,8 @@ enum CourseWidgetCalendar {
         return parsed.isEmpty && times != nil ? slots(nil) : parsed
     }
 
-    /// 小组件需要重新排版的时刻：每节课开始/结束、每天零点。
+    /// 小组件需要重新排版的时刻：每节课开始/结束、每天零点；
+    /// 24 小时内正在上的课每分钟一条，“还剩 N 分钟”按分钟走而不显示秒。
     static func refreshDates(snapshot: CourseWidgetSnapshot?, from now: Date) -> [Date] {
         var dates: Set<Date> = [now]
         let startOfToday = calendar.startOfDay(for: now)
@@ -245,11 +246,18 @@ enum CourseWidgetCalendar {
             }
         }
         let horizon = now.addingTimeInterval(48 * 3600)
+        let minuteHorizon = now.addingTimeInterval(24 * 3600)
         for day in snapshot?.days ?? [] {
             guard let plan = plan(for: day) else { continue }
             for occurrence in plan.occurrences {
                 for moment in [occurrence.start, occurrence.end] where moment > now && moment < horizon {
                     dates.insert(moment)
+                }
+                guard occurrence.end > now, occurrence.start < minuteHorizon else { continue }
+                var tick = occurrence.start
+                while tick < occurrence.end {
+                    if tick > now { dates.insert(tick) }
+                    tick = tick.addingTimeInterval(60)
                 }
             }
         }
