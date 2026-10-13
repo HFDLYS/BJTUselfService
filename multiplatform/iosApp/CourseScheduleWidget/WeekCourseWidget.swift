@@ -28,8 +28,12 @@ struct WeekWidgetView: View {
         case .stale:
             WidgetMessage(title: "课表需要更新", detail: "打开 App 刷新课表", compact: false).padding()
         case .ready(let model):
-            WeekGrid(layout: WeekLayout(model: model), now: model.now)
-                .padding(EdgeInsets(top: 12, leading: 8, bottom: 10, trailing: 10))
+            VStack(spacing: 6) {
+                WidgetHeader(plan: model.today)
+                    .padding(.leading, 6)
+                WeekGrid(layout: WeekLayout(model: model), now: model.now)
+            }
+            .padding(EdgeInsets(top: 14, leading: 8, bottom: 10, trailing: 12))
         }
     }
 }
@@ -54,7 +58,6 @@ struct WeekLayout {
     let slots: [ClosedRange<Int>]
     let blocks: [WeekBlock]
     let todayColumn: Int?
-    let week: Int?
 
     init(model: CourseWidgetModel) {
         let calendar = CourseWidgetCalendar.calendar
@@ -107,7 +110,6 @@ struct WeekLayout {
         self.slots = slots
         self.blocks = blocks
         self.todayColumn = days.firstIndex { calendar.isDate($0.date, inSameDayAs: model.now) }
-        self.week = model.today.week
     }
 }
 
@@ -118,7 +120,7 @@ private struct WeekGrid: View {
     let now: Date
 
     private let axisWidth: CGFloat = 30
-    private let headerHeight: CGFloat = 34
+    private let headerHeight: CGFloat = 30
     private let gap: CGFloat = 3
 
     var body: some View {
@@ -175,20 +177,12 @@ private struct WeekGrid: View {
     }
 
     private var cornerLabel: some View {
-        VStack(spacing: 0) {
-            let month = CourseWidgetCalendar.calendar.component(.month, from: now)
-            Text("\(month)月")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.secondary)
-            if let week = layout.week {
-                (Text("第").font(.system(size: 8, weight: .medium))
-                    + Text("\(week)").font(.system(size: 14, weight: .heavy).monospacedDigit())
-                    + Text("周").font(.system(size: 8, weight: .medium)))
-                    .padding(.top, 1)
-            }
-        }
-        .lineLimit(1)
-        .minimumScaleFactor(0.7)
+        let month = CourseWidgetCalendar.calendar.component(.month, from: now)
+        return Text("\(month)月")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
     }
 }
 

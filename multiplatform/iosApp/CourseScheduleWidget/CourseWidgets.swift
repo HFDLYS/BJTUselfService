@@ -52,7 +52,7 @@ private struct UpNextSmall: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            UpNextHeader(model: model, showWeek: false)
+            UpNextHeader(model: model, compact: true)
             if let upNext = model.upNext {
                 if upNext.isFutureDay {
                     SectionLabel(text: model.today.occurrences.isEmpty ? "今天没有课" : "今天的课已上完")
@@ -78,13 +78,7 @@ private struct UpNextMedium: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                UpNextHeader(model: model, showWeek: false, large: true)
-                Spacer(minLength: 4)
-                if let week = shownDay?.week {
-                    WeekBadge(week: week, size: 15)
-                }
-            }
+            UpNextHeader(model: model)
             if let upNext = model.upNext {
                 HStack(alignment: .top, spacing: 14) {
                     column(title: primaryTitle(upNext), occurrence: upNext.primary)
@@ -109,12 +103,6 @@ private struct UpNextMedium: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-
-    /// 头部显示的那天：跨天时是下一个有课日。
-    private var shownDay: CourseDayPlan? {
-        if let upNext = model.upNext, upNext.isFutureDay { return model.nextDay }
-        return model.today
     }
 
     private func primaryTitle(_ upNext: (primary: CourseOccurrence, secondary: CourseOccurrence?, isFutureDay: Bool)) -> Text {
@@ -259,15 +247,11 @@ struct TodayWidgetView: View {
         let hiddenFinished = plan.occurrences.filter { !visibleIDs.contains($0.id) && $0.isFinished(at: model.now) }.count
 
         VStack(alignment: .leading, spacing: family == .systemLarge ? 8 : 6) {
-            HStack(alignment: .firstTextBaseline) {
-                DateHeader(plan: plan, showWeek: true, prefix: showsNextDay ? dayLabel(plan.date, now: model.now) : nil)
-                Spacer(minLength: 4)
-                if !plan.occurrences.isEmpty {
-                    Text("共 \(plan.occurrences.count) 节")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
+            WidgetHeader(
+                plan: plan,
+                prefix: showsNextDay ? dayLabel(plan.date, now: model.now) : nil,
+                detail: plan.occurrences.isEmpty ? nil : "共 \(plan.occurrences.count) 节"
+            )
             if plan.occurrences.isEmpty {
                 Spacer(minLength: 0)
                 EmptyDay(text: "今天没有课，好好休息")
@@ -369,28 +353,39 @@ enum WidgetPalette {
     static let weekday = Color(red: 0.91, green: 0.27, blue: 0.33)
 }
 
-private struct DateHeader: View {
+/// 所有卡片统一的头部：左边“[明天] 日期 星期”（星期红色），右边教学周胶囊。
+struct WidgetHeader: View {
     let plan: CourseDayPlan
-    let showWeek: Bool
     var prefix: String? = nil
-    var large = false
+    /// 日期后的补充信息，如“共 4 节”。
+    var detail: String? = nil
+    var compact = false
 
     var body: some View {
-        let font: Font = large ? .subheadline : .footnote
-        HStack(alignment: .firstTextBaseline, spacing: 4) {
-            if let prefix {
-                Text(prefix).font(font.weight(.semibold))
+        let font: Font = compact ? .footnote : .subheadline
+        HStack(alignment: .center, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                if let prefix {
+                    Text(prefix).font(font.weight(.semibold))
+                }
+                Text(monthDay(plan.date))
+                    .font(font.weight(.semibold).monospacedDigit())
+                Text(weekday(plan.date))
+                    .font(font.weight(.semibold))
+                    .foregroundStyle(WidgetPalette.weekday)
+                if let detail {
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
-            Text(monthDay(plan.date))
-                .font(font.weight(.medium).monospacedDigit())
-            Text(weekday(plan.date))
-                .font(font.weight(.semibold))
-                .foregroundStyle(WidgetPalette.weekday)
-            if showWeek, let week = plan.week {
-                WeekBadge(week: week, size: large ? 15 : 13)
+            .lineLimit(1)
+            .minimumScaleFactor(compact ? 0.75 : 0.85)
+            Spacer(minLength: 4)
+            if let week = plan.week {
+                WeekBadge(week: week, size: compact ? 11 : 13)
             }
         }
-        .lineLimit(1)
     }
 }
 
@@ -415,14 +410,13 @@ struct WeekBadge: View {
 /// 临近课程的日期头：显示的是哪天的课就写哪天，跨天时加“明天/后天”。
 private struct UpNextHeader: View {
     let model: CourseWidgetModel
-    let showWeek: Bool
-    var large = false
+    var compact = false
 
     var body: some View {
         if let upNext = model.upNext, upNext.isFutureDay, let day = model.nextDay {
-            DateHeader(plan: day, showWeek: showWeek, prefix: dayLabel(day.date, now: model.now), large: large)
+            WidgetHeader(plan: day, prefix: dayLabel(day.date, now: model.now), compact: compact)
         } else {
-            DateHeader(plan: model.today, showWeek: showWeek, large: large)
+            WidgetHeader(plan: model.today, compact: compact)
         }
     }
 }
