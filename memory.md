@@ -1,15 +1,15 @@
 # BJTUselfService 实时工作记忆
 
 > 最后更新：2026-10-13。
-> 当前分支：`main` = `mine/main@7f0d246`（PR #11 已合入）。工作区只有本次文档整理（未提交）。
+> 当前分支：`main` = `mine/main`（PR #11 与文档整理 `f0c997f` 已推送）。远端只剩 `mine/main`；本地另有两个备份分支（见下）。
 > KMP 应用版本：`1.8.4-Beta3` / Build 35（macOS/Windows 安装包数值版本 1.8.4）。正式 Latest 仍为 `v1.8.3-KMP`。
 > 冻结原 Android：`v1.7.1` / versionCode 9（对照 `origin/main@7d94f74`）。
 > 已完成工作的细节见 `history_full.md` 末尾日志。
 
 ## 进行中
 
-- 文档整理（2026-10-13）：删除 `goal.md`，重写 `AGENTS.md`，`history_full.md` 改为日志式并补齐 10-10～10-13 条目，本文件精简。待用户确认后提交。
-- 已合并但仍在本地/远端的分支：本地 `feat/category-colors-widget-links`，远端 `mine/` 下 PR #8～#11 的分支与 `claude/project-thread-a8br6t`；是否删除等用户决定。
+- 无。
+- 本地备份分支 `backup/readme-before-squash-20261007`（4 个未合入提交）、`codex/Duo-before-cleanup-20261009`（6 个）只在本机，含未进主线的独立提交，按用户决定保留或删除。
 
 ## 当前痛点
 
@@ -36,6 +36,5 @@
 
 ## 接下来
 
-1. 用户确认后提交本次文档整理（`docs:` 提交，走分支 + PR 或直接推 `mine/main`，按用户意愿）。
-2. 在真机已装的 Beta3（SideStore 保留扩展）上验证小组件共享容器与各尺寸显示。
-3. 准备 1.8.4 正式发布时：核对版本号清单（见 `AGENTS.md`）、写 `docs/releases/<tag>.md`，等待用户批准打标签。
+1. 在真机已装的 Beta3（SideStore 保留扩展）上验证小组件共享容器与各尺寸显示。
+2. 准备 1.8.4 正式发布时：核对版本号清单（见 `AGENTS.md`）、写 `docs/releases/<tag>.md`，等待用户批准打标签。
