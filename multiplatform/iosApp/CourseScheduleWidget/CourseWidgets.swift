@@ -261,10 +261,8 @@ struct TodayWidgetView: View {
             if !hiddenUpcoming.isEmpty || hiddenFinished > 0 { used += 1 }
             let room = Int(15 - used - 1.2)
             guard room >= 1 else { return nil }
-            // 放不全时最后一行让给“还有 N 节”；连一行课都放不下就不显示预告。
-            if next.occurrences.count <= room { return (next, next.occurrences) }
-            guard room >= 2 else { return nil }
-            return (next, Array(next.occurrences.prefix(room - 1)))
+            // 放不全时在小标题里写“剩余 N 节未显示”，不再单占一行。
+            return (next, Array(next.occurrences.prefix(room)))
         }()
 
         VStack(alignment: .leading, spacing: compact ? 4 : (family == .systemLarge ? 8 : 6)) {
@@ -399,8 +397,12 @@ private struct NextDayPreview: View {
                 let label = dayLabel(day.date, now: now)
                 Text(label == weekday(day.date) ? label : "\(label) \(weekday(day.date))")
                     .font(.caption.weight(.semibold))
-                Text("共 \(day.occurrences.count) 节")
+                Text(day.occurrences.count > rows.count
+                     ? "共 \(day.occurrences.count) 节 剩余 \(day.occurrences.count - rows.count) 节未显示"
+                     : "共 \(day.occurrences.count) 节")
                     .font(.caption2)
+                    .lineLimit(1)
+                    .fixedSize()
                 Rectangle()
                     .fill(.separator)
                     .frame(height: 0.5)
@@ -427,12 +429,6 @@ private struct NextDayPreview: View {
                 }
                 .foregroundStyle(.secondary)
                 .padding(.leading, 6)
-            }
-            if day.occurrences.count > rows.count {
-                Text("还有 \(day.occurrences.count - rows.count) 节")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .padding(.leading, 15)
             }
         }
     }
