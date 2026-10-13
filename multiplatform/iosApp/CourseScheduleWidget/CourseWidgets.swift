@@ -14,7 +14,7 @@ struct CourseWidgetBundle: WidgetBundle {
 
 struct UpNextCourseWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "UpNextCourseWidget", provider: CourseWidgetProvider()) { entry in
+        StaticConfiguration(kind: "UpNextCourseWidget", provider: CourseWidgetProvider(minuteTicks: true)) { entry in
             UpNextWidgetView(entry: entry)
                 .containerBackground(for: .widget) { WidgetPalette.background }
         }
@@ -261,9 +261,10 @@ struct TodayWidgetView: View {
             if !hiddenUpcoming.isEmpty || hiddenFinished > 0 { used += 1 }
             let room = Int(15 - used - 1.2)
             guard room >= 1 else { return nil }
-            // 放不全时最后一行让给“还有 N 节”。
-            let count = next.occurrences.count <= room ? room : max(1, room - 1)
-            return (next, Array(next.occurrences.prefix(count)))
+            // 放不全时最后一行让给“还有 N 节”；连一行课都放不下就不显示预告。
+            if next.occurrences.count <= room { return (next, next.occurrences) }
+            guard room >= 2 else { return nil }
+            return (next, Array(next.occurrences.prefix(room - 1)))
         }()
 
         VStack(alignment: .leading, spacing: compact ? 4 : (family == .systemLarge ? 8 : 6)) {
