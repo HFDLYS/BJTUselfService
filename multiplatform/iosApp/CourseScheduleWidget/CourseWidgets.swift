@@ -239,8 +239,12 @@ struct TodayWidgetView: View {
         let pending = plan.occurrences.count - firstActive
         let compact = pending > capacity
         let limit = compact ? compactCapacity : capacity
+        // 中号只看还没上的课，上完的在脚注右侧计数；大号保留上完的课（变灰）。
         // 空间不够时先丢掉已经下课的，保证正在上和接下来的课可见。
         let visible: [CourseOccurrence] = {
+            if family != .systemLarge {
+                return Array(plan.occurrences[firstActive...].prefix(limit))
+            }
             if plan.occurrences.count <= limit { return plan.occurrences }
             let start = max(0, min(firstActive, plan.occurrences.count - limit))
             return Array(plan.occurrences[start..<min(start + limit, plan.occurrences.count)])
@@ -274,6 +278,11 @@ struct TodayWidgetView: View {
                     .frame(maxWidth: .infinity)
                 Spacer(minLength: 0)
             } else {
+                if visible.isEmpty {
+                    Spacer(minLength: 0)
+                    EmptyDay(text: "今天的课已上完")
+                        .frame(maxWidth: .infinity)
+                }
                 ForEach(visible) { occurrence in
                     if compact {
                         CompactTodayRow(occurrence: occurrence, now: model.now)
@@ -362,8 +371,8 @@ private struct CompactTodayRow: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
             Spacer(minLength: 4)
-            Text(timeRange(occurrence))
-                .font(.caption2.monospacedDigit())
+            Text(clock(occurrence.start))
+                .font(.caption.monospacedDigit())
                 .foregroundStyle(ongoing ? .primary : .secondary)
                 .fixedSize()
         }
@@ -438,9 +447,9 @@ private struct HiddenSummary: View {
             if let first = upcoming.first {
                 Group {
                     if upcoming.count == 1 {
-                        Text("之后还有 1 节 · \(clock(first.start)) \(first.session.name)")
+                        Text("还有 1 节未显示 · \(clock(first.start)) \(first.session.name)")
                     } else {
-                        Text("之后还有 \(upcoming.count) 节 · \(clock(first.start)) 起")
+                        Text("还有 \(upcoming.count) 节未上")
                     }
                 }
                 .foregroundStyle(.primary)
