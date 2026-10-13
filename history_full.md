@@ -721,3 +721,14 @@
   - 主体完成但留有边界：M4（合法签名下 iOS Keychain 往返未做）；M13 物理在线（移动端登录后运行、真实账号上传、Windows 触摸屏未验收）；M15 邮箱（真实发送、删除、移动、附件上传和 iOS 真实登录后邮箱页未验收）；验证码自动识别默认开启，24 张冒烟集 Apple/Android 表达式 21/24、argmax 24/24 一致，发布级还需至少 300 张独立留出集。
   - 未开始/外部条件：M8 正式签名发布（Apple Developer Team、Archive、公证、隐私问卷）；M16 校园网 VPN 只做了入口可达性确认；真实数据变化样本、真实作业上传、退出账号往返等学校侧条件。
   - 当时已调整的旧决策：小组件已于 2026-10-12 重新启动开发（见上文）；进一步无障碍专项仍不作为门禁。
+
+## 2026-10-13 iOS 小组件跨天文案与整周无课提示（PR #12，`fix/ios-widget-copy`，不改版本号）
+
+- 小号「临近课程」：跨天头部写“明天/后天”时省掉日期，只留“明天 周三”；更远的日子写“10.16 周五”（修掉原来“周五 10.16 周五”的重复）。
+- 中号「临近课程」：跨天时日期下方单开一行“今天已上完”，两栏标题从“今天已上完 · 第一节 / 接下来”改为“明天第一节 / 明天第二节”（后天、本周周几、“下周一”同理），只有一节时右栏写“明天只有一节课”。这一模式下课名字号不变，标签/地点/时间改 footnote 并收紧间距。
+- 「今日课程」中/大号：跨天时日期下方同样加“今天已上完”，与小号、中号共用 `DayStatusLine`（caption2 + 勾选图标）；中号此时行距收紧、紧凑行少放一节。
+- 明天没课、后天才有课：状态行补“· 明天无课”，空出更多天时写“· 之后 N 天无课”；头部为“后天 …”。
+- 整周没课且明天也没课（`CourseWidgetModel.isRestPeriod`）：各尺寸（含锁屏矩形/行内、周视图空周）显示“非教学周 / Enjoy🎉”；今天在教学周内（`week != nil`）只是没排课时写“本周没有课”。头部保持今天，有下一次课时小字“下次上课 下周一 08:00 …”。
+- 实现：`CourseWidgetData.swift` 新增 `weekIsEmpty`、`isRestPeriod`、`todayStatus`、`dayOffset`、`monday(of:)`；`CourseWidgets.swift` 用 `relativeDayPrefix`/`dayName` 取代 `dayLabel`，新增 `RestPeriod`；`WeekCourseWidget.swift` 空周提示。
+- 验证：本地无 Swift 工具链；PR CI `iOS compile and macOS security tests`、`iOS sideload IPA`、`Android compile security check` 均通过。
+- 未验证：未在模拟器/真机查看各尺寸实际排版；中号跨天模式高度为估算，需在小屏 iPhone 上确认不截断。
