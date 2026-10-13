@@ -137,6 +137,29 @@ struct CourseWidgetModel {
     /// 今天还没结束的课（含正在上的）。
     var remainingToday: [CourseOccurrence] { today.occurrences.filter { !$0.isFinished(at: now) } }
 
+    /// 本周一到周日都没有课。
+    var weekIsEmpty: Bool { week.allSatisfy { $0.occurrences.isEmpty } }
+
+    /// 整周没课、明天也没课（放假或非教学周）：显示休息提示，而不是把很久以后的课当“下一节”。
+    var isRestPeriod: Bool {
+        guard weekIsEmpty else { return false }
+        guard let next = nextDay else { return true }
+        return CourseWidgetCalendar.dayOffset(next.date, from: now) > 1
+    }
+
+    /// 今天没有待上的课时日期下方那一行：“今天已上完”“今天没有课”，
+    /// 下一个有课日不是明天时补上中间空着的天数，如“今天已上完 · 明天无课”。
+    var todayStatus: String {
+        let base = today.occurrences.isEmpty ? "今天没有课" : "今天已上完"
+        guard let next = nextDay else { return base }
+        let gap = CourseWidgetCalendar.dayOffset(next.date, from: now)
+        switch gap {
+        case ...1: return base
+        case 2: return "\(base) · 明天无课"
+        default: return "\(base) · 之后 \(gap - 1) 天无课"
+        }
+    }
+
     /// 临近课程：正在上的那节 + 之后一节；今天上完了就取下一个有课日的前两节。
     var upNext: (primary: CourseOccurrence, secondary: CourseOccurrence?, isFutureDay: Bool)? {
         let remaining = remainingToday
@@ -161,6 +184,19 @@ enum CourseWidgetCalendar {
     static func dayKey(_ date: Date) -> String {
         let parts = calendar.dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    }
+
+    /// `date` 比 `now` 晚几个日历日（今天 0、明天 1）。
+    static func dayOffset(_ date: Date, from now: Date) -> Int {
+        calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: date)).day ?? 0
+    }
+
+    /// 某天所在周的周一。
+    static func monday(of date: Date) -> Date {
+        let day = calendar.startOfDay(for: date)
+        // weekday：1 = 周日 … 7 = 周六。
+        let sinceMonday = (calendar.component(.weekday, from: day) + 5) % 7
+        return calendar.date(byAdding: .day, value: -sinceMonday, to: day) ?? day
     }
 
     static func date(fromKey key: String) -> Date? {

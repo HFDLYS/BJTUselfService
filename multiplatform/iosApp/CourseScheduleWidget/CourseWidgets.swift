@@ -53,9 +53,13 @@ private struct UpNextSmall: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             UpNextHeader(model: model, compact: true)
-            if let upNext = model.upNext {
+            if model.isRestPeriod {
+                Spacer(minLength: 0)
+                RestPeriod(model: model, compact: true)
+                Spacer(minLength: 0)
+            } else if let upNext = model.upNext {
                 if upNext.isFutureDay {
-                    SectionLabel(text: model.today.occurrences.isEmpty ? "今天没有课" : "今天的课已上完")
+                    DayStatusLine(text: model.todayStatus)
                 }
                 CourseBlock(occurrence: upNext.primary, now: model.now, style: .detailed)
                 if let secondary = upNext.secondary {
@@ -64,7 +68,7 @@ private struct UpNextSmall: View {
                 Spacer(minLength: 0)
             } else {
                 Spacer(minLength: 0)
-                EmptyDay(text: model.today.occurrences.isEmpty ? "今天没有课" : "今天的课已上完")
+                EmptyDay(text: model.today.occurrences.isEmpty ? "今天没有课" : "今天已上完")
                 Spacer(minLength: 0)
             }
         }
@@ -73,22 +77,34 @@ private struct UpNextSmall: View {
 }
 
 /// 中号：左“当前/下一节”、右“接下来”两栏，大字课名 + 地点 + 时间。
+/// 今天上完后头部换成下一个有课日，日期下方单开一行“今天已上完”，两栏标“明天第一节/明天第二节”。
 private struct UpNextMedium: View {
     let model: CourseWidgetModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let upNext = model.isRestPeriod ? nil : model.upNext
+        // 跨天时多一行状态：课名字号不变，标签/地点/时间和间距收紧，保证 158pt 高的中号也放得下。
+        let tight = upNext?.isFutureDay == true
+        VStack(alignment: .leading, spacing: tight ? 6 : 12) {
             UpNextHeader(model: model)
-            if let upNext = model.upNext {
+            if model.isRestPeriod {
+                Spacer(minLength: 0)
+                RestPeriod(model: model)
+                Spacer(minLength: 0)
+            } else if let upNext {
+                if upNext.isFutureDay {
+                    DayStatusLine(text: model.todayStatus)
+                }
                 HStack(alignment: .top, spacing: 14) {
-                    column(title: primaryTitle(upNext), occurrence: upNext.primary)
+                    column(title: primaryTitle(upNext), occurrence: upNext.primary, tight: tight)
                     Divider()
+                    let secondTitle = upNext.isFutureDay ? "\(dayName(upNext.primary.start, now: model.now))第二节" : "接下来"
                     if let secondary = upNext.secondary {
-                        column(title: Text("接下来"), occurrence: secondary)
+                        column(title: Text(secondTitle), occurrence: secondary, tight: tight)
                     } else {
-                        VStack(alignment: .leading, spacing: 8) {
-                            ColumnLabel(text: Text("接下来"))
-                            Text(upNext.isFutureDay ? "当天只有这一节" : "今天没有更多课了")
+                        VStack(alignment: .leading, spacing: tight ? 4 : 8) {
+                            ColumnLabel(text: Text(secondTitle), tight: tight)
+                            Text(upNext.isFutureDay ? "\(dayName(upNext.primary.start, now: model.now))只有一节课" : "今天没有更多课了")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
@@ -97,7 +113,7 @@ private struct UpNextMedium: View {
                 }
             } else {
                 Spacer(minLength: 0)
-                EmptyDay(text: model.today.occurrences.isEmpty ? "今天没有课，好好休息" : "今天的课已上完")
+                EmptyDay(text: model.today.occurrences.isEmpty ? "今天没有课，好好休息" : "今天已上完")
                     .frame(maxWidth: .infinity)
                 Spacer(minLength: 0)
             }
@@ -107,7 +123,7 @@ private struct UpNextMedium: View {
 
     private func primaryTitle(_ upNext: (primary: CourseOccurrence, secondary: CourseOccurrence?, isFutureDay: Bool)) -> Text {
         if upNext.isFutureDay {
-            return Text(model.today.occurrences.isEmpty ? "今天没有课 · 第一节" : "今天已上完 · 第一节")
+            return Text("\(dayName(upNext.primary.start, now: model.now))第一节")
         }
         if upNext.primary.isOngoing(at: model.now) {
             return Text("当前 · 还剩 \(remainingText(until: upNext.primary.end, now: model.now))")
@@ -115,26 +131,26 @@ private struct UpNextMedium: View {
         return Text("下一节")
     }
 
-    private func column(title: Text, occurrence: CourseOccurrence) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ColumnLabel(text: title)
+    private func column(title: Text, occurrence: CourseOccurrence, tight: Bool) -> some View {
+        VStack(alignment: .leading, spacing: tight ? 4 : 8) {
+            ColumnLabel(text: title, tight: tight)
             HStack(alignment: .top, spacing: 8) {
                 RoundedRectangle(cornerRadius: 2)
                     .fill(Color(hex: occurrence.session.color))
                     .frame(width: 4)
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: tight ? 1 : 2) {
                     Text(occurrence.session.name)
                         .font(.title3.weight(.bold))
                         .lineLimit(1)
                     let detail = occurrence.session.place.isEmpty ? occurrence.session.teacher : occurrence.session.place
                     if !detail.isEmpty {
                         Text(detail)
-                            .font(.subheadline)
+                            .font(tight ? .footnote : .subheadline)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
                     Text(timeRange(occurrence))
-                        .font(.subheadline.monospacedDigit())
+                        .font((tight ? Font.footnote : .subheadline).monospacedDigit())
                         .lineLimit(1)
                 }
             }
@@ -146,9 +162,10 @@ private struct UpNextMedium: View {
 
 private struct ColumnLabel: View {
     let text: Text
+    var tight = false
     var body: some View {
         text
-            .font(.subheadline)
+            .font(tight ? .footnote : .subheadline)
             .foregroundStyle(.secondary)
             .lineLimit(1)
     }
@@ -158,11 +175,17 @@ private struct UpNextRectangular: View {
     let model: CourseWidgetModel
 
     var body: some View {
-        if let upNext = model.upNext {
+        if model.isRestPeriod {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(restTitle(model)).font(.headline)
+                Text("Enjoy🎉").font(.caption)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else if let upNext = model.upNext {
             let occurrence = upNext.primary
             VStack(alignment: .leading, spacing: 1) {
                 Text(upNext.isFutureDay
-                     ? "\(dayLabel(occurrence.start, now: model.now)) \(timeRange(occurrence))"
+                     ? "\(dayName(occurrence.start, now: model.now)) \(timeRange(occurrence))"
                      : (occurrence.isOngoing(at: model.now) ? "正在上 · 至 \(clock(occurrence.end))" : "下一节 · \(timeRange(occurrence))"))
                     .font(.caption2)
                     .widgetAccentable()
@@ -175,7 +198,7 @@ private struct UpNextRectangular: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         } else {
-            Text(model.today.occurrences.isEmpty ? "今天没有课" : "今天的课已上完")
+            Text(model.today.occurrences.isEmpty ? "今天没有课" : "今天已上完")
                 .font(.headline)
         }
     }
@@ -185,9 +208,11 @@ private struct UpNextInline: View {
     let model: CourseWidgetModel
 
     var body: some View {
-        if let upNext = model.upNext {
+        if model.isRestPeriod {
+            Text("\(restTitle(model)) Enjoy🎉")
+        } else if let upNext = model.upNext {
             let occurrence = upNext.primary
-            let prefix = upNext.isFutureDay ? "\(dayLabel(occurrence.start, now: model.now)) " : ""
+            let prefix = upNext.isFutureDay ? "\(dayName(occurrence.start, now: model.now)) " : ""
             Text("\(prefix)\(clock(occurrence.start)) \(occurrence.session.name)")
         } else {
             Text("今天没有更多课了")
@@ -222,7 +247,17 @@ struct TodayWidgetView: View {
         case .stale:
             WidgetMessage(title: "课表需要更新", detail: "打开 App 刷新课表", compact: false)
         case .ready(let model):
-            content(model)
+            if model.isRestPeriod {
+                VStack(alignment: .leading, spacing: 6) {
+                    WidgetHeader(plan: model.today)
+                    Spacer(minLength: 0)
+                    RestPeriod(model: model)
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            } else {
+                content(model)
+            }
         }
     }
 
@@ -238,7 +273,9 @@ struct TodayWidgetView: View {
         let firstActive = showsNextDay ? 0 : (plan.occurrences.firstIndex { !$0.isFinished(at: model.now) } ?? plan.occurrences.count)
         let pending = plan.occurrences.count - firstActive
         let compact = pending > capacity
-        let limit = compact ? compactCapacity : capacity
+        // 中号跨天时日期下方多一行“今天已上完”，紧凑行少放一节。
+        let tight = showsNextDay && family != .systemLarge
+        let limit = compact ? compactCapacity - (tight ? 1 : 0) : capacity
         // 中号只看还没上的课，上完的在脚注右侧计数；大号保留上完的课（变灰）。
         // 空间不够时先丢掉已经下课的，保证正在上和接下来的课可见。
         let visible: [CourseOccurrence] = {
@@ -265,12 +302,15 @@ struct TodayWidgetView: View {
             return (next, Array(next.occurrences.prefix(room)))
         }()
 
-        VStack(alignment: .leading, spacing: compact ? 4 : (family == .systemLarge ? 8 : 6)) {
+        VStack(alignment: .leading, spacing: compact || tight ? 4 : (family == .systemLarge ? 8 : 6)) {
             WidgetHeader(
                 plan: plan,
-                prefix: showsNextDay ? dayLabel(plan.date, now: model.now) : nil,
+                prefix: showsNextDay ? relativeDayPrefix(plan.date, now: model.now) : nil,
                 detail: plan.occurrences.isEmpty ? nil : "共 \(plan.occurrences.count) 节"
             )
+            if showsNextDay {
+                DayStatusLine(text: model.todayStatus)
+            }
             if plan.occurrences.isEmpty {
                 Spacer(minLength: 0)
                 EmptyDay(text: "今天没有课，好好休息")
@@ -279,14 +319,14 @@ struct TodayWidgetView: View {
             } else {
                 if visible.isEmpty {
                     Spacer(minLength: 0)
-                    EmptyDay(text: "今天的课已上完")
+                    EmptyDay(text: "今天已上完")
                         .frame(maxWidth: .infinity)
                 }
                 ForEach(visible) { occurrence in
                     if compact {
                         CompactTodayRow(occurrence: occurrence, now: model.now)
                     } else {
-                        TodayRow(occurrence: occurrence, now: model.now, roomy: family == .systemLarge)
+                        TodayRow(occurrence: occurrence, now: model.now, roomy: family == .systemLarge, tight: tight)
                     }
                 }
                 if !hiddenUpcoming.isEmpty || hiddenFinished > 0 {
@@ -307,6 +347,7 @@ private struct TodayRow: View {
     let occurrence: CourseOccurrence
     let now: Date
     let roomy: Bool
+    var tight = false
 
     var body: some View {
         let color = Color(hex: occurrence.session.color)
@@ -337,7 +378,7 @@ private struct TodayRow: View {
             }
             .font(.caption.monospacedDigit())
         }
-        .padding(.vertical, roomy ? 6 : 4)
+        .padding(.vertical, roomy ? 6 : (tight ? 2 : 4))
         .padding(.trailing, 8)
         .padding(.leading, 0)
         .background(
@@ -395,8 +436,8 @@ private struct NextDayPreview: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                let label = dayLabel(day.date, now: now)
-                Text(label == weekday(day.date) ? label : "\(label) \(weekday(day.date))")
+                let name = dayName(day.date, now: now)
+                Text(name.contains("周") ? name : "\(name) \(weekday(day.date))")
                     .font(.caption.weight(.semibold))
                 Text(day.occurrences.count > rows.count
                      ? "共 \(day.occurrences.count) 节 剩余 \(day.occurrences.count - rows.count) 节未显示"
@@ -479,6 +520,8 @@ struct WidgetHeader: View {
     /// 日期后的补充信息，如“共 4 节”。
     var detail: String? = nil
     var compact = false
+    /// 小号放不下“明天 10.14 周三”：有“明天/后天”时省掉日期，只留“明天 周三”。
+    var showsDate = true
 
     var body: some View {
         let font: Font = compact ? .footnote : .subheadline
@@ -487,8 +530,10 @@ struct WidgetHeader: View {
                 if let prefix {
                     Text(prefix).font(font.weight(.semibold))
                 }
-                Text(monthDay(plan.date))
-                    .font(font.weight(.semibold).monospacedDigit())
+                if showsDate {
+                    Text(monthDay(plan.date))
+                        .font(font.weight(.semibold).monospacedDigit())
+                }
                 Text(weekday(plan.date))
                     .font(font.weight(.semibold))
                     .foregroundStyle(WidgetPalette.weekday)
@@ -527,27 +572,77 @@ struct WeekBadge: View {
 }
 
 /// 临近课程的日期头：显示的是哪天的课就写哪天，跨天时加“明天/后天”。
+/// 放假提示时仍写今天，不跳到很久以后的日期。
 private struct UpNextHeader: View {
     let model: CourseWidgetModel
     var compact = false
 
     var body: some View {
-        if let upNext = model.upNext, upNext.isFutureDay, let day = model.nextDay {
-            WidgetHeader(plan: day, prefix: dayLabel(day.date, now: model.now), compact: compact)
+        if !model.isRestPeriod, let upNext = model.upNext, upNext.isFutureDay, let day = model.nextDay {
+            let prefix = relativeDayPrefix(day.date, now: model.now)
+            WidgetHeader(plan: day, prefix: prefix, compact: compact, showsDate: !(compact && prefix != nil))
         } else {
             WidgetHeader(plan: model.today, compact: compact)
         }
     }
 }
 
-private struct SectionLabel: View {
+/// 日期下方的状态行（“今天已上完”“今天没有课 · 明天无课”）：小号、中号、大号同一样式。
+struct DayStatusLine: View {
     let text: String
     var body: some View {
-        Text(text)
-            .font(.caption2.weight(.medium))
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
+        Label {
+            Text(text)
+        } icon: {
+            Image(systemName: "checkmark.circle.fill")
+        }
+        .labelStyle(StatusLabelStyle())
+        .font(.caption2.weight(.medium))
+        .foregroundStyle(.secondary)
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
     }
+}
+
+private struct StatusLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 3) {
+            configuration.icon.imageScale(.small)
+            configuration.title
+        }
+    }
+}
+
+/// 整周没课、明天也没课：“非教学周 / Enjoy🎉”，有下一次课时在下面小字提一句。
+struct RestPeriod: View {
+    let model: CourseWidgetModel
+    var compact = false
+
+    var body: some View {
+        VStack(spacing: compact ? 2 : 4) {
+            Text(restTitle(model))
+                .font(compact ? .headline : .title3.weight(.semibold))
+            Text("Enjoy🎉")
+                .font(compact ? .subheadline : .headline)
+                .foregroundStyle(.secondary)
+            if let next = model.nextDay, let first = next.occurrences.first {
+                let when = "\(dayName(next.date, now: model.now)) \(clock(first.start))"
+                Text(compact ? "下次上课 \(when)" : "下次上课 · \(when) \(first.session.name)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .padding(.top, compact ? 2 : 4)
+            }
+        }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+    }
+}
+
+/// 今天不在教学周内（开学前、放假、考试周之后）写“非教学周”；在教学周里只是整周没排课时写“本周没有课”。
+func restTitle(_ model: CourseWidgetModel) -> String {
+    model.today.week == nil ? "非教学周" : "本周没有课"
 }
 
 private enum CourseBlockStyle { case detailed, titleOnly }
@@ -666,15 +761,31 @@ private func weekday(_ date: Date) -> String {
     return names[max(0, min(index, 6))]
 }
 
-/// “明天”“后天”，更远的显示星期。
-private func dayLabel(_ date: Date, now: Date) -> String {
-    let calendar = CourseWidgetCalendar.calendar
-    let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: date)).day ?? 0
-    switch days {
+/// 头部日期前的相对说法：只有“明天”“后天”；更远的直接看日期和星期，避免“周五 10.16 周五”。
+func relativeDayPrefix(_ date: Date, now: Date) -> String? {
+    switch CourseWidgetCalendar.dayOffset(date, from: now) {
+    case 1: return "明天"
+    case 2: return "后天"
+    default: return nil
+    }
+}
+
+/// 文案里称呼某天（“明天第一节”“下次上课 下周一”）：明天、后天、本周内写周几、下周写“下周几”，再远写日期。
+func dayName(_ date: Date, now: Date) -> String {
+    let offset = CourseWidgetCalendar.dayOffset(date, from: now)
+    switch offset {
     case 0: return "今天"
     case 1: return "明天"
     case 2: return "后天"
-    default: return weekday(date)
+    default: break
+    }
+    let calendar = CourseWidgetCalendar.calendar
+    let weeks = calendar.dateComponents([.day], from: CourseWidgetCalendar.monday(of: now),
+                                        to: CourseWidgetCalendar.monday(of: date)).day.map { $0 / 7 } ?? 0
+    switch weeks {
+    case 0: return weekday(date)
+    case 1: return "下" + weekday(date)
+    default: return monthDay(date)
     }
 }
 
