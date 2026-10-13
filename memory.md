@@ -1,14 +1,16 @@
 # BJTUselfService 实时工作记忆
 
 > 最后更新：2026-10-13。
-> 当前分支：`main` = `mine/main`（PR #11 与文档整理 `f0c997f` 已推送）。本地与远端都只剩 `main`。
+> 当前分支：`fix/package-beijing-time`，基于 `mine/main@9dff5e6`（PR #13 已合入）；四端打包北京时间修复待 PR 合入。
 > KMP 应用版本：`1.8.4-Beta3` / Build 35（macOS/Windows 安装包数值版本 1.8.4）。正式 Latest 仍为 `v1.8.3-KMP`。
 > 冻结原 Android：`v1.7.1` / versionCode 9（对照 `origin/main@7d94f74`）。
 > 已完成工作的细节见 `history_full.md` 末尾日志。
 
 ## 进行中
 
-- 无。
+- 四端打包北京时间：`kmp-package.yml` 全局设置 `TZ=Asia/Shanghai` 与 JVM 时区；Windows 原生工具设置 `China Standard Time`，保留原中文编码参数。iOS 签名后统一暂存目录 mtime、复验签名，以 `zip -X` 去掉 UTC 扩展时间；APK/MSI/DMG 仅刷新输出文件 mtime，不重写签名包内容。打包日志显式打印北京时间与偏移量。
+  - 本地验证：YAML 解析、9 个 Bash 步骤 `bash -n`、JVM 时区、模拟 IPA 的北京时间跨日/真实 epoch/ZIP 时间/无 UTC 扩展字段/符号链接/内容哈希均通过，`git diff --check` 通过。
+  - 未验证：真实 macOS/iOS 签名与打包交给 PR 的 `kmp-package` CI；Windows/MSI、Android/APK、macOS/DMG 需后续四端打包验证（当前 PR 只打 iOS）。仅修复后续产物，既有 Actions 产物与 GitHub 自身 UTC 运行时间不变。
 
 ## 当前痛点
 
