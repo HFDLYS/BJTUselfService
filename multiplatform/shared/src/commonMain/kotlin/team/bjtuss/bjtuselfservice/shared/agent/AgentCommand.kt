@@ -25,6 +25,12 @@ object AgentExit {
     const val NO_DATA = 2
     /** 用户在 App 里没有允许 Agent 读取这一类数据。 */
     const val NOT_ALLOWED = 5
+    /** cache update：自动登录失败（验证码多次失败、密码变更、未记住密码或网络）。 */
+    const val LOGIN_FAILED = 3
+    /** cache update：部分数据源刷新失败，失败项保留原缓存。 */
+    const val PARTIAL = 4
+    /** cache update：App 正在运行，请在 App 里刷新。 */
+    const val APP_RUNNING = 6
 }
 
 const val AGENT_SCHEMA_VERSION = 1
@@ -49,6 +55,7 @@ val AGENT_USAGE = """
       grades                          需要在 App 设置里允许
       citel                           CITEL 任务列表（元数据）
       cache read <courses|homework|exams|grades|citel|calendar> [同上选项]
+      cache update [grades,courses,homework,exams]   用记住的账号后台登录并刷新（App 开着时请在 App 里刷新）
       install [--no-claude] | uninstall | doctor   安装/移除 Skill 与启动脚本，检查环境（仅桌面端）
     范围: --today | --tomorrow | --week [N] | --date YYYY-MM-DD | --from YYYY-MM-DD --to YYYY-MM-DD
           （calendar 默认今天起 7 天；courses 默认本周）
@@ -69,7 +76,7 @@ fun runAgentCommand(args: List<String>, provider: AgentSnapshotProvider, now: In
     val rest = args.filter { it != "--json" }
     val command = rest.firstOrNull() ?: return AgentOutput("", AGENT_USAGE, AgentExit.USAGE)
     val (name, options) = if (command == "cache") {
-        if (rest.getOrNull(1) != "read") return AgentOutput("", "cache 只支持 read（cache update 还没实现）。\n$AGENT_USAGE", AgentExit.USAGE)
+        if (rest.getOrNull(1) != "read") return AgentOutput("", "cache 只支持 read 和 update。\n$AGENT_USAGE", AgentExit.USAGE)
         val target = rest.getOrNull(2) ?: return AgentOutput("", AGENT_USAGE, AgentExit.USAGE)
         target to rest.drop(3)
     } else command to rest.drop(1)
