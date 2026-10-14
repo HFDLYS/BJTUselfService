@@ -77,7 +77,7 @@ jobs:
           Write-Host "install exit=$($p.ExitCode)`n$out`n$err"
           if ($p.ExitCode -ne 0) { throw "install failed" }
           $cmd = Join-Path $env:LOCALAPPDATA "BJTUselfServiceKMP\bin\bjtu.cmd"
-          $skill = Join-Path $env:USERPROFILE ".agents\skills\bjtu-self-service\SKILL.md"
+          $skill = Join-Path $env:USERPROFILE ".agents\skills\bjtuss\SKILL.md"
           if (-not (Test-Path $cmd) -or -not (Test-Path $skill)) { throw "files missing" }
           $json = & $cmd status --json | Out-String
           Write-Host "bjtu.cmd status exit=$LASTEXITCODE`n$json"

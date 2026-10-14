@@ -36,6 +36,9 @@ import team.bjtuss.bjtuselfservice.shared.DesktopSyncStatusSmoke
 private const val CAPTCHA_VERIFICATION_ARGUMENT = "--verify-captcha-model="
 private const val SYNC_STATUS_SMOKE_ARGUMENT = "--sync-status-smoke"
 
+/** 进程级持有，防止锁对象被回收；进程退出时系统释放。 */
+private var appRunningLock: AutoCloseable? = null
+
 fun main(args: Array<String>) {
     if (args.firstOrNull() == "agent") {
         // AI Agent 命令行：在任何 AWT 类加载前切到 headless，不出现 Dock 图标、不打开窗口。
@@ -81,6 +84,10 @@ fun main(args: Array<String>) {
     }
     val accountSecurityStore = createDesktopAccountSecurityStore()
     val cacheStoreHandle = createDesktopCacheStore()
+    // 告诉命令行“App 正在运行”：此时 agent 的 cache update 会让用户在 App 里刷新，避免两边各登录一次互相顶掉会话。
+    appRunningLock = team.bjtuss.bjtuselfservice.shared.agent.holdAgentAppLock(
+        File(System.getProperty("user.home"), "Library/Application Support/BJTUselfServiceKMP"),
+    )
 
     try {
         application {

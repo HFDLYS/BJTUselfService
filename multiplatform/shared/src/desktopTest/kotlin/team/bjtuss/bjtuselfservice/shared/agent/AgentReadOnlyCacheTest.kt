@@ -89,7 +89,7 @@ class AgentReadOnlyCacheTest {
     }
 
     private fun providerFor(loadKey: () -> ByteArray?, remembered: String? = null): AgentSnapshotProvider =
-        cacheSnapshotProvider(AgentCliPlatform(directory, loadKey) { remembered })
+        cacheSnapshotProvider(AgentCliPlatform(directory, loadKey, rememberedUsername = { remembered }))
 
     private fun writeAppCache(extraAccount: String? = null) {
         val handle = openDesktopCacheStore(directory, JvmAesCacheValueProtector(key.copyOf()))
