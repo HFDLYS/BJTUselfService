@@ -103,6 +103,9 @@ class CacheStoreTest {
             assertTrue(store.preferences().citelGuideAcknowledged)
             assertTrue(store.preferences().assignmentAggregateGuideAcknowledged)
             assertFalse(store.preferences().aggregateAssignments)
+            assertFalse(store.preferences().release184GuideAcknowledged)
+            store.savePreferences(store.preferences().copy(release184GuideAcknowledged = true))
+            assertTrue(store.preferences().release184GuideAcknowledged)
         } finally { store.close() }
     }
 

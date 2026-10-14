@@ -23,27 +23,38 @@ class SettingsScreenModelTest {
         assertTrue(team.bjtuss.bjtuselfservice.shared.feature.shell.bottomNavSections(stored).any { it.name == "CITEL" })
     }
     @Test
-    fun redesignConfirmationRequiresSuccessfulSaveAndKeepsNavigation() {
+    fun release183ConfirmationRequiresSuccessfulSaveAndKeepsNavigation() {
         var canSave = false
         var stored = AppPreferences(bottomNavigationItems = listOf("MAILBOX", "EXAMS"))
         val model = model(initialPreferences = stored, persistPreferences = {
             if (canSave) stored = it
             canSave
         })
-        model.acknowledgeRedesignGuide()
-        assertFalse(model.state.value.preferences.redesignGuideAcknowledged)
+        assertTrue(model.state.value.preferences.release183GuidePending)
+        model.acknowledgeRelease183Guide()
+        assertTrue(model.state.value.preferences.release183GuidePending)
         assertTrue(model.state.value.saveFailed)
         canSave = true
-        model.acknowledgeRedesignGuide()
+        model.acknowledgeRelease183Guide()
         assertTrue(stored.redesignGuideAcknowledged)
-        assertFalse(model.state.value.saveFailed)
-        assertEquals(listOf("MAILBOX", "EXAMS"), stored.bottomNavigationItems)
-        model.setDynamicColor(false)
-        assertTrue(stored.redesignGuideAcknowledged)
-        model.acknowledgeCitelGuide()
-        model.acknowledgeAssignmentAggregateGuide()
         assertTrue(stored.citelGuideAcknowledged)
         assertTrue(stored.assignmentAggregateGuideAcknowledged)
+        assertFalse(stored.release183GuidePending)
+        assertFalse(model.state.value.saveFailed)
+        assertEquals(listOf("MAILBOX", "EXAMS"), stored.bottomNavigationItems)
+        assertFalse(stored.release184GuideAcknowledged)
+        model.setDynamicColor(false)
+        assertTrue(stored.redesignGuideAcknowledged)
+        model.acknowledgeRelease184Guide()
+        assertTrue(stored.release184GuideAcknowledged)
+    }
+
+    @Test
+    fun release183GuideStaysPendingUntilAllOldGuidesAcknowledged() {
+        assertFalse(AppPreferences(redesignGuideAcknowledged = true, citelGuideAcknowledged = true,
+            assignmentAggregateGuideAcknowledged = true).release183GuidePending)
+        assertTrue(AppPreferences(redesignGuideAcknowledged = true, citelGuideAcknowledged = true).release183GuidePending)
+        assertTrue(AppPreferences(citelGuideAcknowledged = true, assignmentAggregateGuideAcknowledged = true).release183GuidePending)
     }
 
     private fun model(

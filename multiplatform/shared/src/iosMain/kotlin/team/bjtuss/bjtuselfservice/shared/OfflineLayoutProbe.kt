@@ -34,7 +34,7 @@ fun OfflineLayoutBootstrap(onReady: (AuthenticatedSession) -> Unit): UIViewContr
         override suspend fun setShouldRememberCredentials(enabled: Boolean) = Unit
         override suspend fun clearRememberCredentialsSetting() = Unit
     })) }
-    val preferences = remember { AppPreferences(bottomNavigationItems = listOf("HOME", "SCHEDULE", "GRADES", "ASSIGNMENTS", "MORE"), physicsLabEnabled = false, citelEnabled = false, redesignGuideAcknowledged = true, citelGuideAcknowledged = true, assignmentAggregateGuideAcknowledged = true) }
+    val preferences = remember { AppPreferences(bottomNavigationItems = listOf("HOME", "SCHEDULE", "GRADES", "ASSIGNMENTS", "MORE"), physicsLabEnabled = false, citelEnabled = false, redesignGuideAcknowledged = true, citelGuideAcknowledged = true, assignmentAggregateGuideAcknowledged = true, release184GuideAcknowledged = true) }
     val source = rememberAuthenticatedSession(
         StudentProfile("布局测试", "offline-layout", "测试", "测试"), false,
         transport, remember { SchoolLoginProtocol(transport) }, cache, currentPlatform(), preferences,

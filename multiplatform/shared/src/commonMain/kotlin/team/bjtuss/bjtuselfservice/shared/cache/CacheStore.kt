@@ -30,6 +30,8 @@ data class AppPreferences(
     val redesignGuideAcknowledged: Boolean = false,
     val citelGuideAcknowledged: Boolean = false,
     val assignmentAggregateGuideAcknowledged: Boolean = false,
+    /** 1.8.4 新功能必看弹窗（演示实验、桌面小组件、错峰上课）。 */
+    val release184GuideAcknowledged: Boolean = false,
     /** null migrates the previous account-scoped physicslab.enabled setting on session creation. */
     val physicsLabEnabled: Boolean? = null,
     val citelEnabled: Boolean? = null,
@@ -38,6 +40,9 @@ data class AppPreferences(
     val staggeredSecondSlot: Boolean = true,
 ) {
     val isPhysicsLabEnabled: Boolean get() = physicsLabEnabled == true
+    /** 1.8.3 的三个必看弹窗已合并为一个；三项都确认过的用户不再看到合并弹窗。 */
+    val release183GuidePending: Boolean
+        get() = !redesignGuideAcknowledged || !citelGuideAcknowledged || !assignmentAggregateGuideAcknowledged
     val isCitelEnabled: Boolean get() = citelEnabled == true
 
     /** 物理在线只有一个总开关：关闭时不自动同步，也不显示入口。 */
@@ -392,6 +397,7 @@ class CacheStore(
         redesignGuideAcknowledged = booleanSetting(SettingKey.REDESIGN_GUIDE_ACKNOWLEDGED, false),
         citelGuideAcknowledged = booleanSetting(SettingKey.CITEL_GUIDE_ACKNOWLEDGED, false),
         assignmentAggregateGuideAcknowledged = booleanSetting(SettingKey.ASSIGNMENT_AGGREGATE_GUIDE_ACKNOWLEDGED, false),
+        release184GuideAcknowledged = booleanSetting(SettingKey.RELEASE_184_GUIDE_ACKNOWLEDGED, false),
     )
 
     fun savePreferences(preferences: AppPreferences) {
@@ -415,6 +421,7 @@ class CacheStore(
             putSetting(SettingKey.REDESIGN_GUIDE_ACKNOWLEDGED, preferences.redesignGuideAcknowledged.toString())
             putSetting(SettingKey.CITEL_GUIDE_ACKNOWLEDGED, preferences.citelGuideAcknowledged.toString())
             putSetting(SettingKey.ASSIGNMENT_AGGREGATE_GUIDE_ACKNOWLEDGED, preferences.assignmentAggregateGuideAcknowledged.toString())
+            putSetting(SettingKey.RELEASE_184_GUIDE_ACKNOWLEDGED, preferences.release184GuideAcknowledged.toString())
         }
     }
 
@@ -606,6 +613,7 @@ private object SettingKey {
     const val REDESIGN_GUIDE_ACKNOWLEDGED = "redesign_guide_acknowledged"
     const val CITEL_GUIDE_ACKNOWLEDGED = "citel_guide_acknowledged"
     const val ASSIGNMENT_AGGREGATE_GUIDE_ACKNOWLEDGED = "assignment_aggregate_guide_acknowledged"
+    const val RELEASE_184_GUIDE_ACKNOWLEDGED = "release_184_guide_acknowledged"
     const val SHOW_PHYVLAB_IN_BOTTOM_NAV = "show_phyvlab_in_bottom_nav"
 }
 
