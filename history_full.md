@@ -834,3 +834,18 @@
 - 本地 main 先与 mine/main@8e9e4152 对齐；Candidate3 范围待用户明确（完整代码基线或仅版本号），没有擅自回退已合入功能。
 - 验证：multiplatform 下 `./gradlew :shared:desktopTest :androidApp:assembleDebug :desktopApp:compileKotlin :windowsApp:compileKotlinWindows :shared:compileKotlinIosSimulatorArm64 :shared:compileKotlinIosArm64` 成功，895 测试零失败/零跳过；日志在 `.artifacts/branch-cleanup-2026-10-14/dev-validation.log`。
 - 未验证：本轮仅源码分支整理，未替换已安装 1.8.5-AgentAlpha，也未重新实机验证 #23 界面。
+
+
+## 2026-10-14 main 恢复 Candidate3 完整基线（1.8.4-Candidate3 / Build 37）
+
+- 用户明确选择完整代码基线。main 恢复到 `debug-1.8.4-Candidate3@adaf5e75`，通过新的提交保留原 main@8e9e4152 及 Candidate3 的历史，不 force-push，不改旧标签。Agent A–E、#23 零点截止修复和本机 Alpha 整合由 dev 保存。
+- 唯一代码差异：Candidate3 标签的 macOS packageBuildVersion 遗留为 35，校正为 37，与 Android versionCode、iOS 宿主和小组件 CFBundleVersion 一致；文字版本均为 1.8.4-Candidate3，macOS/Windows 数值版本 1.8.4。其余与标签的差异仅 memory/history 的状态更新。
+- 验证：multiplatform 下 `./gradlew :shared:desktopTest :androidApp:assembleDebug :desktopApp:compileKotlin :windowsApp:compileKotlinWindows :shared:compileKotlinIosSimulatorArm64 :shared:compileKotlinIosArm64` BUILD SUCCESSFUL，822 测试零失败/零跳过。
+- iOS：JBR Java 21，`xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Debug -sdk iphonesimulator -destination platform=iOS\ Simulator,id=6857828A-CCEA-47D0-B26A-93462734DD91 -derivedDataPath ../.artifacts/agent-d-ios CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES DEVELOPMENT_TEAM=34S53DC6T6 ONLY_ACTIVE_ARCH=YES build` BUILD SUCCEEDED；产物宿主/小组件版本与签名复验。日志在 `.artifacts/branch-cleanup-2026-10-14/main-{validation,ios}.log`。
+- 未验证：本轮没有重新安装或交互验证 Candidate3；/Applications 仍为此前验证的 1.8.5-AgentAlpha / Build 38，未重新打包替换、未发布 Release。
+
+
+## 2026-10-14 dev 同步 Candidate3 主线历史（feat/ai-agent-dev，1.8.5-AgentAlpha / Build 38）
+
+- main@53bf642a 已正常推送到 mine，并纳入 dev 祖先。此历史合并保留 dev 的完整 Alpha 源码，避免主线基线恢复提交删除 dev 的 Agent 内容；源码逐文件与原 dev@839143b8 比对一致，差异仅三份状态文档。后续 dev 对 main 的 PR 会包含完整 Agent A–E、独立 #23 和 Alpha 版本改动。
+- 验证：main 本地/远端一致、祖先关系及版本清单检查通过；dev 源码未变，沿用上一轮 895 测试零失败和四端编译结果。未重新实机验证，安装版保持 Alpha。
