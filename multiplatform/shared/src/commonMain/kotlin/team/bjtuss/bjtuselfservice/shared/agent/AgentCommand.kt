@@ -47,14 +47,22 @@ sealed interface AgentSnapshotResult {
 val AGENT_USAGE = """
     用法: bjtu <命令> [选项]
       status                          版本、账号、缓存情况
-      calendar [--today|--tomorrow|--week [N]|--from YYYY-MM-DD --to YYYY-MM-DD] [--all]
-                                      聚合日程：课程、实验、考试、作业开放/截止
-      courses [--today|--week [N]|--date YYYY-MM-DD]
-      homework [--pending] [--source course|phyvlab|citel] [--all]
+      calendar [范围] [筛选]          聚合日程：课程、实验、考试、作业开放/折扣/截止
+      courses [范围] [--course 关键词] 课程与实验
+      homework [--pending] [筛选]     作业：课程平台、物理在线、CITEL
       exams
       grades                          需要在 App 设置里允许
       citel                           CITEL 任务列表（元数据）
       cache read <courses|homework|exams|grades|citel|calendar> [同上选项]
+    范围: --today | --tomorrow | --week [N] | --date YYYY-MM-DD | --from YYYY-MM-DD --to YYYY-MM-DD
+          （calendar 默认今天起 7 天；courses 默认本周）
+    筛选（可组合，多值用逗号或重复参数）:
+      --source course,phyvlab,citel   只看这些来源的作业
+      --course 关键词                  课程名包含关键词（忽略大小写）
+      --kind class,lab,exam,assignment_open,assignment_discount,assignment_due   仅 calendar
+      --app-filter                    套用用户在 App 作业页存的课程筛选（默认不套用）
+      --all                           连同物理实验课里没约上的实验一起列出
+    注意: 北京时间 00:00 截止的作业算作前一天 24:00 截止（与 App 首页一致），JSON 里 agendaDate 为归属日、start/dueTime 为实际时刻。
     通用选项: --json  输出 JSON（给 agent 用）；默认输出 Markdown
 """.trimIndent()
 
@@ -92,26 +100,20 @@ fun runAgentCommand(args: List<String>, provider: AgentSnapshotProvider, now: In
             "status" -> render(json, name, now, statusJson(ready), statusMarkdown(ready))
             "calendar" -> {
                 val range = parseRange(options, today, snapshot)
-                val items = agentCalendar(snapshot, range.first, range.second, now, includeAll = "--all" in options)
+                val calendarOptions = AgentCalendarOptions(kinds = parseKinds(options), homework = homeworkOptions(options))
+                val items = agentCalendar(snapshot, range.first, range.second, now, calendarOptions)
                 render(json, name, now, calendarJson(items, range, snapshot), calendarMarkdown(items, range))
             }
             "courses" -> {
                 val range = parseRange(options, today, snapshot, defaultWeek = true)
-                val items = agentCalendar(snapshot, range.first, range.second, now)
-                    .filter { it.kind == AgentCalendarKind.CLASS || it.kind == AgentCalendarKind.LAB }
+                val items = agentCalendar(snapshot, range.first, range.second, now, AgentCalendarOptions(
+                    kinds = setOf(AgentCalendarKind.CLASS, AgentCalendarKind.LAB),
+                    homework = homeworkOptions(options),
+                ))
                 render(json, name, now, calendarJson(items, range, snapshot), calendarMarkdown(items, range))
             }
             "homework" -> {
-                val source = optionValue(options, "--source")?.let(::parseSource)
-                val items = agentHomework(
-                    snapshot,
-                    AgentHomeworkOptions(
-                        pendingOnly = "--pending" in options,
-                        sources = source?.let(::setOf) ?: AssignmentSource.entries.toSet(),
-                        includeAll = "--all" in options,
-                    ),
-                    now,
-                )
+                val items = agentHomework(snapshot, homeworkOptions(options).copy(pendingOnly = "--pending" in options), now)
                 render(json, name, now, homeworkJson(items, snapshot), homeworkMarkdown(items))
             }
             "exams" -> render(json, name, now, examsJson(snapshot), examsMarkdown(snapshot))
@@ -184,7 +186,9 @@ internal fun parseRange(
 /** 只做语法检查，不需要缓存数据。 */
 private fun validateOptions(options: List<String>) {
     listOf("--date", "--from", "--to").forEach { name -> optionValue(options, name)?.let(::parseDate) }
-    optionValue(options, "--source")?.let(::parseSource)
+    optionValues(options, "--source").forEach { parseSource(it) }
+    optionValues(options, "--course")
+    parseKinds(options)
     val weekIndex = options.indexOf("--week")
     if (weekIndex >= 0) {
         options.getOrNull(weekIndex + 1)?.takeIf { !it.startsWith("--") }?.let {
@@ -196,8 +200,30 @@ private fun validateOptions(options: List<String>) {
 }
 
 private val KNOWN_OPTIONS = setOf(
-    "--date", "--from", "--to", "--today", "--tomorrow", "--week", "--source", "--pending", "--all",
+    "--date", "--from", "--to", "--today", "--tomorrow", "--week", "--source", "--course", "--kind",
+    "--pending", "--all", "--app-filter",
 )
+
+private fun homeworkOptions(options: List<String>) = AgentHomeworkOptions(
+    sources = optionValues(options, "--source").map(::parseSource).toSet().ifEmpty { AssignmentSource.entries.toSet() },
+    courseKeywords = optionValues(options, "--course"),
+    applyAppFilter = "--app-filter" in options,
+    includeUnbooked = "--all" in options,
+)
+
+private fun parseKinds(options: List<String>): Set<AgentCalendarKind> =
+    optionValues(options, "--kind").map { value ->
+        AgentCalendarKind.entries.firstOrNull { it.wire == value.lowercase() }
+            ?: throw AgentUsageException("--kind 只能是 ${AgentCalendarKind.entries.joinToString(",") { it.wire }}")
+    }.toSet().ifEmpty { AgentCalendarKind.entries.toSet() }
+
+/** 可重复、可逗号分隔：`--course 物理 --course 数据结构` 或 `--source course,citel`。 */
+private fun optionValues(options: List<String>, name: String): List<String> =
+    options.indices.filter { options[it] == name }.flatMap { index ->
+        val value = options.getOrNull(index + 1)?.takeIf { !it.startsWith("--") }
+            ?: throw AgentUsageException("$name 缺少参数")
+        value.split(',', '，').map(String::trim).filter(String::isNotEmpty)
+    }
 
 private fun optionValue(options: List<String>, name: String): String? {
     val index = options.indexOf(name)

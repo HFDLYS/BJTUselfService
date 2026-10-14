@@ -55,10 +55,11 @@ class AgentCommandTest {
                 "lab|光纤特性和光信号传输（实验）|2026-11-12T13:00:00+08:00",
                 "exam|离散数学（考试）|2026-11-12T14:00:00+08:00",
                 "assignment_due|栈与队列|2026-11-12T23:59:00+08:00",
+                "assignment_due|零点截止的作业|2026-11-13T00:00:00+08:00",
             ),
             summary,
         )
-        assertEquals("citel", items.last().str("source"))
+        assertEquals("citel", items[items.size - 2].str("source"))
     }
 
     @Test
@@ -78,18 +79,49 @@ class AgentCommandTest {
         val all = run("homework", "--all", "--json")
         val allTitles = parse(all).getValue("data").jsonObject.getValue("items").jsonArray.map { it.jsonObject.str("title") }
         assertTrue(allTitles.any { "光栅光谱仪" in it })
-        assertTrue("被隐藏的课的作业" in allTitles)
     }
 
     @Test
-    fun homeworkHonorsSavedCourseFilterAndPendingFlag() {
-        val titles = parse(run("homework", "--json")).getValue("data").jsonObject.getValue("items").jsonArray
+    fun appFilterIsOptInAndAgentFiltersAreExposed() {
+        fun titles(vararg args: String) = parse(run(*args, "--json")).getValue("data").jsonObject.getValue("items").jsonArray
             .map { it.jsonObject.str("title") }
-        assertFalse("被隐藏的课的作业" in titles, "沿用 App 里存的课程筛选")
+        assertTrue("被隐藏的课的作业" in titles("homework"), "默认不套用 App 作业页筛选")
+        assertFalse("被隐藏的课的作业" in titles("homework", "--app-filter"))
+        assertEquals(listOf("实验报告一"), titles("homework", "--pending", "--source", "course", "--course", "甲"))
+        assertEquals(listOf("栈与队列"), titles("homework", "--source", "citel,course", "--course", "乙"))
 
-        val pending = parse(run("homework", "--pending", "--source", "course", "--json"))
+        val filters = parse(run("homework", "--json")).getValue("data").jsonObject.getValue("availableFilters").jsonObject
+        assertTrue(filters.getValue("course").jsonArray.any { it.jsonPrimitive.content == "物理实验II_(2026秋)" })
+        assertEquals("true", filters.getValue("appFilterActive").jsonPrimitive.content)
+    }
+
+    @Test
+    fun midnightDeadlineBelongsToPreviousDay() {
+        val data = parse(run("calendar", "--today", "--kind", "assignment_due", "--json")).getValue("data").jsonObject
+        val items = data.getValue("items").jsonArray.map { it.jsonObject }
+        val midnight = items.single { it.str("title") == "零点截止的作业" }
+        assertEquals("2026-11-12", midnight.str("agendaDate"))
+        assertEquals("2026-11-13T00:00:00+08:00", midnight.str("start"))
+        assertEquals("true", midnight.str("midnightDeadline"))
+        // 23:59 截止排在 24:00 之前。
+        assertEquals(listOf("栈与队列", "零点截止的作业"), items.map { it.str("title") })
+        assertTrue(data.getValue("notes").jsonArray.single().jsonPrimitive.content.contains("00:00"))
+
+        val tomorrow = parse(run("calendar", "--tomorrow", "--kind", "assignment_due", "--json")).getValue("data").jsonObject
+        assertTrue(tomorrow.getValue("items").jsonArray.none { it.jsonObject.str("title") == "零点截止的作业" })
+
+        val markdown = run("calendar", "--today").stdout
+        assertTrue("24:00 [作业截止] 零点截止的作业" in markdown)
+        assertTrue("即次日 00:00" in markdown)
+    }
+
+    @Test
+    fun kindAndCourseFiltersApplyToCalendar() {
+        val items = parse(run("calendar", "--today", "--kind", "class", "--course", "网络", "--json"))
             .getValue("data").jsonObject.getValue("items").jsonArray.map { it.jsonObject.str("title") }
-        assertEquals(listOf("实验报告一"), pending)
+        assertEquals(listOf("计算机网络"), items)
+        assertEquals(AgentExit.USAGE, run("calendar", "--kind", "party").exitCode)
+        assertEquals(AgentExit.USAGE, run("homework", "--course").exitCode)
     }
 
     @Test
@@ -183,6 +215,7 @@ class AgentCommandTest {
         store.replaceHomework(student, listOf(
             homework(1, 10, "测试课程甲", "实验报告一", end = "2026-11-20 23:59"),
             homework(2, 20, "被隐藏的课", "被隐藏的课的作业", end = "2026-11-21 23:59"),
+            homework(3, 10, "测试课程甲", "零点截止的作业", end = "2026-11-13 00:00", submitted = true),
         ))
         store.putMetadata(student, "assignment.aggregate.filters", json.encodeToString(
             AggregateAssignmentFilters(platformCourses = mapOf(AssignmentSource.COURSE_PLATFORM to AggregateCourseFilter(false, setOf(10)))),
@@ -215,10 +248,10 @@ class AgentCommandTest {
         courseTime = "第1-16周", coursePlace = place, isCurrentSemester = false,
     )
 
-    private fun homework(id: Int, courseId: Int, courseName: String, title: String, end: String) = Homework(
+    private fun homework(id: Int, courseId: Int, courseName: String, title: String, end: String, submitted: Boolean = false) = Homework(
         id = id, upId = id, idSnId = null, score = "", userId = 1, courseId = courseId, courseName = courseName,
         title = title, content = "", createDate = "2026-11-01 00:00", endTime = end, openDate = "2026-11-01 00:00",
-        status = 1, submitCount = 0, allCount = 30, subStatus = "未提交", scoreId = 0, homeworkType = 2,
+        status = 1, submitCount = 0, allCount = 30, subStatus = if (submitted) "已提交" else "未提交", scoreId = 0, homeworkType = 2,
     )
 
     private fun activity(id: Int, course: PhyVlabCourse, title: String, due: String) = PhyVlabActivity(
