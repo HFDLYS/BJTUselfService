@@ -1,7 +1,7 @@
 # BJTUselfService 实时工作记忆
 
 > 最后更新：2026-10-14。
-> 当前分支：`feat/android-widgets`（基于 `feat/staggered-second-slot`）。PR #16（错峰上课）CI 全绿、待合入；打包标签 `debug-1.8.4-Beta-staggered` 成功。
+> 当前分支：`feat/android-widgets`（基于 `feat/staggered-second-slot`）。PR #16（错峰上课）、PR #17（Android 小组件）CI 全绿，等待用户验证后合并；打包标签 `debug-1.8.4-Beta-staggered` 成功。
 > KMP 应用版本：`1.8.4-Beta3` / Build 35（macOS/Windows 安装包数值版本 1.8.4）。正式 Latest 仍为 `v1.8.3-KMP`。
 > 冻结原 Android：`v1.7.1` / versionCode 9（对照 `origin/main@7d94f74`）。
 > 已完成工作的细节见 `history_full.md` 末尾日志。
@@ -21,7 +21,8 @@
   - 同分支附带 iOS 中号“临近课程”溢出修复：栏标签/课名/地点/时间加 `minimumScaleFactor`，剩余时间窄栏短写“1 小时 15 分”。
   - 已验证：`:shared:desktopTest` 全过（新增 `CourseWidgetModelTest`）；`:androidApp:assembleDebug`、`lintDebug`、桌面/Windows/iOS Kotlin 编译通过；iOS 签名模拟器 xcodebuild 成功。Pixel 10 Pro XL 模拟器（API 37）用合成快照实测三种小组件、深浅色、错峰下移、分钟倒计时刷新。
   - 未验证：荣耀真机（服务中心入口、16dp 容器、折叠屏尺寸）；Android 12 以下系统；真实登录后由 App 写入快照的链路；iOS 溢出修复的实际观感（只编译）。
-  - 备注：此前有一版 Android 小组件 PR #15（`feat/android-course-widgets`）已关闭未合并，本次为独立实现。
+  - 备注：此前一版 Android 小组件 PR #15 因实现质量不达标被用户关闭（见其评论），远端分支已于 2026-10-14 删除；#17 为独立实现。
+  - PR 状态：#17 CI 全绿（Android 编译、iOS 编译与测试、iOS 侧载 IPA）；用户验证后决定是否合并 #16、#17。
 
 ## 当前痛点
 
