@@ -1,5 +1,6 @@
 package team.bjtuss.bjtuselfservice.shared.feature.phyvlab
 
+import team.bjtuss.bjtuselfservice.shared.domain.time.formatChineseDeadline
 import team.bjtuss.bjtuselfservice.shared.feature.shell.LocalBottomBarClearance
 
 import androidx.compose.foundation.Canvas
@@ -480,7 +481,7 @@ internal fun PhyVlabActivityRow(activity: PhyVlabActivity, nowEpochSeconds: Long
             AssignmentCardHeader(activity.courseName, activity.title, activity.completed, source)
             Text("类型 · ${activity.activityType}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             activity.openText?.let { Text("开始 · ${formatPhyVlabDateTime(it)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            activity.dueText?.let { Text("截止 · ${formatPhyVlabDateTime(it)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            activity.dueText?.let { Text("截止 · ${formatChineseDeadline(it)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
 }
@@ -633,7 +634,7 @@ private fun PhyVlabAssignmentDetailContent(
     val scrollState = rememberScrollState()
     // 真实偏移上报给壳层算玻璃浓度；只在全屏路由页生效（sheet 里复用不受影响）。
     val openedAt = activity.openText?.let(::formatPhyVlabDateTime)
-    val dueAt = activity.dueText?.let(::formatPhyVlabDateTime)
+    val dueAt = activity.dueText?.let(::formatChineseDeadline)
     val submittedAt = detail?.submissionDateText?.let(::formatPhyVlabDateTime)
     val submitted = detail?.let { !it.isDraft && phyVlabAssignmentDetailHasSubmission(it) } ?: activity.completed
     val submissionTiming = phyVlabSubmissionTimingLabel(activity, detail)
