@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12 以下没有系统小组件圆角；与荣耀卡片容器的 16dp 一致。 -->
+    <dimen name="widget_corner_radius">16dp</dimen>
+    <dimen name="widget_padding">16dp</dimen>
+</resources>

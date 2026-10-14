@@ -1,0 +1,13 @@
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/status_text"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:drawableStart="@drawable/ic_widget_check_filled"
+    android:drawablePadding="3dp"
+    android:gravity="center_vertical"
+    android:textSize="11sp"
+    android:textColor="@color/widget_text_secondary"
+    android:fontFamily="sans-serif-medium"
+    android:maxLines="1"
+    android:ellipsize="end"
+    android:includeFontPadding="false" />

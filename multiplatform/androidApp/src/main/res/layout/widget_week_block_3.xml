@@ -1,0 +1,11 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/week_block"
+    android:layout_width="match_parent"
+    android:layout_height="0dp"
+    android:layout_weight="3"
+    android:paddingStart="1.5dp"
+    android:paddingTop="1.5dp"
+    android:paddingEnd="1.5dp"
+    android:paddingBottom="1.5dp">
+    <include layout="@layout/widget_week_block_body" />
+</FrameLayout>
