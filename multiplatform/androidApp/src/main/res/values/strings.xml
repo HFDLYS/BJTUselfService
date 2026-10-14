@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">交大自由行 KMP</string>
+    <string name="widget_up_next_label">临近课程</string>
+    <string name="widget_up_next_description">显示正在上的课和下一节课。</string>
+    <string name="widget_today_label">今日课程</string>
+    <string name="widget_today_description">按时间顺序显示今天的课程，上完后显示下一个有课的日子。</string>
+    <string name="widget_week_label">本周课表</string>
+    <string name="widget_week_description">按大节显示本周一到周日的课程，配色与课程表页一致。</string>
+    <string name="widget_loading">正在读取课表…</string>
 </resources>

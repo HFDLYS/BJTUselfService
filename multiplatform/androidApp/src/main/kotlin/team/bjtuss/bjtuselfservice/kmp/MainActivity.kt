@@ -15,6 +15,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AndroidAuthenticatedSessionRegistry.installLifecycle(application)
+        // 课表快照写入后通知桌面小组件重排（进程内一次即可，重复调用无副作用）。
+        team.bjtuss.bjtuselfservice.shared.feature.widget.installAndroidCourseWidgetStore(this) {
+            team.bjtuss.bjtuselfservice.kmp.widget.CourseWidgetUpdater.updateAll(it)
+        }
         enableImmersiveEdgeToEdge()
         // 调试日志只在 debug 构建开启；release 保持关闭。
         AppLog.enabled = BuildConfig.DEBUG
