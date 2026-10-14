@@ -57,7 +57,6 @@ import team.bjtuss.bjtuselfservice.shared.feature.course.CourseScheduleScreenMod
 import team.bjtuss.bjtuselfservice.shared.feature.courseware.CoursewareScreenModel
 import team.bjtuss.bjtuselfservice.shared.feature.exam.ExamScheduleScreenModel
 import team.bjtuss.bjtuselfservice.shared.feature.grade.GradeScreenModel
-import team.bjtuss.bjtuselfservice.shared.feature.course.saveAcademicWeeksIfChanged
 import team.bjtuss.bjtuselfservice.shared.feature.home.HomeScreenModel
 import team.bjtuss.bjtuselfservice.shared.feature.homework.HomeworkScreenModel
 import team.bjtuss.bjtuselfservice.shared.feature.mailbox.MailboxScreenModel
@@ -135,9 +134,6 @@ internal fun rememberAuthenticatedSession(
             repository = courseScheduleRepository,
             changeRecorder = courseChangeRecorder(homeChangeFeed),
             calendarRepository = classroomOccupancyRepository,
-            onCurrentAcademicWeeks = { weeks ->
-                cacheStore.saveAcademicWeeksIfChanged(profile.studentId, weeks)
-            },
         )
     }
     val examScheduleRepository = remember(profile.studentId, cacheStore) {

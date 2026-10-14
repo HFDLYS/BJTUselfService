@@ -1,8 +1,5 @@
 package team.bjtuss.bjtuselfservice.shared.feature.home
 
-import team.bjtuss.bjtuselfservice.shared.domain.time.chineseLabel
-import team.bjtuss.bjtuselfservice.shared.domain.time.deadlineDisplay
-import team.bjtuss.bjtuselfservice.shared.domain.time.formatSchoolDeadline
 import team.bjtuss.bjtuselfservice.shared.feature.shell.bottomSystemBars
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -1173,7 +1170,7 @@ private fun DueSoonHomeworkSummary(
         )
         homework.take(3).forEach { item ->
             Text(
-                "${displayScheduleCourseName(item.courseName)} · ${item.title} · ${formatSchoolDeadline(item.endTime)}",
+                "${displayScheduleCourseName(item.courseName)} · ${item.title} · ${item.endTime}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -1382,7 +1379,7 @@ private fun AgendaDayDetails(
             AgendaEventRow(
                 type = "截止",
                 title = item.title,
-                detail = "${displayScheduleCourseName(item.courseName)} · ${formatSchoolDeadline(item.endTime)}",
+                detail = "${displayScheduleCourseName(item.courseName)} · ${item.endTime}",
                 onClick = { onOpenHomework(item) },
                 canNavigate = canNavigate,
                 done = isHomeworkSubmitted(item),
@@ -1507,11 +1504,6 @@ private fun weekdayShortName(date: LocalDate): String =
 private fun weekdayName(date: LocalDate): String = "星期${weekdayShortName(date)}"
 
 private fun formatPhyVlabAgendaDate(event: PhyVlabEvent): String {
-    // 由作业截止生成的事件（物理在线活动、CITEL）：零点截止显示为前一天 24:00，与它所在的日程日一致。
-    if (event.kind == PhyVlabEventKind.DEADLINE && (event.id.startsWith("activity-") || event.id.startsWith("citel-due-"))) {
-        val shown = deadlineDisplay(Instant.fromEpochSeconds(event.dayTimestamp).toLocalDateTime(TimeZone.of("Asia/Shanghai")))
-        return "${shown.date} ${shown.clock} · ${shown.date.dayOfWeek.chineseLabel()}"
-    }
     if (Regex("·\\s*周[一二三四五六日]").containsMatchIn(event.dateText)) return event.dateText
     val weekday = runCatching {
         Instant.fromEpochSeconds(event.dayTimestamp)

@@ -59,31 +59,27 @@ internal fun TimedGuideDialog(
     )
 }
 
+/** 1.8.3 原有的新版导航、CITEL、作业聚合三个弹窗合为一个。 */
 @Composable
-internal fun RedesignGuideDialog(saveFailed: Boolean, onConfirm: () -> Unit) {
+internal fun Release183GuideDialog(saveFailed: Boolean, onConfirm: () -> Unit) {
     TimedGuideDialog(
-        title = "新版导航",
-        body = "底栏改为「首页」和「应用」。常用页请到「应用 → 设置 → 底栏显示」添加。",
+        title = "1.8.3 版本说明",
+        body = "· 新版导航：底栏改为「首页」和「应用」。常用页请到「应用 → 设置 → 底栏显示」添加。\n\n" +
+            "· 新增 CITEL：CITEL 作业已接入。请到「应用 → 设置」配置账号后再使用。\n\n" +
+            "· 作业聚合：课程平台、物理在线和 CITEL 的作业统一显示在「作业」中。可在设置中关闭「作业聚合」。",
         saveFailed = saveFailed,
         onConfirm = onConfirm,
     )
 }
 
 @Composable
-internal fun CitelGuideDialog(saveFailed: Boolean, onConfirm: () -> Unit) {
+internal fun Release184GuideDialog(saveFailed: Boolean, onConfirm: () -> Unit) {
     TimedGuideDialog(
-        title = "新增 CITEL",
-        body = "CITEL 作业已接入。请到「应用 → 设置」配置账号后再使用。",
-        saveFailed = saveFailed,
-        onConfirm = onConfirm,
-    )
-}
-
-@Composable
-internal fun AssignmentAggregateGuideDialog(saveFailed: Boolean, onConfirm: () -> Unit) {
-    TimedGuideDialog(
-        title = "各平台作业已聚合",
-        body = "课程平台、物理在线和 CITEL 的作业统一显示在「作业」中。可在设置中关闭「作业聚合」。",
+        title = "1.8.4 新增功能",
+        body = "· 演示实验：首页日程和「应用 → 演示实验」显示已预约的大学物理演示实验。" +
+            "请到「应用 → 设置」启用并填写演示实验账号，同步需要校园网。\n\n" +
+            "· 桌面小组件：iOS 与 Android 新增「临近课程」「今日课程」「本周课表」，在桌面长按添加，同步课表后显示。\n\n" +
+            "· 错峰上课：第二节在逸夫教学楼、思源西楼的课按 10:30–12:20 显示。可在设置中关闭「错峰上课时间」。",
         saveFailed = saveFailed,
         onConfirm = onConfirm,
     )

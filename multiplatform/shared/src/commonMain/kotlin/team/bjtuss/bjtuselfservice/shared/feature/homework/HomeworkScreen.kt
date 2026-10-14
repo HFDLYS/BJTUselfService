@@ -1,6 +1,5 @@
 package team.bjtuss.bjtuselfservice.shared.feature.homework
 
-import team.bjtuss.bjtuselfservice.shared.domain.time.formatSchoolDeadline
 import team.bjtuss.bjtuselfservice.shared.feature.shell.LocalBottomBarClearance
 
 import team.bjtuss.bjtuselfservice.shared.feature.common.WorkspaceEmptyState
@@ -922,7 +921,7 @@ internal fun HomeworkCard(
             team.bjtuss.bjtuselfservice.shared.feature.assignment.AssignmentCardHeader(
                 item.courseName, item.title, team.bjtuss.bjtuselfservice.shared.domain.homework.isHomeworkSubmitted(item), source)
             HomeworkCardLine("类型", item.typeLabel())
-            HomeworkCardLine("截止", item.endTime.ifBlank { "未提供" }.let(::formatSchoolDeadline))
+            HomeworkCardLine("截止", item.endTime.ifBlank { "未提供" })
             HomeworkCardLine("提交人数", "${item.submitCount} / ${item.allCount}")
             if (item.score.isNotBlank()) HomeworkCardLine("评分", item.score)
         }
@@ -1112,7 +1111,7 @@ internal fun homeworkDetailToMarkdown(
         appendLine("- 课程：${homework.courseName}")
         appendLine("- 类型：${homework.typeLabel()}")
         appendLine("- 开放时间：${homework.openDate.ifBlank { "未提供" }}")
-        appendLine("- 截止时间：${homework.endTime.ifBlank { "未提供" }.let(::formatSchoolDeadline)}")
+        appendLine("- 截止时间：${homework.endTime.ifBlank { "未提供" }}")
         appendLine("- 提交状态：${homework.subStatus.ifBlank { "未标明" }}")
         if (homework.score.isNotBlank()) appendLine("- 评分：${homework.score}")
         appendLine()
@@ -1180,7 +1179,7 @@ private fun HomeworkDetailSheetBody(
         HomeworkDetailLine("课程", homework.courseName)
         HomeworkDetailLine("类型", homework.typeLabel())
         HomeworkDetailLine("开放时间", homework.openDate.ifBlank { "未提供" })
-        HomeworkDetailLine("截止时间", homework.endTime.ifBlank { "未提供" }.let(::formatSchoolDeadline))
+        HomeworkDetailLine("截止时间", homework.endTime.ifBlank { "未提供" })
         HomeworkDetailLine("提交状态", homework.subStatus.ifBlank { "未标明" })
         if (homework.score.isNotBlank()) HomeworkDetailLine("评分", homework.score)
         if (isLoading) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())

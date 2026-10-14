@@ -739,3 +739,107 @@
 - 外层 ZIP：`upload-artifact@v4` 把文件时间按 UTC 写进 DOS 时间，单设 TZ 不够。四端通过 `scripts/stage-actions-artifact.py` 创建上传副本，仅副本 mtime 加 8 小时；原包保留真实 epoch，内容与签名不变。
 - 验证：YAML 解析、9 个 Bash 步骤 `bash -n`、JVM 时区、模拟 IPA 的北京时间跨日/真实 epoch/ZIP 时间/无 UTC 扩展字段/符号链接/内容哈希均通过；首轮 CI `38429777141` 的 IPA 内 30 个条目均为北京时间，CRC 与签名复验通过。
 - 未验证：第二轮 CI 外层 ZIP 时间的实际结果未在 memory 中记录；Windows/MSI、Android/APK、macOS/DMG 需后续四端打包确认。既有 Actions 产物与 GitHub 自身 UTC 运行时间不变。
+
+## 2026-10-14 第二节错峰上课时间（PR #16，`feat/staggered-second-slot`）
+
+- 改动：第二节教室在逸夫教学楼（YF）/思源西楼（SX）时按 10:30–12:20。设置页新增开关「错峰上课时间」（默认开，`AppPreferences.staggeredSecondSlot`）。规则在 `domain/course/StaggeredClassTime.kt`（楼名或 `YF/SX+数字` 教室号；思源楼/思源东楼/威海逸夫楼不算；实验/考试不参与）。
+- 精确时间覆盖：课程详情（含“（错峰）”）、按日列表卡片与整节均错峰时的节次标签、首页“现在/下一节”与日程、iOS 小组件快照 start/end、日历导出。
+- 只下移不加节：课表网格色块顶边下移约 1/8 格（≤7dp）、底边压到格线；iOS 周视图按 `staggerMinutes` 归回原大节，同样微移。快照新增可选字段 `staggerMinutes`，旧小组件忽略。
+- 验证：`:shared:desktopTest` 全过（含新增 `StaggeredClassTimeRenderTest`，合成课表出图于 `shared/build/reports/staggered-class-time/`，浅/深色、整节错峰、混排、关闭开关均人工看过）；iOS 签名模拟器 `xcodebuild` Debug（含小组件 Swift）`BUILD SUCCEEDED`；`:androidApp:assembleDebug`、`:desktopApp:compileKotlin`、`:windowsApp:compileKotlinWindows`、`:shared:compileKotlinIos{SimulatorArm64,Arm64}` 通过；PR CI 全绿。
+- 未验证：真实课表里 YF/SX 地点文本格式（按既有 fixture `海淀西校区,思源西楼,SX501` 推断）；模拟器/真机中的设置页开关、首页卡片和 iOS 周视图小组件实际观感。
+
+## 2026-10-14 Android 桌面课表小组件（PR #17 `feat/android-widgets`，经 PR #19 `fix/merge-android-widgets` 补合入 main，1.8.4-Candidate2 / Build 36）
+
+- 改动：临近课程（2×2/4×2）、今日课程（4×2/4×4）、本周课表（4×4），与 iOS 同一份快照与版式规则。展示逻辑在 shared `feature/widget/CourseWidgetModel.kt`（可测，与 Swift 一一对应）；快照写到应用私有目录 `files/course-widget.json`（`CourseWidgetStore.android.kt`），写入后回调 `CourseWidgetUpdater.updateAll`；渲染为原生 RemoteViews（`androidApp/.../kmp/widget/`），不引入 Glance 等新库。
+- 版式：以 iOS 尺寸为基准按实际宽高等比缩放字号（0.9–1.25），两栏共用字号，单行按估算宽度缩字；周视图按行高/列宽计算每块可放几行。深浅色走 values-night，类别文字色在 Android 12+ 用资源色；Android 12+ 按桌面上报的每个尺寸各排一份；容器 16dp 圆角（Android 12+ 用系统圆角）。
+- 刷新：非唤醒 RTC 闹钟，上课时段逐分钟、其它时间按课程起止且最多 15 分钟；不申请精确闹钟权限。
+- 同分支附带 iOS 中号“临近课程”溢出修复：栏标签/课名/地点/时间加 `minimumScaleFactor`，剩余时间窄栏短写“1 小时 15 分”。
+- 排版教训：RemoteViews 超出卡片的内容会被直接裁掉，不像 iOS 按行截断；中文字体行高实测约 1.7 倍字号（`line` 常量），估高要偏大；先 `shrinkToFit` 整体缩小保住完整版式，再决定是否丢次要内容（今日课程脚注）；小号“下一节”是核心信息，按“整体缩小 → 长课名压成一行 → 最后才丢它”让步（`planSmall`）。桌面上报高度比实际显示小约 30dp，估高时补回 18dp（`SIZE_SLACK_DP`）；课名只超出可用宽度 15% 以内时缩字单行；XML 与代码里不要各加一份外边距。
+- 合并事故：#17 的 base 是 `feat/staggered-second-slot`，该分支在 #17 合并前 33 秒已通过 #16 合入 main，#17 的改动（`1f37b8e`）因此没有进入 main，`debug-1.8.4-Candidate` 的 APK 没有小组件。PR #19 无冲突补合 `1f37b8e`，并把版本改为 1.8.4-Candidate2（Android versionCode/iOS CFBundleVersion 35→36，`AppUpdateChecker.CURRENT_VERSION` 及测试）；打包标签 `debug-1.8.4-Candidate2`（`ea0f760f`）。教训：叠加分支的 PR 合并前先确认 base 仍是 main，或先把 base 改成 main。
+- 背景：此前一版 Android 小组件 PR #15 因实现质量不达标被用户关闭，远端分支已删除；#17 为独立实现。
+- 验证：`:shared:desktopTest` 全过（新增 `CourseWidgetModelTest`）；`:androidApp:assembleDebug`、`lintDebug`、桌面/Windows/iOS Kotlin 编译通过；iOS 签名模拟器 xcodebuild 成功。Pixel 10 Pro XL 模拟器（API 37）用合成快照实测三种小组件、深浅色、错峰下移、分钟倒计时刷新。Candidate2 debug 包 `adb install -r` 到荣耀 AAK-AN00 与小米 25091RP04C 成功。
+- 未验证：Android 12 以下系统；真实登录后由 App 写入快照的链路；iOS 溢出修复的实际观感（只编译）。
+
+## 2026-10-14 取消 PR 触发 iOS IPA 打包（PR #18，`fix/ci-no-pr-ios-package`）
+
+- 改动：`kmp-package.yml` 的 `pull_request` 触发器按 `iosApp/**` 等路径触发，iOS 任务的 `if` 未排除 PR 事件，修改 iOS 相关文件的 PR 也会打 Debug IPA。移除 `pull_request` 触发器；打包改为推 `v*`/`debug-*` 标签或手动 `workflow_dispatch`。PR 检查只剩 `kmp-security-check`。
+- 验证：仅 CI。之后 PR #20 只触发 `kmp-security-check` 的 2 项（Android 编译、iOS 编译与 macOS 测试），没有打包任务。
+
+## 2026-10-14 去掉荣耀 honorcard 标记，修复 MagicOS 找不到小组件（PR #20，`fix/honor-widget-visibility`）
+
+- 现象：带 `com.hihonor.widget.type=honorcard` 的 Candidate2 在荣耀 AAK-AN00（MagicOS 11.0.0.109 / Android 17）上，服务卡片与经典小组件入口都找不到本应用。
+- 改动：删除 `AndroidManifest.xml` 三个小组件 receiver 上的 honorcard meta-data，只保留标准 AppWidget。
+- 原因/决策：荣耀卡片除该标记外，还需在荣耀开发者平台「智慧服务」登记服务（签合作协议、包名与 versionCode/minSdk、SHA256 证书指纹、各规格 4 倍截图、AppWidgetProvider 类名、测试名单与审核）。荣耀文档称该标记不影响原有显示，但实测未登记时 MagicOS 会把小组件整体隐藏。用户决定不接入荣耀服务卡片，走标准小组件；后续只视情况优化 Android 小组件显示。若将来接入，审核要求还包括：系统裁圆角、不用透明背景、安全边距 ≥12dp、文字用 dp、列表按压反馈（浅色 5% 黑/深色 10% 白）、深色背景 `#262626`、未登录/加载/无网兜底、点击直达落地页。
+- 验证：`./gradlew :androidApp:assembleDebug` 成功；`aapt2 dump xmltree` 确认 APK 无 hihonor、三个 provider 仍在；荣耀 `adb install -r` 后 `dumpsys appwidget` 识别三个 provider，用户确认桌面经典小组件列表可见；小米 25091RP04C（Android 16）同样识别。PR CI：Android 编译通过；用户合并时 iOS 编译与 macOS 测试仍在运行（结果未记录）。
+- 未验证：荣耀上添加后的实际渲染、尺寸与刷新；折叠屏尺寸。
+
+
+## 2026-10-14 Agent A–E 接受与本地 Alpha 部署（PR #21/#22/#24/#25/#26，1.8.5-AgentAlpha / Build 38）
+
+- 合并事实：用户已接受全部 PR。#21 合入 main，#22 → feat/ai-agent-cli，#24 → feat/ai-agent-skill，#25 → feat/ai-agent-sync，#26 → feat/ai-agent-citel；不是五个全部进入 main。现由 feat/ai-agent-dev 汇总完整代码及这些合并记录，并纳入独立 #23 零点截止修复。
+- 下列为实施与部署时的验证记录；其中“未提交/未合入/待审核”和旧分支名描述当时状态，现已由上述事实及 memory.md 的最新摘要取代。
+
+- 本地 Agent Alpha 更新（2026-10-14）：基于 `feat/ai-agent` Candidate3，squash 整合 `feat/ai-agent-uninstall` A–E；保留原有 1.8.4 引导行为。统一为 `1.8.5-AgentAlpha` / Build 38；构建、/Applications 可恢复替换和新版 Skill 安装验证通过。不提交、不推送、不发布 Release。
+  - 验证：完整 Gradle 矩阵含 `:shared:desktopTest :androidApp:assembleDebug :desktopApp:compileKotlin :windowsApp:compileKotlinWindows :shared:compileKotlinIosSimulatorArm64 :shared:compileKotlinIosArm64 :desktopApp:packageDmg` 成功；890 测试零失败。签名 arm64 模拟器 xcodebuild `BUILD SUCCEEDED`。打包/安装 App 的 codesign --verify --deep --strict 通过，数值版本 1.8.5 / Build 38。
+  - 安装验证：新 `/Applications/交大自由行 KMP.app` 已启动，安装版 `agent status --json` 退出 0，version=1.8.5-AgentAlpha，缓存读取成功；经 `~/.local/bin/bjtu help` 调用退出 0，含 CITEL show/export、cache update、uninstall-app。
+  - Skill：新版安装器安装 `~/.agents/skills/bjtuss`（Claude 根目录共享同一软链接）；旧 `.agents/.claude` 下 `bjtu-self-service` 均不存在。Skill 内版本和全文/卸载命令已更新；安装版 doctor 退出 0，显示已安装 1.8.5-AgentAlpha、Claude 共用、缓存可读。未清账号、缓存或钥匙串；独立 Keychain 测试已随 desktopTest 通过。
+  - 回退：旧 App 备份在 `.artifacts/app-backups/2026-10-14-211010/交大自由行 KMP.app`；测试/构建记录在 `.artifacts/agent-alpha-*`。未运行新版本的真实完整卸载、未安装 Android/iOS/Windows 包。
+
+- AI Agent 接入（Skill + CLI，不做 MCP）：计划见 `docs/agent/ai-agent-plan.md`，Spike 记录见 `docs/agent/spike-2026-10-14.md`。PR A 在 `feat/ai-agent-cli`（从 main 开出，cherry-pick 自 `feat/ai-agent`；后者基于未合入的 `release/1.8.4`，保留不动）。
+  - PR A 内容：`<App> agent <命令> [--json]`，macOS 和 Windows 一样，提供 `status`、`calendar`、`courses`、`homework`、`exams`、`grades`、`citel` 和 `cache read`。
+    - `calendar` 聚合课程（含错峰）、物理实验、演示实验、考试，以及三个来源作业的开放/折扣/截止。
+    - `homework` 聚合课程平台、物理在线、CITEL；物理实验课按约课结果过滤，标题去掉序号和“（难度系数…）”后匹配，未约的实验默认隐藏。
+    - 成绩默认不开放（开关 `agent.scope.grades`）；学号脱敏；参数先于缓存读取校验。
+    - 缓存只读打开，不新建密钥、不迁移、不删库，schema 版本不符时提示先打开 App。
+    - App 新增写入 `academic_weeks_v1`，CLI 离线换算日期用；没有它时按当前周推算，并标 `inferred`。
+  - 已验证：`:shared:desktopTest` 全过（新增 22 项）；四端编译通过；打包后的 macOS 启动器在临时 HOME 下跑 help/status/参数错误；Windows CI 冒烟测试全绿（GUI exe 经重定向句柄输出，DPAPI 正常）。
+  - 真实数据已验证（2026-10-14）：把 `feat/ai-agent` 打包成 1.8.4-Candidate3 替换了 `/Applications` 里的 1.8.3（旧版在废纸篓）。用户打开新版、在钥匙串里允许后，用安装版启动器跑 `status`、`calendar --week`、`homework --pending` 都没再弹窗。错峰时间正确；物理实验 16 项里只留下约上的 4 项（含“超声专题”“声源定位的GPS模拟”），12 项没约的都过滤掉了；校历缓存已写入（日期不再是推算）。
+  - 用户决定（2026-10-14）：零点截止与首页一致，归到前一天 24:00，JSON 给出 `agendaDate`、`midnightDeadline` 和 `notes` 提醒 agent；筛选交给 agent 自己做，默认不再套用 App 作业页的筛选（`--app-filter` 可以显式套用），提供 `--source`、`--course`、`--kind`，并输出 `availableFilters`；`--all` 只表示连同没约的实验一起列出。
+  - 未验证：零点截止和筛选这次改动还没在真实数据上跑（安装版是改动前打的包）；App 首页和作业页还没用上“未约实验”过滤。
+  - 本轮本地打包已将 macOS `packageBuildVersion` 与四端 Build 统一为 38。
+  - PR B（`feat/ai-agent-skill`，叠在 PR A 上）：设置页“AI 助手”卡片，只在桌面端显示。功能有：一键安装、重新安装、移除；“允许读取成绩”开关（`AppPreferences.agentGradesAllowed`，默认关）；一句可复制的话，粘贴给 agent 即可用。命令行新增 `agent install [--no-claude]`、`uninstall`、`doctor`。
+    - 安装位置：Skill 当前写到 `~/.agents/skills/bjtuss/SKILL.md`，旧 `bjtu-self-service` 仅清理带标记的本 App 文件。启动脚本在 macOS 是 `~/.local/bin/bjtu`，在 Windows 是 `%LOCALAPPDATA%\BJTUselfServiceKMP\bin\bjtu.cmd`，按系统代码页写；Skill 里写的是脚本的绝对路径，所以不用改 PATH。
+    - 只动自己写的文件：脚本里带标记注释，Skill 目录里带标记文件。目标位置已有别人的同名文件时拒绝覆盖，卸载也只删带标记的。
+    - Claude Code：`~/.claude/skills` 本身就是指向 `~/.agents/skills` 的软链接时不再另建；是普通目录时建软链接（Windows 建不了就复制一份）；同名位置被占用时不动。
+    - 已验证：`:shared:desktopTest` 853 项全过（安装器 8 项都在临时 HOME 里跑，包括真的执行生成的脚本、检查参数转发）；四端编译通过。Windows CI 补了 install → 经 `bjtu.cmd` 调用 → uninstall 的检查。
+    - 已验证（2026-10-14）：打包替换本机 App 后，用户在设置页一键安装成功，卡片深浅色都正常；用户新开 Codex 会话贴那句话，Codex 自己找到 `~/.agents/skills` 下的 Skill，调用了命令，正确答出本周课表、零点截止（按前一天 24 点说）、物理实验只算约上的 4 项、缓存时间。“允许读取成绩”是用户自己打开的。
+    - 追加（同一 PR）：Skill 改名为 `bjtuss`（安装时清掉带标记的旧目录 `bjtu-self-service`）。课表、作业、考试、成绩同步成功后写 `synced_at_v1.<source>`（仓库的 `onSynced` 回调）；输出顶层加 `freshness`（超过 4 小时的进 `stale`，没有记录的进 `unknown`），Markdown 顶部加提示；Skill 规定 `stale` 不为空时先问用户要不要刷新。CITEL 输出加 `judgeStatus`，避免把“交了但没全对”说成“没交”。
+  - App 零点截止显示的独立 PR #23 尚未合入；本轮 Alpha 保持已有 App 界面显示机制，CLI 的归日说明已包含。
+  - PR C（`feat/ai-agent-sync`，叠在 PR B 上）：`cache update [grades,courses,homework,exams]`，用 App 记住的账号后台登录并刷新，顺序与 App 启动同步一致：成绩 → 课表（含校历和当前周）→ 作业 → 考试。
+    - 复用仓库、`onSynced` 和首页变动记录，所以 App 的“变动记录”不会漏掉命令行同步进来的变化。登录流程与 `SchoolSessionRecovery` 相同，但保留失败原因。
+    - 安全：
+      - App 运行时持有 `app-running.lock`。命令行拿不到这把锁就退出码 6，让用户在 App 里刷新，避免两边各登录一次互相顶掉会话。
+      - 写库前先拿锁；不建表、不迁移、不删库。
+      - 只读“记住的密码”：不调用会清除凭据的 `AccountSecurityCoordinator.restore()`。记住的账号与缓存账号不一致时拒绝。
+    - 退出码：3 登录失败，4 部分失败，6 App 在运行。Skill 规定：数据超过 4 小时时先问用户；同意后 App 关着就跑 `cache update`，App 开着就请用户在 App 里刷新；物理在线、CITEL 等只能在 App 里刷新。
+    - 已验证：`:shared:desktopTest` 865 项全过（本轮新增参数拒绝、失败后释放锁与缓存保留回归）（编排、锁、四道关卡，其中包括“未记住密码时绝不清除凭据”）；四端编译通过。
+    - 2026-10-14 追加验证：`:shared:desktopTest :androidApp:assembleDebug :desktopApp:compileKotlin :windowsApp:compileKotlinWindows :shared:compileKotlinIosSimulatorArm64 :shared:compileKotlinIosArm64 :desktopApp:createDistributable` 成功；865 测试零失败。打包源码启动器真实 `agent cache update --json` 退出 0，login=ok，grades/courses/homework/exams 全 ok，academicCalendar=updated；未替换 /Applications 安装版；随后 status 的 freshness.stale 与 unknown 均为空。
+    - 未验证：Windows 端验证码模型在 CLI 路径下加载；Windows 真实网络刷新。
+  - PR D #25（`feat/ai-agent-citel`，基于 #24）：按需获取编程题全文与公开/结果页用例，写入加密 `citel.problem.<模块id>`（校验 CITEL 用户名，切换账号不复用旧题面）。普通同步/打开详情不下载 I/O；详情页可获取、复制、保存 Markdown、导出文件夹；聚合作业导出带缓存全文。CLI `citel show <id> [--fetch] [--json]` / `citel export <id> --out <新目录> [--fetch]`，默认离线，联网前拿 App 锁；导出暂存后移动，拒绝覆盖已有目录。
+    - 2026-10-14 CDP 复核：题目页 4 行 ×5 格，结果页 6 行 ×13 格，I/O text/plain UTF-8 CRLF；结果页链接无 showasplaintext class，按 href 提取；以 a/test/type 匹配公开用例身份，避免 download 参数导致重复。
+    - 验证：`:shared:desktopTest :androidApp:assembleDebug :desktopApp:compileKotlin :windowsApp:compileKotlinWindows :shared:compileKotlinIosSimulatorArm64 :shared:compileKotlinIosArm64 :desktopApp:createDistributable` 成功，879 测试零失败；签名 arm64 模拟器 xcodebuild `BUILD SUCCEEDED`。fixture 渲染浅/深色、大字体、缓存详情已看图。
+    - 打包启动器真实 `citel show 9265 --fetch --json` 退出 0：6 用例（4 公开，2 结果页），输入/期望输出完整；离线 show/export 退出 0，13 文件（problem.md + 6 对 I/O），逐文件字节与缓存一致。产物仅在忽略目录 `.artifacts/agent-d-real-export`。
+    - Mac fixture UI 在 E 的 `--agent-ui-smoke` 中实际点击获取全文、复制反馈，窄宽/深浅色正常；源码测试包与安装版使用不同 Bundle ID，测试结束已退出。
+    - 未验证：四端原生保存面板、iOS 实际详情页操作；Windows 实机 CITEL 登录；题面图片仍保留原链接，不离线下载 assets。
+  - PR E #26（`feat/ai-agent-uninstall`，基于 D #25）：Mac `agent uninstall-app [--yes]` 默认无副作用预览，执行前检查 App 包与锁，清理缓存目录、自己的 Preferences 节点、所有本 App Keychain 服务与管理的 Skill/脚本，最后原生 Trash API 移 App 到废纸篓。设置页共用清理器，新增卸载前清理；运行中保留空数据库和其加密密钥，避免破坏仍打开的 SQLite，下次退出 App 后用 CLI 完成删除。
+    - 验证：四端构建与 macOS createDistributable 成功，889 单测零失败（清理器 8 项：临时 HOME 删除、独立 Keychain 服务所有账号删除、偏好兄弟节点/共享 plist 保留、App 锁/未知包阻断、符号链接、部分失败保留 App、实时空库保留、临时 App 原生 Trash 往返恢复）。真实机仅运行 dry-run，输出在 `.artifacts/agent-e-dry-run.md`。
+    - Computer Use：纯内存 fixture 源码测试页验证获取/复制、卸载前确认/取消、窄宽与深浅色；测试进程已退出，安装版未关闭或替换。额外设置入口 2 测试通过；签名 arm64 模拟器 xcodebuild `BUILD SUCCEEDED`。
+    - 未验证：真实 App 完整卸载、真实设置清理后的重登录（按规则不删除真实用户数据）；iOS 实际详情交互、各端原生保存面板；Windows 不提供卸载清理。
+
+
+## 2026-10-14 分支收口（feat/ai-agent-dev，main 基线调整待确认）
+
+- 新建并推送 `feat/ai-agent-dev`，完整保存本机 Alpha 整合、Candidate3 发布引导、Agent A–E 及接受后的合并提交，并纳入独立 #23。保留 Git 历史，不改写远端历史。
+- 逐个验证祖先关系后删除 12 个旧本地分支及 9 个 mine 远端分支；只保留 main 和 dev。上游 origin 与历史标签未动。所有旧引用已保存到忽略目录 `.artifacts/branch-cleanup-2026-10-14/before-cleanup.bundle`，bundle verify 通过。
+- 本地 main 先与 mine/main@8e9e4152 对齐；Candidate3 范围待用户明确（完整代码基线或仅版本号），没有擅自回退已合入功能。
+- 验证：multiplatform 下 `./gradlew :shared:desktopTest :androidApp:assembleDebug :desktopApp:compileKotlin :windowsApp:compileKotlinWindows :shared:compileKotlinIosSimulatorArm64 :shared:compileKotlinIosArm64` 成功，895 测试零失败/零跳过；日志在 `.artifacts/branch-cleanup-2026-10-14/dev-validation.log`。
+- 未验证：本轮仅源码分支整理，未替换已安装 1.8.5-AgentAlpha，也未重新实机验证 #23 界面。
+
+
+## 2026-10-14 main 恢复 Candidate3 完整基线（1.8.4-Candidate3 / Build 37）
+
+- 用户明确选择完整代码基线。main 恢复到 `debug-1.8.4-Candidate3@adaf5e75`，通过新的提交保留原 main@8e9e4152 及 Candidate3 的历史，不 force-push，不改旧标签。Agent A–E、#23 零点截止修复和本机 Alpha 整合由 dev 保存。
+- 唯一代码差异：Candidate3 标签的 macOS packageBuildVersion 遗留为 35，校正为 37，与 Android versionCode、iOS 宿主和小组件 CFBundleVersion 一致；文字版本均为 1.8.4-Candidate3，macOS/Windows 数值版本 1.8.4。其余与标签的差异仅 memory/history 的状态更新。
+- 验证：multiplatform 下 `./gradlew :shared:desktopTest :androidApp:assembleDebug :desktopApp:compileKotlin :windowsApp:compileKotlinWindows :shared:compileKotlinIosSimulatorArm64 :shared:compileKotlinIosArm64` BUILD SUCCESSFUL，822 测试零失败/零跳过。
+- iOS：JBR Java 21，`xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Debug -sdk iphonesimulator -destination platform=iOS\ Simulator,id=6857828A-CCEA-47D0-B26A-93462734DD91 -derivedDataPath ../.artifacts/agent-d-ios CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES DEVELOPMENT_TEAM=34S53DC6T6 ONLY_ACTIVE_ARCH=YES build` BUILD SUCCEEDED；产物宿主/小组件版本与签名复验。日志在 `.artifacts/branch-cleanup-2026-10-14/main-{validation,ios}.log`。
+- 未验证：本轮没有重新安装或交互验证 Candidate3；/Applications 仍为此前验证的 1.8.5-AgentAlpha / Build 38，未重新打包替换、未发布 Release。

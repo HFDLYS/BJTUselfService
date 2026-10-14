@@ -54,9 +54,11 @@ class SettingsScreenModel(
     private var automaticUpdateChecked = false
     private var postponedUntilMillis = initialPreferences.updatePostponedUntilMillis
 
-    fun acknowledgeRedesignGuide() = updatePreferences { copy(redesignGuideAcknowledged = true) }
-    fun acknowledgeCitelGuide() = updatePreferences { copy(citelGuideAcknowledged = true) }
-    fun acknowledgeAssignmentAggregateGuide() = updatePreferences { copy(assignmentAggregateGuideAcknowledged = true) }
+    /** 1.8.3 合并弹窗覆盖新版导航、CITEL、作业聚合三项，确认一次即全部记为已读。 */
+    fun acknowledgeRelease183Guide() = updatePreferences {
+        copy(redesignGuideAcknowledged = true, citelGuideAcknowledged = true, assignmentAggregateGuideAcknowledged = true)
+    }
+    fun acknowledgeRelease184Guide() = updatePreferences { copy(release184GuideAcknowledged = true) }
 
     fun setBottomNavigationItem(routeId: String, enabled: Boolean) {
         val current = mutableState.value.preferences

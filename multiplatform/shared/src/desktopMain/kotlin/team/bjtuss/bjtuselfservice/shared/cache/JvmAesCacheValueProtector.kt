@@ -7,7 +7,6 @@ import javax.crypto.Cipher
 import javax.crypto.Mac
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
-import team.bjtuss.bjtuselfservice.shared.security.CredentialVaultOperation
 import team.bjtuss.bjtuselfservice.shared.security.LEGACY_CACHE_KEY_SERVICE
 import team.bjtuss.bjtuselfservice.shared.security.LEGACY_PRIMARY_ACCOUNT
 import team.bjtuss.bjtuselfservice.shared.security.MacOsKeychainItem
@@ -142,16 +141,4 @@ internal fun loadOrCreateMacOsCacheKey(): DesktopCacheKey {
     val created = ByteArray(32).also(SecureRandom()::nextBytes)
     productionMacOsSecretBag.put(MacOsSecretKeys.CACHE_KEY, created, legacy)
     return DesktopCacheKey(created, created = true)
-}
-
-/**
- * 只读取已有的缓存密钥，绝不新建、不迁移旧条目（AI Agent 命令行用）。
- * 没有密钥说明 App 从未在本机登录过，返回 null。
- */
-internal fun loadExistingMacOsCacheKey(): ByteArray? {
-    val bytes = productionMacOsSecretBag.get(MacOsSecretKeys.CACHE_KEY)
-        ?: MacOsKeychainItem(LEGACY_CACHE_KEY_SERVICE, LEGACY_PRIMARY_ACCOUNT).load(CredentialVaultOperation.LOAD)
-        ?: return null
-    require(bytes.size == 32) { "Invalid cache encryption key" }
-    return bytes
 }

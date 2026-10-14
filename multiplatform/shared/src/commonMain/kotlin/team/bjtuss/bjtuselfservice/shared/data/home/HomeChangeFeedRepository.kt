@@ -1,7 +1,5 @@
 package team.bjtuss.bjtuselfservice.shared.data.home
 
-import team.bjtuss.bjtuselfservice.shared.domain.time.formatChineseDeadline
-import team.bjtuss.bjtuselfservice.shared.domain.time.formatSchoolDeadline
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -217,13 +215,13 @@ fun homeworkChangeRecorder(feed: HomeChangeFeedRepository): DataChangeRecorder<H
             old.copy(id = 0, idSnId = null) == new.copy(id = 0, idSnId = null)
         },
         title = Homework::title,
-        detail = { "${it.courseName} · ${formatSchoolDeadline(it.endTime)} · ${it.subStatus}" },
+        detail = { "${it.courseName} · ${it.endTime} · ${it.subStatus}" },
         fields = { before, after ->
             listOf(
                 HomeChangeField("课程", before?.courseName.orEmpty(), after?.courseName.orEmpty()),
                 HomeChangeField("分数", homeworkScoreLabel(before?.score), homeworkScoreLabel(after?.score)),
                 HomeChangeField("状态", before?.subStatus.orEmpty(), after?.subStatus.orEmpty()),
-                HomeChangeField("截止时间", before?.endTime.orEmpty().let(::formatSchoolDeadline), after?.endTime.orEmpty().let(::formatSchoolDeadline)),
+                HomeChangeField("截止时间", before?.endTime.orEmpty(), after?.endTime.orEmpty()),
             )
         },
     )
@@ -238,14 +236,14 @@ fun phyvlabChangeRecorder(feed: HomeChangeFeedRepository): DataChangeRecorder<Ph
         detail = { activity ->
             buildString {
                 append(activity.courseName)
-                activity.dueText?.let { append(" · 截止 ").append(formatChineseDeadline(it)) }
+                activity.dueText?.let { append(" · 截止 ").append(it) }
                 append(" · ").append(if (activity.completed) "已完成" else "未完成")
             }
         },
         fields = { before, after ->
             listOf(
                 HomeChangeField("课程", before?.courseName.orEmpty(), after?.courseName.orEmpty()),
-                HomeChangeField("截止时间", before?.dueText.orEmpty().let(::formatChineseDeadline), after?.dueText.orEmpty().let(::formatChineseDeadline)),
+                HomeChangeField("截止时间", before?.dueText.orEmpty(), after?.dueText.orEmpty()),
                 HomeChangeField("状态", before?.let { if (it.completed) "已完成" else "未完成" }.orEmpty(), after?.let { if (it.completed) "已完成" else "未完成" }.orEmpty()),
             )
         },

@@ -33,12 +33,6 @@ private const val CAPTCHA_VERIFICATION_ARGUMENT = "--verify-captcha-model="
 private const val CAPTCHA_LOGITS_ARGUMENT = "--dump-captcha-logits="
 
 fun main(args: Array<String>) {
-    if (args.firstOrNull() == "agent") {
-        // AI Agent 命令行：在任何 AWT 类加载前切到 headless，不打开窗口。
-        System.setProperty("java.awt.headless", "true")
-        val code = team.bjtuss.bjtuselfservice.shared.agent.runAgentCli(args.drop(1), windowsAgentCliPlatform())
-        kotlin.system.exitProcess(code)
-    }
     val captchaRecognizer = WindowsTorchCaptchaRecognizer()
     args.firstOrNull { it.startsWith(CAPTCHA_LOGITS_ARGUMENT) }?.let { argument ->
         val image = File(argument.removePrefix(CAPTCHA_LOGITS_ARGUMENT))

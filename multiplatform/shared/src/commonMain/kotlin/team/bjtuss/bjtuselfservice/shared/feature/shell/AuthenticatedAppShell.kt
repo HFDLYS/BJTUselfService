@@ -1056,20 +1056,13 @@ fun AuthenticatedAppShell(
     // 「前往下载」，不依赖用户停留在设置页（设置页内按钮触发的结果也走同一弹窗）。
     val showGuideOnThisHost = !entryLoggingIn &&
         (forcedRouteId == null || forcedRouteId == AppSection.HOME.name)
-    val showRedesignGuide = showGuideOnThisHost &&
-        !settingsState.preferences.redesignGuideAcknowledged
-    val showCitelGuide = showGuideOnThisHost && !showRedesignGuide &&
-        !settingsState.preferences.citelGuideAcknowledged
-    val showAssignmentAggregateGuide = showGuideOnThisHost && !showRedesignGuide && !showCitelGuide &&
-        !settingsState.preferences.assignmentAggregateGuideAcknowledged
-    val blockingGuideVisible = showRedesignGuide || showCitelGuide || showAssignmentAggregateGuide
+    val showRelease183Guide = showGuideOnThisHost && settingsState.preferences.release183GuidePending
+    val showRelease184Guide = showGuideOnThisHost && !showRelease183Guide &&
+        !settingsState.preferences.release184GuideAcknowledged
+    val blockingGuideVisible = showRelease183Guide || showRelease184Guide
     when {
-        showRedesignGuide -> RedesignGuideDialog(settingsState.saveFailed, settingsModel::acknowledgeRedesignGuide)
-        showCitelGuide -> CitelGuideDialog(settingsState.saveFailed, settingsModel::acknowledgeCitelGuide)
-        showAssignmentAggregateGuide -> AssignmentAggregateGuideDialog(
-            settingsState.saveFailed,
-            settingsModel::acknowledgeAssignmentAggregateGuide,
-        )
+        showRelease183Guide -> Release183GuideDialog(settingsState.saveFailed, settingsModel::acknowledgeRelease183Guide)
+        showRelease184Guide -> Release184GuideDialog(settingsState.saveFailed, settingsModel::acknowledgeRelease184Guide)
         else -> AppUpdateResultDialog(settingsState.updateCheck, settingsModel::dismissUpdateCheck, settingsModel::postponeUpdate)
     }
     partialSyncFailureDialogItems?.takeUnless { blockingGuideVisible }?.let { items ->
