@@ -227,22 +227,35 @@ internal fun rememberAuthenticatedSession(
             clearAccountCache = {
                 runCatching { cacheStore.clearAccount(profile.studentId) }.isSuccess
             },
-            wipeAllLocalData = {
-                val labAccounts = (cacheStore.metadataAccountScopes("physicslab.configured") + profile.studentId).distinct()
-                val labCredentialsPurged = runCatching {
-                    labAccounts.forEach { securityCoordinator.physicsLabVault(it)?.clear() }
-                    (cacheStore.metadataAccountScopes("phydemo.configured") + profile.studentId).distinct()
-                        .forEach { securityCoordinator.physicsDemoVault(it)?.clear() }
-                    (cacheStore.metadataAccountScopes("citel.username") + profile.studentId).distinct()
-                        .forEach { securityCoordinator.citelVault(it)?.clear() }
-                }.isSuccess
-                val cacheCleared = labCredentialsPurged && runCatching { cacheStore.clearAll() }.isSuccess
-                val credentialsPurged = securityCoordinator.purge()
-                val wiped = cacheCleared && credentialsPurged && labCredentialsPurged
-                // Stay signed out after a full wipe, or background sync could
-                // immediately recreate personal cache rows from this live session.
+            prepareUninstall = {
+                val cleaner = team.bjtuss.bjtuselfservice.shared.feature.settings.platformLocalDataCleaner()
+                val wiped = cleaner?.clearLocalData(cacheStore, removeAgent = true) == true
                 if (wiped) onPurgeLogout(profile.studentId)
                 wiped
+            },
+            wipeAllLocalData = {
+                val cleaner = team.bjtuss.bjtuselfservice.shared.feature.settings.platformLocalDataCleaner()
+                if (cleaner != null) {
+                    val wiped = cleaner.clearLocalData(cacheStore)
+                    if (wiped) onPurgeLogout(profile.studentId)
+                    wiped
+                } else {
+                    val labAccounts = (cacheStore.metadataAccountScopes("physicslab.configured") + profile.studentId).distinct()
+                    val labCredentialsPurged = runCatching {
+                        labAccounts.forEach { securityCoordinator.physicsLabVault(it)?.clear() }
+                        (cacheStore.metadataAccountScopes("phydemo.configured") + profile.studentId).distinct()
+                            .forEach { securityCoordinator.physicsDemoVault(it)?.clear() }
+                        (cacheStore.metadataAccountScopes("citel.username") + profile.studentId).distinct()
+                            .forEach { securityCoordinator.citelVault(it)?.clear() }
+                    }.isSuccess
+                    val cacheCleared = labCredentialsPurged && runCatching { cacheStore.clearAll() }.isSuccess
+                    val credentialsPurged = securityCoordinator.purge()
+                    val wiped = cacheCleared && credentialsPurged && labCredentialsPurged
+                    // Stay signed out after a full wipe, or background sync could
+                    // immediately recreate personal cache rows from this live session.
+                    if (wiped) onPurgeLogout(profile.studentId)
+                    wiped
+                }
             },
             checkLatestRelease = { AppUpdateChecker.fetchLatest(transport) },
         )

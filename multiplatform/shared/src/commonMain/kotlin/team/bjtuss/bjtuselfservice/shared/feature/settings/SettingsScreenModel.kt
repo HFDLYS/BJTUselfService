@@ -46,6 +46,7 @@ class SettingsScreenModel(
     private val wipeAllLocalData: suspend () -> Boolean,
     private val checkLatestRelease: suspend () -> AppUpdateChecker.Result,
     private val nowMillis: () -> Long = { Clock.System.now().toEpochMilliseconds() },
+    private val prepareUninstall: (suspend () -> Boolean)? = null,
 ) {
     private val mutableState = MutableStateFlow(SettingsUiState(initialPreferences.copy(
         autoSyncGrades = true, autoSyncHomework = true, autoSyncSchedule = true, autoSyncExams = true,
@@ -137,11 +138,15 @@ class SettingsScreenModel(
      * 清除全部本地数据：所有账号的离线缓存、应用设置与系统安全存储中的登录信息。
      * 供桌面端卸载前的兜底清理（macOS 删除 .app 不会清 Application Support/Keychain）。
      */
-    suspend fun clearAllLocalData() {
+    suspend fun clearAllLocalData() { runDataWipe(wipeAllLocalData) }
+
+    suspend fun prepareForUninstall() { runDataWipe(prepareUninstall ?: return) }
+
+    private suspend fun runDataWipe(action: suspend () -> Boolean) {
         if (mutableState.value.dataWipeAction == OfflineCacheActionState.Clearing) return
         mutableState.value = mutableState.value.copy(dataWipeAction = OfflineCacheActionState.Clearing)
         val wiped = try {
-            wipeAllLocalData()
+            action()
         } catch (_: Exception) {
             false
         }

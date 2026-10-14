@@ -58,6 +58,7 @@ fun runAgentCli(
     // sqlite-jdbc 依赖 SLF4J，未带实现时会往 stderr 打三行警告，干扰 agent 读取错误信息。
     System.setProperty("slf4j.internal.verbosity", "ERROR")
     val output = when (args.firstOrNull()) {
+        "uninstall-app" -> runUninstallApp(args)
         "install", "uninstall", "doctor" -> runIntegrationCommand(args, platform, integration())
         "citel" -> if (args.getOrNull(1)?.let { !it.startsWith("--") } == true) runAgentCitel(args, platform)
             else runAgentCommand(args, cacheSnapshotProvider(platform), Clock.System.now())

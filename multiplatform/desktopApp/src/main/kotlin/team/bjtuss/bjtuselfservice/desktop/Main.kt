@@ -53,14 +53,14 @@ fun main(args: Array<String>) {
         // Enable only sanitized timing events; general business/debug logs stay off.
         team.bjtuss.bjtuselfservice.shared.logging.SyncTiming.sink = { println(it) }
     }
-    if (SYNC_STATUS_SMOKE_ARGUMENT in args || "--schedule-events-smoke" in args || "--new-migration-smoke" in args) {
+    if (SYNC_STATUS_SMOKE_ARGUMENT in args || "--schedule-events-smoke" in args || "--new-migration-smoke" in args || "--agent-ui-smoke" in args) {
         application {
             Window(
                 onCloseRequest = { exitApplication() },
                 title = "同步状态 · 本地测试",
                 state = rememberWindowState(width = if ("--narrow" in args) 420.dp else 1080.dp, height = 720.dp),
             ) {
-                if ("--new-migration-smoke" in args) team.bjtuss.bjtuselfservice.shared.feature.shell.NewMigrationUiProbe() else if ("--schedule-events-smoke" in args) team.bjtuss.bjtuselfservice.shared.DesktopScheduleEventsSmoke() else DesktopSyncStatusSmoke()
+                if ("--agent-ui-smoke" in args) team.bjtuss.bjtuselfservice.shared.DesktopAgentUiSmoke() else if ("--new-migration-smoke" in args) team.bjtuss.bjtuselfservice.shared.feature.shell.NewMigrationUiProbe() else if ("--schedule-events-smoke" in args) team.bjtuss.bjtuselfservice.shared.DesktopScheduleEventsSmoke() else DesktopSyncStatusSmoke()
             }
         }
         return
