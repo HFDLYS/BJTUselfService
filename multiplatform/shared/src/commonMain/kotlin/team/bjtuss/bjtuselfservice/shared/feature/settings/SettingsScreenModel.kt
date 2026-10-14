@@ -107,6 +107,8 @@ class SettingsScreenModel(
     fun setCitelEnabled(enabled: Boolean) = updatePreferences { copy(citelEnabled = enabled) }
     fun setStaggeredSecondSlot(enabled: Boolean) = updatePreferences { copy(staggeredSecondSlot = enabled) }
 
+    fun setAgentGradesAllowed(allowed: Boolean) = updatePreferences { copy(agentGradesAllowed = allowed) }
+
     fun setPhyVlabEnabled(enabled: Boolean) = updatePreferences {
         copy(
             autoSyncPhyVlab = enabled,

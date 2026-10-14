@@ -52,6 +52,7 @@ import team.bjtuss.bjtuselfservice.shared.update.annotatedInlineMarkdown
 import team.bjtuss.bjtuselfservice.shared.update.parseReleaseNotes
 import team.bjtuss.bjtuselfservice.shared.feature.scroll.desktopTouchScroll
 import team.bjtuss.bjtuselfservice.shared.feature.shell.AppleSheetOrAlert
+import team.bjtuss.bjtuselfservice.shared.agent.platformAgentIntegration
 import team.bjtuss.bjtuselfservice.shared.feature.shell.LocalTopBarClearance
 import team.bjtuss.bjtuselfservice.shared.feature.shell.TopScrollColumn
 
@@ -221,6 +222,13 @@ fun SettingsWorkspace(
             state.preferences.isCitelEnabled, physicsLabConfigured, citelConfigured,
             model::setPhyVlabEnabled, model::setPhysicsLabEnabled, model::setCitelEnabled,
             onPhysicsLabSettings, onCitelSettings, physicsDemoEnabled, physicsDemoConfigured, onPhysicsDemoEnabled, onPhysicsDemoSettings)
+        // 本机 AI Agent 接入只在桌面端（macOS/Windows 共用 MacOS 家族）。
+        val agentIntegration = remember(platform.family) {
+            if (platform.family == PlatformFamily.MacOS) platformAgentIntegration() else null
+        }
+        if (agentIntegration != null) {
+            AgentAssistantCard(agentIntegration, state.preferences.agentGradesAllowed, model::setAgentGradesAllowed)
+        }
         ElevatedCard(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("底栏显示", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
