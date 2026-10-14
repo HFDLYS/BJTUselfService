@@ -68,6 +68,7 @@ class DesktopAgentIntegration(
             skillDir.mkdirs()
             skillFile.writeText(renderAgentSkill(cliCommand(), isWindows, appVersion))
             writeMarker(skillDir)
+            removeLegacySkills()
             val claudeNote = if (linkClaude) linkClaudeSkill() else null
             AgentInstallResult.Done(listOfNotNull("已安装：${skillFile.absolutePath}", "命令：${cliFile.absolutePath}", claudeNote)
                 .joinToString("\n"))
@@ -85,6 +86,7 @@ class DesktopAgentIntegration(
                 removed += claudeSkill.absolutePath
             }
             if (readMarker(skillDir) != null && skillDir.deleteRecursively()) removed += skillDir.absolutePath
+            removed += removeLegacySkills()
             AgentInstallResult.Done(if (removed.isEmpty()) "没有需要移除的文件。" else "已移除：\n" + removed.joinToString("\n"))
         } catch (error: Exception) {
             AgentInstallResult.Failed("移除失败：${error.message ?: error::class.simpleName}")
@@ -170,6 +172,24 @@ class DesktopAgentIntegration(
             // Windows 普通用户不能建软链接：复制一份（带标记，卸载时一起删）。
             skillDir.copyRecursively(claudeSkill, overwrite = true)
             "已复制到 Claude Code：${claudeSkill.absolutePath}"
+        }
+    }
+
+    /** 改名前装的技能目录（及 Claude Code 里的链接）：只删带本 App 标记的。 */
+    private fun removeLegacySkills(): List<String> = LEGACY_AGENT_SKILL_NAMES.flatMap { name ->
+        val legacy = File(agentsSkillsRoot, name)
+        val legacyClaude = File(claudeSkillsRoot, name)
+        buildList {
+            if (!sharesAgentsSkills()) {
+                val link = legacyClaude.toPath()
+                val ours = (Files.isSymbolicLink(link) && Files.readSymbolicLink(link).toString() == legacy.absolutePath) ||
+                    (legacyClaude.isDirectory && !Files.isSymbolicLink(link) && readMarker(legacyClaude) != null)
+                if (ours) {
+                    deletePath(link)
+                    add(legacyClaude.absolutePath)
+                }
+            }
+            if (readMarker(legacy) != null && legacy.deleteRecursively()) add(legacy.absolutePath)
         }
     }
 

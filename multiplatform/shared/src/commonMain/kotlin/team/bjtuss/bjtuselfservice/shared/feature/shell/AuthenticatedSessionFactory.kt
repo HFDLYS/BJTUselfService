@@ -57,6 +57,8 @@ import team.bjtuss.bjtuselfservice.shared.feature.course.CourseScheduleScreenMod
 import team.bjtuss.bjtuselfservice.shared.feature.courseware.CoursewareScreenModel
 import team.bjtuss.bjtuselfservice.shared.feature.exam.ExamScheduleScreenModel
 import team.bjtuss.bjtuselfservice.shared.feature.grade.GradeScreenModel
+import team.bjtuss.bjtuselfservice.shared.cache.SyncSource
+import team.bjtuss.bjtuselfservice.shared.cache.markSynced
 import team.bjtuss.bjtuselfservice.shared.feature.course.saveAcademicWeeksIfChanged
 import team.bjtuss.bjtuselfservice.shared.feature.home.HomeScreenModel
 import team.bjtuss.bjtuselfservice.shared.feature.homework.HomeworkScreenModel
@@ -109,6 +111,7 @@ internal fun rememberAuthenticatedSession(
             local = CacheStoreGradeLocalDataSource(cacheStore),
             remote = SchoolGradeRemoteDataSource(transport),
             programRemote = SchoolTrainingProgramRemoteDataSource(transport),
+            onSynced = { cacheStore.markSynced(profile.studentId, SyncSource.GRADES, kotlin.time.Clock.System.now().epochSeconds) },
         )
     }
     val gradeModel = remember(gradeRepository, homeChangeFeed) {
@@ -128,6 +131,7 @@ internal fun rememberAuthenticatedSession(
                 transport = transport,
                 endpoint = smartPlatformEndpoint,
             ),
+            onSynced = { cacheStore.markSynced(profile.studentId, SyncSource.COURSES, kotlin.time.Clock.System.now().epochSeconds) },
         )
     }
     val courseScheduleModel = remember(courseScheduleRepository, homeChangeFeed, classroomOccupancyRepository) {
@@ -145,6 +149,7 @@ internal fun rememberAuthenticatedSession(
             accountScope = profile.studentId,
             local = CacheStoreExamScheduleLocalDataSource(cacheStore),
             remote = SchoolExamScheduleRemoteDataSource(transport),
+            onSynced = { cacheStore.markSynced(profile.studentId, SyncSource.EXAMS, kotlin.time.Clock.System.now().epochSeconds) },
         )
     }
     val examScheduleModel = remember(examScheduleRepository, homeChangeFeed) {
@@ -158,6 +163,7 @@ internal fun rememberAuthenticatedSession(
                 transport = transport,
                 endpoint = smartPlatformEndpoint,
             ),
+            onSynced = { cacheStore.markSynced(profile.studentId, SyncSource.HOMEWORK, kotlin.time.Clock.System.now().epochSeconds) },
         )
     }
     val homeworkModel = remember(homeworkRepository, homeChangeFeed) {

@@ -25,7 +25,9 @@
     - 只动自己写的文件：脚本里带标记注释，Skill 目录里带标记文件。目标位置已有别人的同名文件时拒绝覆盖，卸载也只删带标记的。
     - Claude Code：`~/.claude/skills` 本身就是指向 `~/.agents/skills` 的软链接时不再另建；是普通目录时建软链接（Windows 建不了就复制一份）；同名位置被占用时不动。
     - 已验证：`:shared:desktopTest` 853 项全过（安装器 8 项都在临时 HOME 里跑，包括真的执行生成的脚本、检查参数转发）；四端编译通过。Windows CI 补了 install → 经 `bjtu.cmd` 调用 → uninstall 的检查。
-    - 未验证：设置页卡片的实际观感（深浅色、窄窗口），以及打包后在真机上一键安装、粘贴给 Claude Code 的端到端效果。
+    - 已验证（2026-10-14）：打包替换本机 App 后，用户在设置页一键安装成功，卡片深浅色都正常；用户新开 Codex 会话贴那句话，Codex 自己找到 `~/.agents/skills` 下的 Skill，调用了命令，正确答出本周课表、零点截止（按前一天 24 点说）、物理实验只算约上的 4 项、缓存时间。“允许读取成绩”是用户自己打开的。
+    - 追加（同一 PR）：Skill 改名为 `bjtuss`（安装时清掉带标记的旧目录 `bjtu-self-service`）。课表、作业、考试、成绩同步成功后写 `synced_at_v1.<source>`（仓库的 `onSynced` 回调）；输出顶层加 `freshness`（超过 4 小时的进 `stale`，没有记录的进 `unknown`），Markdown 顶部加提示；Skill 规定 `stale` 不为空时先问用户要不要刷新。CITEL 输出加 `judgeStatus`，避免把“交了但没全对”说成“没交”。
+  - 待做：App 全局把“次日 00:00 截止”显示为“前一天 24:00”（用户 2026-10-14 要求，与首页归日逻辑一致），单独从 main 开 PR。
   - 后续：PR C（`cache update`）、PR D（CITEL 题面和用例导出 Markdown，只在做题或拉全文时下载 I/O）、PR E（Mac 卸载清理）。
 - 荣耀小组件不可见修复（`fix/honor-widget-visibility`，PR 待合入）：带 `com.hihonor.widget.type=honorcard` 的 Candidate2 在荣耀 AAK-AN00（MagicOS 11.0.0.109 / Android 17）上服务卡片与经典小组件入口都找不到本应用；去掉三个 receiver 上的该 meta-data 后（`.artifacts/honor-no-honorcard-debug.apk`），`dumpsys appwidget` 识别三个 provider，用户确认桌面小组件列表里出现。结论：未配齐荣耀卡片所需配置时，honorcard 标记会让 MagicOS 把小组件整体隐藏；先走标准 AppWidget。小米 25091RP04C（Android 16）系统同样识别。未验证：荣耀上实际添加后的渲染、尺寸与刷新。荣耀「服务卡片/快服务」需在荣耀开发者平台智慧服务登记（签协议、SHA256 指纹、截图、审核），用户 2026-10-14 决定不做；后续只视情况优化安卓小组件显示。
 - 第二节错峰上课（PR #16，`feat/staggered-second-slot`，CI 全绿，待合入）：第二节教室在逸夫教学楼（YF）/思源西楼（SX）时按 10:30–12:20。设置页新增开关「错峰上课时间」（默认开，`AppPreferences.staggeredSecondSlot`）。规则在 `domain/course/StaggeredClassTime.kt`（楼名或 `YF/SX+数字` 教室号；思源楼/思源东楼/威海逸夫楼不算；实验/考试不参与）。

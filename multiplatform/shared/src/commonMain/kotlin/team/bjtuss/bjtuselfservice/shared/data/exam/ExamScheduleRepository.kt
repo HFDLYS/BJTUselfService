@@ -46,6 +46,8 @@ class DefaultExamScheduleRepository(
     accountScope: String,
     private val local: ExamScheduleLocalDataSource,
     private val remote: ExamScheduleRemoteDataSource,
+    /** 远端数据成功写入缓存后调用（记录同步时间，供离线读取方判断新旧）。 */
+    private val onSynced: () -> Unit = {},
 ) : ExamScheduleRepository {
     private val accountScope = accountScope.trim().also {
         require(it.isNotEmpty()) { "accountScope cannot be blank" }
@@ -66,6 +68,7 @@ class DefaultExamScheduleRepository(
         }
         return try {
             local.replace(accountScope, remoteExams)
+            runCatching(onSynced)
             ExamScheduleRefreshResult.Success(local.load(accountScope))
         } catch (_: Exception) {
             ExamScheduleRefreshResult.Failure(

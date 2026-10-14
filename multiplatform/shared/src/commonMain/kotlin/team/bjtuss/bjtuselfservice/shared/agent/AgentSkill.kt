@@ -1,10 +1,13 @@
 package team.bjtuss.bjtuselfservice.shared.agent
 
 /** 装到 `~/.agents/skills/<name>/` 的技能目录名，也是 SKILL.md 里的 name。 */
-const val AGENT_SKILL_NAME = "bjtu-self-service"
+const val AGENT_SKILL_NAME = "bjtuss"
+
+/** 改名前的技能目录；安装/移除时一并清理带本 App 标记的旧目录。 */
+val LEGACY_AGENT_SKILL_NAMES = listOf("bjtu-self-service")
 
 /** 设置页展示、用户复制给任意 agent 的一句话。 */
-const val AGENT_SETUP_PROMPT = "用 bjtu-self-service 技能看看我这周的课、日程和还没交的作业。"
+const val AGENT_SETUP_PROMPT = "用 bjtuss 技能看看我这周的课、日程和还没交的作业。"
 
 /**
  * 生成 SKILL.md。[cliCommand] 是能直接在 shell 里执行的命令前缀（已按平台加好引号），
@@ -52,14 +55,21 @@ $cliCommand <命令> [选项] --json
 - `--all`：连同物理实验课里用户没约的实验一起列出。
 - 每次 `calendar`/`homework` 的 JSON 里有 `availableFilters`，列出可用的来源、类型和全部课程名；先看它再决定怎么筛，不要猜课程名。
 
+## 先看数据新旧（每次回答前）
+
+JSON 顶层有 `freshness`：`sources` 是各数据源的同步时间和 `ageHours`，`stale` 是超过 $AGENT_STALE_AFTER_HOURS 小时的数据源，`unknown` 是没有同步时间记录的。
+- `stale` 不为空时：**先告诉用户哪些数据已超过 $AGENT_STALE_AFTER_HOURS 小时（例如“作业 6 小时前同步”），问是否先打开交大自由行 App 刷新再查**。用户说不用，再基于现有缓存回答，并在答案里注明同步时间。
+- 只有 `unknown`：照常回答，末尾提一句这些数据的同步时间未知。
+- 都新：直接回答，可顺带说明同步时间。
+
 ## 解读规则（重要）
 
 1. **零点截止**：北京时间 00:00 截止的作业，算作**前一天 24:00** 截止，与 App 首页一致。JSON 里 `agendaDate`/`dueAgendaDate` 是归属日，`start`/`dueTime` 是实际时刻，`midnightDeadline: true` 标出这类。对用户说“周日晚 24 点前”，不要说“周一还能交”。
 2. **时区**：所有时间都是北京时间（`+08:00`），不随电脑时区变化。
 3. **物理实验**：物理在线的“物理实验”课把本学期全部实验都列成作业，学生只需交自己在选课系统约上的那几个。默认只列 `enrollment: booked` 的；`unverified` 表示没有约课缓存无法判断，列出来并提醒用户确认；不要把没约的实验当成待做作业。
 4. **日期来源**：`academicCalendar: inferred` 表示校历未缓存、日期按当前周推算，可能有偏差，提醒用户打开 App 同步一次。
-5. **数据新旧**：缓存可能不是最新的。用户问到“刚布置的”“刚交的”之类时，提醒以 App 或学校系统为准，必要时让用户打开 App 刷新。
-6. **CITEL 编程题**：目前只有元数据（标题、截止、状态、链接），没有题面；需要题面时给出 `url` 让用户打开。
+5. **数据新旧**：即使没超过 $AGENT_STALE_AFTER_HOURS 小时，用户问到“刚布置的”“刚交的”之类时，也提醒以 App 或学校系统为准。
+6. **CITEL 编程题**：`submitted` 只在判题 AC 时为 true；`judgeStatus` 是平台原始判题状态（如 WA、部分通过），有分数但未 AC 时说明“已提交但未全部通过”，不要说“没交”。目前只有元数据（标题、截止、状态、链接），没有题面；需要题面时给出 `url` 让用户打开。
 
 ## 边界
 

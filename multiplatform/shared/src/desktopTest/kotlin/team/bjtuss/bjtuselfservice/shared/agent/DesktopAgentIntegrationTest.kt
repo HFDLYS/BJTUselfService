@@ -46,8 +46,9 @@ class DesktopAgentIntegrationTest {
         assertEquals(0, process.waitFor())
         assertEquals("agent|calendar|--course|数据 结构|", output)
 
-        val skill = File(home, ".agents/skills/bjtu-self-service/SKILL.md").readText()
-        assertTrue(skill.startsWith("---\nname: bjtu-self-service\n"))
+        val skill = File(home, ".agents/skills/bjtuss/SKILL.md").readText()
+        assertTrue(skill.startsWith("---\nname: bjtuss\n"))
+        assertTrue("freshness" in skill && "4 小时" in skill && "judgeStatus" in skill)
         assertTrue("\"${script.absolutePath}\" <命令>" in skill)
         assertTrue("24:00" in skill && "enrollment: booked" in skill && "--json" in skill)
 
@@ -74,7 +75,7 @@ class DesktopAgentIntegrationTest {
         assertEquals("#!/bin/sh\necho mine\n", foreignScript.readText())
         foreignScript.delete()
 
-        val foreignSkill = File(home, ".agents/skills/bjtu-self-service").apply { mkdirs() }
+        val foreignSkill = File(home, ".agents/skills/bjtuss").apply { mkdirs() }
         File(foreignSkill, "SKILL.md").writeText("someone else")
         assertIs<AgentInstallResult.Failed>(integration().install())
         assertEquals("someone else", File(foreignSkill, "SKILL.md").readText())
@@ -90,9 +91,9 @@ class DesktopAgentIntegrationTest {
         Files.createSymbolicLink(File(home, ".claude/skills").toPath(), File(home, ".agents/skills").toPath())
         integration().install()
         assertEquals(ClaudeSkillLink.SHARED, integration().status().claude)
-        assertFalse(Files.isSymbolicLink(File(home, ".agents/skills/bjtu-self-service").toPath()))
+        assertFalse(Files.isSymbolicLink(File(home, ".agents/skills/bjtuss").toPath()))
         integration().uninstall()
-        assertFalse(File(home, ".agents/skills/bjtu-self-service").exists())
+        assertFalse(File(home, ".agents/skills/bjtuss").exists())
         assertTrue(Files.isSymbolicLink(File(home, ".claude/skills").toPath()), "用户自己的软链接保持不动")
     }
 
@@ -100,7 +101,7 @@ class DesktopAgentIntegrationTest {
     fun linksIntoSeparateClaudeSkillsAndRemovesOnUninstall() {
         File(home, ".claude/skills/other-skill").mkdirs()
         integration().install()
-        val link = File(home, ".claude/skills/bjtu-self-service").toPath()
+        val link = File(home, ".claude/skills/bjtuss").toPath()
         assertTrue(Files.isSymbolicLink(link))
         assertEquals(ClaudeSkillLink.LINKED, integration().status().claude)
         integration().uninstall()
@@ -111,7 +112,7 @@ class DesktopAgentIntegrationTest {
 
     @Test
     fun occupiedClaudeSlotIsLeftAlone() {
-        val occupied = File(home, ".claude/skills/bjtu-self-service").apply { mkdirs() }
+        val occupied = File(home, ".claude/skills/bjtuss").apply { mkdirs() }
         File(occupied, "SKILL.md").writeText("other")
         assertIs<AgentInstallResult.Done>(integration().install())
         assertEquals(ClaudeSkillLink.NOT_LINKED, integration().status().claude)
@@ -131,11 +132,23 @@ class DesktopAgentIntegrationTest {
         assertTrue(text.startsWith("@echo off\r\n"))
         assertTrue("\"$app\" agent %*\r\n" in text)
         assertTrue(windows.status().installed)
-        val skill = File(home, ".agents/skills/bjtu-self-service/SKILL.md").readText()
+        val skill = File(home, ".agents/skills/bjtuss/SKILL.md").readText()
         assertTrue("& \"${script.absolutePath}\" <命令>" in skill)
 
         val ascii = DesktopAgentIntegration(Files.createTempDirectory("agent-home2").toFile(), app, isWindows = true,
             appVersion = "9.9.9", scriptCharset = Charsets.US_ASCII)
         assertIs<AgentInstallResult.Failed>(ascii.install(linkClaude = false))
+    }
+
+    @Test
+    fun installRemovesMarkedLegacySkillNameOnly() {
+        val legacy = File(home, ".agents/skills/bjtu-self-service").apply { mkdirs() }
+        File(legacy, "SKILL.md").writeText("old")
+        File(legacy, ".installed-by-bjtuselfservice").writeText("version=1\n")
+        val foreign = File(home, ".agents/skills/bjtu-other").apply { mkdirs() }
+        integration().install()
+        assertFalse(legacy.exists())
+        assertTrue(foreign.exists())
+        assertTrue(File(home, ".agents/skills/bjtuss/SKILL.md").isFile)
     }
 }
