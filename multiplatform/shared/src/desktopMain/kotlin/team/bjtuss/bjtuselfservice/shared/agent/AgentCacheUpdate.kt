@@ -46,6 +46,9 @@ private val reportJson = Json { prettyPrint = true }
 /** `cache update [grades,courses,homework,exams] [--json]`：用记住的账号后台登录并刷新缓存。 */
 internal fun runCacheUpdate(args: List<String>, platform: AgentCliPlatform): AgentOutput {
     val json = "--json" in args
+    if (args.any { it.startsWith("-") && it != "--json" }) {
+        return AgentOutput("", "cache update 不支持这些选项。", AgentExit.USAGE)
+    }
     val requested = args.filter { !it.startsWith("--") }.flatMap { it.split(',') }.map(String::trim).filter(String::isNotEmpty)
     val targets = if (requested.isEmpty() || requested == listOf("all")) AgentSyncTarget.entries.toList() else {
         requested.map { name ->
