@@ -18,7 +18,7 @@
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
 	<!-- 必须与 iosApp/Info.plist 的版本一致；改版本号时两处一起改（verify-apple-release-metadata.sh 会检查）。 -->
 	<key>CFBundleShortVersionString</key>
-	<string>1.8.4-KMP</string>
+	<string>1.8.4-Candidate3</string>
 	<key>CFBundleVersion</key>
 	<string>37</string>
 	<key>NSExtension</key>

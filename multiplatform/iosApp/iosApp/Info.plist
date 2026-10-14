@@ -19,7 +19,7 @@
 	<key>CFBundlePackageType</key>
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.8.4-KMP</string>
+	<string>1.8.4-Candidate3</string>
 	<key>CFBundleVersion</key>
 	<string>37</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

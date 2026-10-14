@@ -2,13 +2,13 @@
 
 > 最后更新：2026-10-14。
 > 当前分支：`main`（`1f011bc7`，已含 PR #16 错峰上课、#17/#19 Android 小组件、#18 取消 PR 打 IPA、#20 去掉荣耀 honorcard）。最新打包标签 `debug-1.8.4-Candidate2`（`ea0f760f`，不含 #20）。
-> KMP 应用版本：`1.8.4-Candidate2` / Build 36（macOS/Windows 安装包数值版本 1.8.4）。正式 Latest 仍为 `v1.8.3-KMP`。
+> KMP 应用版本：main 为 `1.8.4-Candidate2` / Build 36；`release/1.8.4` 为 `1.8.4-Candidate3` / Build 37（macOS/Windows 安装包数值版本 1.8.4）。正式 Latest 仍为 `v1.8.3-KMP`。
 > 冻结原 Android：`v1.7.1` / versionCode 9（对照 `origin/main@7d94f74`）。
 > 已完成工作的细节见 `history_full.md` 末尾日志。
 
 ## 进行中
 
-- 1.8.4 发布准备（`release/1.8.4`，已推到 `mine`，未开 PR；用户 2026-10-14 表示暂不发正式版）：版本改为 `1.8.4-KMP` / Build 37（Android、iOS 宿主与小组件、`AppUpdateChecker` 及测试、Windows 注释；桌面/Windows 数值版本仍 1.8.4）；发布说明 `docs/releases/v1.8.4-KMP.md`。必看弹窗：原新版导航/CITEL/作业聚合三个合为「1.8.3 版本说明」（`AppPreferences.release183GuidePending`，三项任一未确认才显示，确认一次三项全记已读）；新增「1.8.4 新增功能」（演示实验、桌面小组件、错峰上课，`release_184_guide_acknowledged`），在 1.8.3 弹窗之后显示，均 3 秒倒计时。弹窗文件改名 `feature/shell/ReleaseGuideDialog.kt`。
+- 1.8.4 发布准备（`release/1.8.4`，已推到 `mine`，未开 PR；用户 2026-10-14 表示暂不发正式版）：当前版本 `1.8.4-Candidate3` / Build 37（Android、iOS 宿主与小组件、`AppUpdateChecker` 及测试、Windows 注释；桌面/Windows 数值版本仍 1.8.4），打包标签 `debug-1.8.4-Candidate3`；正式发布时改为 `1.8.4-KMP` / Build 38（发布说明已按 38 写）；发布说明 `docs/releases/v1.8.4-KMP.md`。必看弹窗：原新版导航/CITEL/作业聚合三个合为「1.8.3 版本说明」（`AppPreferences.release183GuidePending`，三项任一未确认才显示，确认一次三项全记已读）；新增「1.8.4 新增功能」（演示实验、桌面小组件、错峰上课，`release_184_guide_acknowledged`），在 1.8.3 弹窗之后显示，均 3 秒倒计时。弹窗文件改名 `feature/shell/ReleaseGuideDialog.kt`。
   - 已验证：`:shared:desktopTest` 822 项全过；`:androidApp:assembleDebug`、`:desktopApp:compileKotlin`、`:windowsApp:compileKotlinWindows`、`:shared:compileKotlinIos{SimulatorArm64,Arm64}` 通过；`DuoBugFixVisualTest` 出图 `shared/build/reports/duo-bugfix-ui/release18{3,4}-{light,dark}.png` 已看过。
   - 未验证：真机/模拟器上从旧版本升级后的弹窗顺序；iOS Xcode 构建（只改 Info.plist，交 CI）。
 
