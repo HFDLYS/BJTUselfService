@@ -15,6 +15,10 @@ import team.bjtuss.bjtuselfservice.shared.cache.loadExistingMacOsCacheKey
 import team.bjtuss.bjtuselfservice.shared.security.MacOsSecretKeys
 import team.bjtuss.bjtuselfservice.shared.security.decodeCredentialPayload
 import team.bjtuss.bjtuselfservice.shared.security.productionMacOsSecretBag
+import team.bjtuss.bjtuselfservice.shared.auth.CaptchaRecognizer
+import team.bjtuss.bjtuselfservice.shared.auth.DesktopCoreMlCaptchaRecognizer
+import team.bjtuss.bjtuselfservice.shared.security.AccountSecurityStore
+import team.bjtuss.bjtuselfservice.shared.security.createDesktopAccountSecurityStore
 import team.bjtuss.bjtuselfservice.shared.update.AppUpdateChecker
 
 private const val CACHE_DATABASE_FILE_NAME = "bjtuselfservice_cache.db"
@@ -25,6 +29,9 @@ class AgentCliPlatform(
     val cacheDirectory: File,
     val loadCacheKey: () -> ByteArray?,
     val rememberedUsername: () -> String?,
+    /** `cache update` 用：系统安全存储（只读取“记住的密码”，绝不清除）与验证码识别。 */
+    val securityStore: (() -> AccountSecurityStore)? = null,
+    val captchaRecognizer: (() -> CaptchaRecognizer)? = null,
 )
 
 fun macOsAgentCliPlatform(): AgentCliPlatform = AgentCliPlatform(
@@ -33,6 +40,8 @@ fun macOsAgentCliPlatform(): AgentCliPlatform = AgentCliPlatform(
     rememberedUsername = {
         productionMacOsSecretBag.get(MacOsSecretKeys.CREDENTIALS)?.let(::decodeCredentialPayload)?.username
     },
+    securityStore = ::createDesktopAccountSecurityStore,
+    captchaRecognizer = { DesktopCoreMlCaptchaRecognizer() },
 )
 
 /**
@@ -49,7 +58,12 @@ fun runAgentCli(
     // sqlite-jdbc 依赖 SLF4J，未带实现时会往 stderr 打三行警告，干扰 agent 读取错误信息。
     System.setProperty("slf4j.internal.verbosity", "ERROR")
     val output = when (args.firstOrNull()) {
+        "uninstall-app" -> runUninstallApp(args)
         "install", "uninstall", "doctor" -> runIntegrationCommand(args, platform, integration())
+        "citel" -> if (args.getOrNull(1)?.let { !it.startsWith("--") } == true) runAgentCitel(args, platform)
+            else runAgentCommand(args, cacheSnapshotProvider(platform), Clock.System.now())
+        "cache" -> if (args.getOrNull(1) == "update") runCacheUpdate(args.drop(2), platform)
+            else runAgentCommand(args, cacheSnapshotProvider(platform), Clock.System.now())
         else -> runAgentCommand(args, cacheSnapshotProvider(platform), Clock.System.now())
     }
     if (output.stdout.isNotEmpty()) out.print(output.stdout)
@@ -105,10 +119,18 @@ class AgentCacheVersionException(message: String) : IllegalStateException(messag
  * 只读连接：不建表、不迁移；schema 版本与本程序不一致时报错，让用户先打开 App 完成升级。
  * App 正在写入时 SQLite 最多等 3 秒。
  */
-internal fun openExistingCacheStoreReadOnly(databaseFile: File, keyBytes: ByteArray): CacheStore {
+internal fun openExistingCacheStoreReadOnly(databaseFile: File, keyBytes: ByteArray): CacheStore =
+    openExistingCacheStore(databaseFile, keyBytes, readOnly = true)
+
+/**
+ * 打开已有缓存库：不建表、不迁移、不在失败时删库（与 App 的 `openCacheStoreWithRecovery` 不同）。
+ * 可写模式只给 `cache update` 用，且调用方须先确认 App 没在运行。
+ */
+internal fun openExistingCacheStore(databaseFile: File, keyBytes: ByteArray, readOnly: Boolean): CacheStore {
     val url = "jdbc:sqlite:${databaseFile.absolutePath}"
     val properties = Properties().apply {
-        setProperty("open_mode", "1") // SQLITE_OPEN_READONLY
+        // SQLITE_OPEN_READONLY = 1；READWRITE = 2（不带 CREATE，库不存在时直接失败）。
+        setProperty("open_mode", if (readOnly) "1" else "2")
         setProperty("busy_timeout", "3000")
     }
     val version = DriverManager.getConnection(url, properties).use { connection ->

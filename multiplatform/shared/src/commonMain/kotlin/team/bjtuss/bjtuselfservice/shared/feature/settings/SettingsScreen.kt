@@ -163,6 +163,7 @@ fun SettingsWorkspace(
     val scope = rememberCoroutineScope()
     var confirmClear by remember { mutableStateOf(false) }
     var confirmWipe by remember { mutableStateOf(false) }
+    var confirmUninstall by remember { mutableStateOf(false) }
     val uriHandler = LocalUriHandler.current
     val pageScrollState = rememberScrollState()
     // 真实偏移上报给壳层算玻璃浓度（手势累加会漂，读列表状态不会）。
@@ -198,6 +199,14 @@ fun SettingsWorkspace(
                     "清理成功后将立即退出登录。适合卸载应用前彻底清理本机数据。"
             )
         }
+    }
+
+    if (confirmUninstall) AppleSheetOrAlert(
+        onDismissRequest = { confirmUninstall = false }, title = "卸载前清理？", confirmLabel = "清理并退出登录",
+        onConfirm = { confirmUninstall = false; scope.launch { model.prepareForUninstall() } }, dismissLabel = "取消",
+    ) {
+        Text("删除所有账号的离线数据、应用设置和登录信息，并移除本 App 安装的 AI 助手。成功后退出登录。" +
+            "App 正在运行时保留空数据库和加密密钥；退出 App 后可通过 agent uninstall-app --yes 删除剩余文件和密钥，并将 App 移到废纸篓。")
     }
 
     // 检查结果弹窗提到 SettingsWorkspace 外层渲染：「前往下载」属于应用壳层导航动作，
@@ -348,6 +357,10 @@ fun SettingsWorkspace(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text("清除全部本地数据")
+                    }
+                    OutlinedButton(onClick = { confirmUninstall = true },
+                        enabled = state.dataWipeAction != OfflineCacheActionState.Clearing, modifier = Modifier.fillMaxWidth()) {
+                        Text("卸载前清理（含移除 AI 助手）")
                     }
                 }
                 if (expanded) {

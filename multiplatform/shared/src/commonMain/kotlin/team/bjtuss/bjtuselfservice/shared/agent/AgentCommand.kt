@@ -25,6 +25,12 @@ object AgentExit {
     const val NO_DATA = 2
     /** 用户在 App 里没有允许 Agent 读取这一类数据。 */
     const val NOT_ALLOWED = 5
+    /** cache update：自动登录失败（验证码多次失败、密码变更、未记住密码或网络）。 */
+    const val LOGIN_FAILED = 3
+    /** cache update：部分数据源刷新失败，失败项保留原缓存。 */
+    const val PARTIAL = 4
+    /** cache update：App 正在运行，请在 App 里刷新。 */
+    const val APP_RUNNING = 6
 }
 
 const val AGENT_SCHEMA_VERSION = 1
@@ -48,8 +54,12 @@ val AGENT_USAGE = """
       exams
       grades                          需要在 App 设置里允许
       citel                           CITEL 任务列表（元数据）
+      citel show <id> [--fetch] [--json]  缓存题面与用例；--fetch 才联网
+      citel export <id> --out <新目录> [--fetch]  导出 problem.md 和 tests/N.in、N.out
       cache read <courses|homework|exams|grades|citel|calendar> [同上选项]
+      cache update [grades,courses,homework,exams]   用记住的账号后台登录并刷新（App 开着时请在 App 里刷新）
       install [--no-claude] | uninstall | doctor   安装/移除 Skill 与启动脚本，检查环境（仅桌面端）
+      uninstall-app [--yes]            Mac 卸载清理：默认预览；--yes 才删除数据并将 App 移到废纸篓
     范围: --today | --tomorrow | --week [N] | --date YYYY-MM-DD | --from YYYY-MM-DD --to YYYY-MM-DD
           （calendar 默认今天起 7 天；courses 默认本周）
     筛选（可组合，多值用逗号或重复参数）:
@@ -69,7 +79,7 @@ fun runAgentCommand(args: List<String>, provider: AgentSnapshotProvider, now: In
     val rest = args.filter { it != "--json" }
     val command = rest.firstOrNull() ?: return AgentOutput("", AGENT_USAGE, AgentExit.USAGE)
     val (name, options) = if (command == "cache") {
-        if (rest.getOrNull(1) != "read") return AgentOutput("", "cache 只支持 read（cache update 还没实现）。\n$AGENT_USAGE", AgentExit.USAGE)
+        if (rest.getOrNull(1) != "read") return AgentOutput("", "cache 只支持 read 和 update。\n$AGENT_USAGE", AgentExit.USAGE)
         val target = rest.getOrNull(2) ?: return AgentOutput("", AGENT_USAGE, AgentExit.USAGE)
         target to rest.drop(3)
     } else command to rest.drop(1)
@@ -93,12 +103,12 @@ fun runAgentCommand(args: List<String>, provider: AgentSnapshotProvider, now: In
     val snapshot = ready.snapshot
     return try {
         when (name) {
-            "status" -> render(json, name, now, statusJson(ready), statusMarkdown(ready))
+            "status" -> render(json, name, now, statusJson(ready), statusMarkdown(ready), snapshot)
             "calendar" -> {
                 val range = parseRange(options, today, snapshot)
                 val calendarOptions = AgentCalendarOptions(kinds = parseKinds(options), homework = homeworkOptions(options))
                 val items = agentCalendar(snapshot, range.first, range.second, now, calendarOptions)
-                render(json, name, now, calendarJson(items, range, snapshot), calendarMarkdown(items, range))
+                render(json, name, now, calendarJson(items, range, snapshot), calendarMarkdown(items, range), snapshot)
             }
             "courses" -> {
                 val range = parseRange(options, today, snapshot, defaultWeek = true)
@@ -106,18 +116,18 @@ fun runAgentCommand(args: List<String>, provider: AgentSnapshotProvider, now: In
                     kinds = setOf(AgentCalendarKind.CLASS, AgentCalendarKind.LAB),
                     homework = homeworkOptions(options),
                 ))
-                render(json, name, now, calendarJson(items, range, snapshot), calendarMarkdown(items, range))
+                render(json, name, now, calendarJson(items, range, snapshot), calendarMarkdown(items, range), snapshot)
             }
             "homework" -> {
                 val items = agentHomework(snapshot, homeworkOptions(options).copy(pendingOnly = "--pending" in options), now)
-                render(json, name, now, homeworkJson(items, snapshot), homeworkMarkdown(items))
+                render(json, name, now, homeworkJson(items, snapshot), homeworkMarkdown(items), snapshot)
             }
-            "exams" -> render(json, name, now, examsJson(snapshot), examsMarkdown(snapshot))
+            "exams" -> render(json, name, now, examsJson(snapshot), examsMarkdown(snapshot), snapshot)
             "grades" -> if (!ready.gradesAllowed) {
                 val reason = "成绩默认不开放给 AI Agent。需要时请在 App 设置的“AI 助手”里允许读取成绩。"
                 AgentOutput(if (json) envelope(name, now, JsonNull, error = reason).render() else "", reason, AgentExit.NOT_ALLOWED)
-            } else render(json, name, now, gradesJson(snapshot), gradesMarkdown(snapshot))
-            "citel" -> render(json, name, now, citelJson(snapshot), citelMarkdown(snapshot))
+            } else render(json, name, now, gradesJson(snapshot), gradesMarkdown(snapshot), snapshot)
+            "citel" -> render(json, name, now, citelJson(snapshot), citelMarkdown(snapshot), snapshot)
             else -> AgentOutput("", AGENT_USAGE, AgentExit.USAGE)
         }
     } catch (error: AgentUsageException) {
@@ -129,17 +139,21 @@ private val KNOWN_COMMANDS = setOf("status", "calendar", "courses", "homework", 
 
 class AgentUsageException(message: String) : IllegalArgumentException(message)
 
-private fun render(json: Boolean, name: String, now: Instant, data: JsonElement, markdown: String): AgentOutput =
-    AgentOutput(if (json) envelope(name, now, data).render() else markdown)
-
-private fun envelope(name: String, now: Instant, data: JsonElement, error: String? = null): JsonObject = buildJsonObject {
-    put("schemaVersion", AGENT_SCHEMA_VERSION)
-    put("command", name)
-    put("generatedAt", isoTime(now.epochSeconds))
-    put("timeZone", AGENT_TIME_ZONE.id)
-    if (error != null) put("error", error)
-    put("data", data)
+private fun render(json: Boolean, name: String, now: Instant, data: JsonElement, markdown: String, snapshot: AgentSnapshot): AgentOutput {
+    val fresh = freshness(snapshot, name, now)
+    return AgentOutput(if (json) envelope(name, now, data, freshness = fresh).render() else fresh.banner() + markdown)
 }
+
+private fun envelope(name: String, now: Instant, data: JsonElement, error: String? = null, freshness: Freshness? = null): JsonObject =
+    buildJsonObject {
+        put("schemaVersion", AGENT_SCHEMA_VERSION)
+        put("command", name)
+        put("generatedAt", isoTime(now.epochSeconds))
+        put("timeZone", AGENT_TIME_ZONE.id)
+        if (error != null) put("error", error)
+        if (freshness != null) put("freshness", freshness.toJson())
+        put("data", data)
+    }
 
 private fun JsonObject.render(): String = prettyJson.encodeToString(JsonObject.serializer(), this) + "\n"
 

@@ -16,6 +16,8 @@ import kotlinx.serialization.json.jsonPrimitive
 import team.bjtuss.bjtuselfservice.shared.auth.StudentProfile
 import team.bjtuss.bjtuselfservice.shared.cache.AppPreferences
 import team.bjtuss.bjtuselfservice.shared.cache.CacheStore
+import team.bjtuss.bjtuselfservice.shared.cache.SyncSource
+import team.bjtuss.bjtuselfservice.shared.cache.markSynced
 import team.bjtuss.bjtuselfservice.shared.cache.db.CacheDatabaseSql
 import team.bjtuss.bjtuselfservice.shared.data.phyvlab.PhyVlabCacheSnapshot
 import team.bjtuss.bjtuselfservice.shared.data.phyvlab.encodePhyVlabCache
@@ -72,6 +74,9 @@ class AgentCommandTest {
         assertTrue("phyvlab:34 光纤特性和光信号传输" in titles)
         assertTrue("phyvlab:第一章作业" in titles, "非物理实验课不过滤")
         assertFalse(titles.any { "光栅光谱仪" in it }, "没约的实验不算")
+        val citel = items.first { it.str("title") == "栈与队列" }
+        assertEquals("false", citel.str("submitted"))
+        assertEquals("WA: Wrong Answer", citel.str("judgeStatus"))
         val booked = items.first { it.str("title") == "34 光纤特性和光信号传输" }
         assertEquals("booked", booked.str("enrollment"))
         assertEquals("光纤特性和光信号传输", booked.str("matchedBooking"))
@@ -122,6 +127,23 @@ class AgentCommandTest {
         assertEquals(listOf("计算机网络"), items)
         assertEquals(AgentExit.USAGE, run("calendar", "--kind", "party").exitCode)
         assertEquals(AgentExit.USAGE, run("homework", "--course").exitCode)
+    }
+
+    @Test
+    fun freshnessFlagsSourcesOlderThanFourHours() {
+        val homework = parse(run("homework", "--json")).getValue("freshness").jsonObject
+        assertEquals(listOf("homework"), homework.getValue("stale").jsonArray.map { it.jsonPrimitive.content })
+        assertEquals("6.0", homework.getValue("sources").jsonObject.getValue("homework").jsonObject.str("ageHours"))
+        // 物理在线快照没写 savedAt、CITEL 没有 lastSync：同步时间未知。
+        assertEquals(listOf("phyvlab", "citel"), homework.getValue("unknown").jsonArray.map { it.jsonPrimitive.content })
+
+        val courses = parse(run("courses", "--json")).getValue("freshness").jsonObject
+        assertTrue(courses.getValue("stale").jsonArray.isEmpty())
+        assertTrue(courses.getValue("unknown").jsonArray.isEmpty())
+        assertFalse(run("courses").stdout.startsWith(">"), "数据都新时不加提示")
+
+        val markdown = run("homework").stdout
+        assertTrue(markdown.startsWith("> 缓存可能不是最新：课程平台作业（6 小时前）"))
     }
 
     @Test
@@ -183,7 +205,8 @@ class AgentCommandTest {
     @Test
     fun markdownIsReadable() {
         val output = run("calendar", "--today")
-        assertTrue(output.stdout.startsWith("# 日程 2026-11-12 ~ 2026-11-12"))
+        assertTrue("\n# 日程 2026-11-12 ~ 2026-11-12\n" in output.stdout)
+        assertTrue(output.stdout.startsWith("> 缓存可能不是最新"))
         assertTrue("10:30–12:20 [课程] 计算机网络" in output.stdout)
     }
 
@@ -210,6 +233,8 @@ class AgentCommandTest {
             course(1, "数据结构", slot = 0, place = "海淀西校区,思源楼,SY101"),
             course(2, "计算机网络", slot = 1, place = "海淀西校区,逸夫教学楼,YF301"),
         ), currentWeek = 10)
+        store.markSynced(student, SyncSource.COURSES, now.epochSeconds - 3600)
+        store.markSynced(student, SyncSource.HOMEWORK, now.epochSeconds - 6 * 3600)
         store.replaceExams(student, listOf(ExamSchedule(1, "期中", "离散数学", "2026-11-12 14:00-16:00 思源101", "已安排", "")))
         store.replaceGrades(student, listOf(Grade(1, "线性代数", "教师", "95", "3", "2025-2026", "1")))
         store.replaceHomework(student, listOf(
@@ -227,7 +252,7 @@ class AgentCommandTest {
         store.putMetadata(student, "citel.tasks", json.encodeToString(listOf(
             CitelTask(7, 173, "测试课程乙", "栈与队列", "https://citel.bjtu.edu.cn/mlsv3/mod/programming/view.php?id=7",
                 programming = true, openTime = epoch("2026-11-01T00:00:00Z"), dueTime = epoch("2026-11-12T15:59:00Z"),
-                discountTime = epoch("2026-11-12T15:59:00Z")),
+                discountTime = epoch("2026-11-12T15:59:00Z"), status = "WA: Wrong Answer", grade = "12"),
         )))
         val lab = PhyVlabCourse(5, "物理实验II_(2026秋)", "", 0, "https://phyvlab.bjtu.edu.cn/course/view.php?id=5")
         val lecture = PhyVlabCourse(6, "大学物理II_(2026秋)", "", 0, "https://phyvlab.bjtu.edu.cn/course/view.php?id=6")

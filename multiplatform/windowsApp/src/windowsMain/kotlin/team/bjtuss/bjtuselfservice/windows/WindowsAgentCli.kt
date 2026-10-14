@@ -8,4 +8,6 @@ internal fun windowsAgentCliPlatform(): AgentCliPlatform = AgentCliPlatform(
     cacheDirectory = File(System.getenv("LOCALAPPDATA") ?: System.getProperty("user.home"), "BJTUselfServiceKMP"),
     loadCacheKey = ::loadExistingWindowsCacheKey,
     rememberedUsername = { runBlocking { WindowsDpapiCredentialVault().load()?.username } },
+    securityStore = ::createWindowsAccountSecurityStore,
+    captchaRecognizer = { WindowsTorchCaptchaRecognizer() },
 )

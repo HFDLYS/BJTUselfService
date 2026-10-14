@@ -1,9 +1,13 @@
 package team.bjtuss.bjtuselfservice.shared.agent
 
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.toInstant
 import kotlinx.serialization.json.Json
 import team.bjtuss.bjtuselfservice.shared.cache.AppPreferences
 import team.bjtuss.bjtuselfservice.shared.cache.CacheStore
+import team.bjtuss.bjtuselfservice.shared.cache.SyncSource
+import team.bjtuss.bjtuselfservice.shared.cache.syncedAt
 import team.bjtuss.bjtuselfservice.shared.data.phyvlab.PhyVlabCacheSnapshot
 import team.bjtuss.bjtuselfservice.shared.data.phyvlab.decodePhyVlabCache
 import team.bjtuss.bjtuselfservice.shared.domain.classroomoccupancy.OccupancyWeekDate
@@ -39,6 +43,8 @@ data class AgentSnapshot(
     val physicsLabs: List<PhysicsLab>?,
     val physicsDemos: List<PhysicsDemoBooking>?,
     val assignmentFilters: AggregateAssignmentFilters,
+    /** 各数据源最近一次成功同步（Unix 秒）；null 表示没有记录（未同步过或旧版本 App 写的缓存）。 */
+    val syncedAt: Map<AgentDataSource, Long?> = emptyMap(),
 ) {
     val citelEnabled: Boolean get() = preferences.isCitelEnabled
     val phyVlabEnabled: Boolean get() = preferences.isPhyVlabEnabled
@@ -86,6 +92,22 @@ fun loadAgentSnapshot(cache: CacheStore, studentId: String, today: LocalDate): A
         physicsDemos = physicsDemos,
         assignmentFilters = decodeOrNull<AggregateAssignmentFilters>(cache.metadata(studentId, "assignment.aggregate.filters"))
             ?: AggregateAssignmentFilters(),
+        syncedAt = buildMap {
+            put(AgentDataSource.COURSES, cache.syncedAt(studentId, SyncSource.COURSES))
+            put(AgentDataSource.HOMEWORK, cache.syncedAt(studentId, SyncSource.HOMEWORK))
+            put(AgentDataSource.EXAMS, cache.syncedAt(studentId, SyncSource.EXAMS))
+            put(AgentDataSource.GRADES, cache.syncedAt(studentId, SyncSource.GRADES))
+            if (preferences.isPhyVlabEnabled) {
+                put(AgentDataSource.PHYVLAB, cache.metadata(studentId, PHYVLAB_SNAPSHOT_KEY)?.let(::decodePhyVlabCache)
+                    ?.savedAtEpochMillis?.takeIf { it > 0 }?.div(1000))
+            }
+            if (preferences.isCitelEnabled) put(AgentDataSource.CITEL, cache.metadata(studentId, "citel.lastSync")?.toLongOrNull())
+            if (physicsDemos != null) {
+                put(AgentDataSource.PHYSICS_DEMO, cache.metadata(studentId, "phydemo.lastSync")?.let { text ->
+                    runCatching { LocalDateTime.parse(text).toInstant(AGENT_TIME_ZONE).epochSeconds }.getOrNull()
+                })
+            }
+        },
     )
 }
 

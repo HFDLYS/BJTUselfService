@@ -1,6 +1,7 @@
 package team.bjtuss.bjtuselfservice.shared.feature.citel
 
 import com.fleeksoft.ksoup.Ksoup
+import kotlinx.serialization.Serializable
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.toInstant
 
@@ -95,8 +96,11 @@ data class CitelProgrammingResult(val status: String, val accepted: Boolean, val
     }
 }
 
+@Serializable
 data class CitelProgrammingTestCase(val number: Int, val passed: Boolean?, val result: String,
-    val timeUsed: String = "", val memoryUsed: String = "")
+    val timeUsed: String = "", val memoryUsed: String = "",
+    val inputUrl: String? = null, val expectedUrl: String? = null, val actualUrl: String? = null,
+    val timeLimit: String = "", val memoryLimit: String = "", val caseType: String = "")
 
 fun isCitelAccepted(status: String): Boolean = Regex("^AC(?:\\s*:.*)?$", RegexOption.IGNORE_CASE).matches(status.trim())
 fun isCitelTesting(status: String): Boolean = Regex("^(RJ|WJ|CJ|PD|PENDING|RUNNING|WAITING|QUEUED|COMPILING|TESTING)(?:\\s*:.*)?$",
@@ -109,16 +113,18 @@ fun CitelTask.submissionStatusText(): String = if (programming) when {
 } else if (submitted) "已提交" else status.ifBlank { "未提交" }
 
 fun parseCitelProgrammingTestResult(html: String, indexed: CitelProgrammingResult): CitelProgrammingResult {
-    val main = Ksoup.parse(html).selectFirst("#region-main") ?: throw CitelFailure("CITEL 评测结果格式发生变化。")
+    val main = Ksoup.parse(html, indexed.resultUrl ?: "$CITEL_BASE/mod/programming/result.php").selectFirst("#region-main") ?: throw CitelFailure("CITEL 评测结果格式发生变化。")
     val summary = main.clone().also { it.select("table, script").remove() }.text()
     val counts = Regex("There are (\\d+) test cases\\. Your program has passed (\\d+) of them and failed in (\\d+) of them\\.",
         RegexOption.IGNORE_CASE).find(summary)
-    val cases = main.select("#test-result-detail-table > tbody > tr").mapNotNull { row ->
+    val cases = main.select("#test-result-detail-table > tbody > tr:not(.emptyrow)").mapNotNull { row ->
         val cells = row.children().filter { it.tagName() == "td" }
         val number = cells.getOrNull(0)?.text()?.toIntOrNull() ?: return@mapNotNull null
         val passed = when (cells.getOrNull(11)?.text()?.trim()?.lowercase()) { "yes" -> true; "no" -> false; else -> null }
         CitelProgrammingTestCase(number, passed, cells.getOrNull(12)?.text().orEmpty(),
-            cells.getOrNull(8)?.text().orEmpty(), cells.getOrNull(9)?.text().orEmpty())
+            cells.getOrNull(8)?.text().orEmpty(), cells.getOrNull(9)?.text().orEmpty(),
+            citelIoLink(cells.getOrNull(4), "in"), citelIoLink(cells.getOrNull(5), "out"), citelIoLink(cells.getOrNull(6), "out"),
+            cells.getOrNull(2)?.text().orEmpty(), cells.getOrNull(3)?.text().orEmpty(), cells.getOrNull(10)?.text().orEmpty())
     }
     return indexed.copy(totalTests = counts?.groupValues?.get(1)?.toIntOrNull(),
         passedTests = counts?.groupValues?.get(2)?.toIntOrNull(), failedTests = counts?.groupValues?.get(3)?.toIntOrNull(),

@@ -201,6 +201,8 @@ internal fun homeworkJson(items: List<AgentHomeworkItem>, snapshot: AgentSnapsho
             }
             a.citel?.let { citel ->
                 put("programming", citel.programming)
+                // 编程题只有判题 AC 才算 submitted；原始判题状态一并给出，避免把“已提交未通过”误读成“没交”。
+                putIfNotNull("judgeStatus", citel.status.ifBlank { null })
                 putTime("discountTime", citel.discountTime?.takeIf { it != a.dueTime })
                 citel.discount?.let { put("discount", it) }
                 citel.allowLate?.let { put("allowLate", it) }
@@ -231,6 +233,7 @@ internal fun homeworkMarkdown(items: List<AgentHomeworkItem>): String = buildStr
         appendLine("## ${item.title}")
         appendLine("- 来源：${a.source.label} · ${a.courseName}")
         appendLine("- 状态：${if (a.submitted) "已提交" else "未提交"}")
+        a.citel?.status?.takeIf { it.isNotBlank() }?.let { appendLine("- 判题：$it") }
         item.openTime?.let { appendLine("- 开放：${shortTime(it)}") }
         a.dueTime?.let { due ->
             appendLine("- 截止：" + if (isMidnightDeadline(due)) "${deadlineAgendaDate(due)} 24:00（即次日 00:00）" else shortTime(due))

@@ -95,6 +95,8 @@ class DefaultHomeworkRepository(
     accountScope: String,
     private val local: HomeworkLocalDataSource,
     private val remote: HomeworkRemoteDataSource,
+    /** 远端数据成功写入缓存后调用（记录同步时间，供离线读取方判断新旧）。 */
+    private val onSynced: () -> Unit = {},
 ) : HomeworkRepository {
     private val accountScope = accountScope.trim().also {
         require(it.isNotEmpty()) { "accountScope cannot be blank" }
@@ -115,6 +117,7 @@ class DefaultHomeworkRepository(
         }
         return try {
             local.replace(accountScope, remoteHomework)
+            runCatching(onSynced)
             HomeworkRefreshResult.Success(local.load(accountScope))
         } catch (_: Exception) {
             HomeworkRefreshResult.Failure(

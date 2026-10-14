@@ -37,13 +37,17 @@ class CitelRenderTest {
             )
             val model = CitelModel("fixture", cache, null, object : CitelDataSource {
                 override suspend fun fetch(credentials: Credentials) = tasks
+                override suspend fun problem(credentials: Credentials, task: CitelTask, withResults: Boolean) =
+                    CitelProblem("顺序表练习", "Grade: 10 / Input:console", "<h4>输入说明</h4><p>读取整数 n 并输出平方。</p><pre>2\n4</pre>",
+                        cases = listOf(CitelProblemCase(1, "公开样例", input = "2\n", expected = "4\n")))
                 override suspend fun submission(credentials: Credentials, task: CitelTask) = MoodleAssignmentStatus("Submitted for grading", listOf(AssignmentFile("原实验报告.pdf")), true, false, true)
                 override suspend fun programmingOptions(credentials: Credentials, task: CitelTask) = CitelProgrammingOptions(mapOf("0" to "gcc", "1" to "g++"), 65536)
             })
             runBlocking { model.configure("fixture", "fixture", false, true) }
             try {
-                listOf("compact-light", "compact-dark", "large-font", "wide-light", "settings", "settings-large", "detail-report", "detail-report-large", "detail-programming").forEach { name ->
+                listOf("compact-light", "compact-dark", "large-font", "wide-light", "settings", "settings-large", "detail-report", "detail-report-large", "detail-programming", "detail-programming-dark", "detail-programming-large", "detail-programming-cached").forEach { name ->
                     if (name.startsWith("detail")) model.showTask(if (name.contains("programming")) tasks[0] else tasks[1]) else model.dismissTask()
+                    if (name.endsWith("cached")) runBlocking { model.fetchProblem() }
                     val scene = ImageComposeScene(width = if (name.startsWith("wide")) 1000 else 390, height = 844,
                         density = Density(1f, if (name.contains("large")) 1.5f else 1f), coroutineContext = Dispatchers.Unconfined) {
                         PlatformAppTheme(useDarkTheme = name.contains("dark"), dynamicColorEnabled = false) {

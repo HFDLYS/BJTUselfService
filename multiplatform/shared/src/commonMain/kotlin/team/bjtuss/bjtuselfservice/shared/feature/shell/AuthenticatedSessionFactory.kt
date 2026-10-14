@@ -57,6 +57,8 @@ import team.bjtuss.bjtuselfservice.shared.feature.course.CourseScheduleScreenMod
 import team.bjtuss.bjtuselfservice.shared.feature.courseware.CoursewareScreenModel
 import team.bjtuss.bjtuselfservice.shared.feature.exam.ExamScheduleScreenModel
 import team.bjtuss.bjtuselfservice.shared.feature.grade.GradeScreenModel
+import team.bjtuss.bjtuselfservice.shared.cache.SyncSource
+import team.bjtuss.bjtuselfservice.shared.cache.markSynced
 import team.bjtuss.bjtuselfservice.shared.feature.course.saveAcademicWeeksIfChanged
 import team.bjtuss.bjtuselfservice.shared.feature.home.HomeScreenModel
 import team.bjtuss.bjtuselfservice.shared.feature.homework.HomeworkScreenModel
@@ -109,6 +111,7 @@ internal fun rememberAuthenticatedSession(
             local = CacheStoreGradeLocalDataSource(cacheStore),
             remote = SchoolGradeRemoteDataSource(transport),
             programRemote = SchoolTrainingProgramRemoteDataSource(transport),
+            onSynced = { cacheStore.markSynced(profile.studentId, SyncSource.GRADES, kotlin.time.Clock.System.now().epochSeconds) },
         )
     }
     val gradeModel = remember(gradeRepository, homeChangeFeed) {
@@ -128,6 +131,7 @@ internal fun rememberAuthenticatedSession(
                 transport = transport,
                 endpoint = smartPlatformEndpoint,
             ),
+            onSynced = { cacheStore.markSynced(profile.studentId, SyncSource.COURSES, kotlin.time.Clock.System.now().epochSeconds) },
         )
     }
     val courseScheduleModel = remember(courseScheduleRepository, homeChangeFeed, classroomOccupancyRepository) {
@@ -145,6 +149,7 @@ internal fun rememberAuthenticatedSession(
             accountScope = profile.studentId,
             local = CacheStoreExamScheduleLocalDataSource(cacheStore),
             remote = SchoolExamScheduleRemoteDataSource(transport),
+            onSynced = { cacheStore.markSynced(profile.studentId, SyncSource.EXAMS, kotlin.time.Clock.System.now().epochSeconds) },
         )
     }
     val examScheduleModel = remember(examScheduleRepository, homeChangeFeed) {
@@ -158,6 +163,7 @@ internal fun rememberAuthenticatedSession(
                 transport = transport,
                 endpoint = smartPlatformEndpoint,
             ),
+            onSynced = { cacheStore.markSynced(profile.studentId, SyncSource.HOMEWORK, kotlin.time.Clock.System.now().epochSeconds) },
         )
     }
     val homeworkModel = remember(homeworkRepository, homeChangeFeed) {
@@ -221,22 +227,35 @@ internal fun rememberAuthenticatedSession(
             clearAccountCache = {
                 runCatching { cacheStore.clearAccount(profile.studentId) }.isSuccess
             },
-            wipeAllLocalData = {
-                val labAccounts = (cacheStore.metadataAccountScopes("physicslab.configured") + profile.studentId).distinct()
-                val labCredentialsPurged = runCatching {
-                    labAccounts.forEach { securityCoordinator.physicsLabVault(it)?.clear() }
-                    (cacheStore.metadataAccountScopes("phydemo.configured") + profile.studentId).distinct()
-                        .forEach { securityCoordinator.physicsDemoVault(it)?.clear() }
-                    (cacheStore.metadataAccountScopes("citel.username") + profile.studentId).distinct()
-                        .forEach { securityCoordinator.citelVault(it)?.clear() }
-                }.isSuccess
-                val cacheCleared = labCredentialsPurged && runCatching { cacheStore.clearAll() }.isSuccess
-                val credentialsPurged = securityCoordinator.purge()
-                val wiped = cacheCleared && credentialsPurged && labCredentialsPurged
-                // Stay signed out after a full wipe, or background sync could
-                // immediately recreate personal cache rows from this live session.
+            prepareUninstall = {
+                val cleaner = team.bjtuss.bjtuselfservice.shared.feature.settings.platformLocalDataCleaner()
+                val wiped = cleaner?.clearLocalData(cacheStore, removeAgent = true) == true
                 if (wiped) onPurgeLogout(profile.studentId)
                 wiped
+            },
+            wipeAllLocalData = {
+                val cleaner = team.bjtuss.bjtuselfservice.shared.feature.settings.platformLocalDataCleaner()
+                if (cleaner != null) {
+                    val wiped = cleaner.clearLocalData(cacheStore)
+                    if (wiped) onPurgeLogout(profile.studentId)
+                    wiped
+                } else {
+                    val labAccounts = (cacheStore.metadataAccountScopes("physicslab.configured") + profile.studentId).distinct()
+                    val labCredentialsPurged = runCatching {
+                        labAccounts.forEach { securityCoordinator.physicsLabVault(it)?.clear() }
+                        (cacheStore.metadataAccountScopes("phydemo.configured") + profile.studentId).distinct()
+                            .forEach { securityCoordinator.physicsDemoVault(it)?.clear() }
+                        (cacheStore.metadataAccountScopes("citel.username") + profile.studentId).distinct()
+                            .forEach { securityCoordinator.citelVault(it)?.clear() }
+                    }.isSuccess
+                    val cacheCleared = labCredentialsPurged && runCatching { cacheStore.clearAll() }.isSuccess
+                    val credentialsPurged = securityCoordinator.purge()
+                    val wiped = cacheCleared && credentialsPurged && labCredentialsPurged
+                    // Stay signed out after a full wipe, or background sync could
+                    // immediately recreate personal cache rows from this live session.
+                    if (wiped) onPurgeLogout(profile.studentId)
+                    wiped
+                }
             },
             checkLatestRelease = { AppUpdateChecker.fetchLatest(transport) },
         )

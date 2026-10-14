@@ -14,7 +14,7 @@ fun createDesktopAccountSecurityStore(): AccountSecurityStore = AccountSecurityS
         MacOsBagBackedCredentialVault(
             bag = productionMacOsSecretBag,
             key = "phydemo:$accountScope",
-            legacyService = "team.bjtuss.bjtuselfservice.kmp.credentials.phydemo",
+            legacyService = LEGACY_PHYSICS_DEMO_SERVICE,
             legacyAccount = accountScope,
         )
     },
@@ -37,7 +37,7 @@ fun createDesktopAccountSecurityStore(): AccountSecurityStore = AccountSecurityS
 )
 
 private class DesktopAccountPreferences : AccountPreferences {
-    private val preferences = Preferences.userRoot().node(
+    private val preferences get() = Preferences.userRoot().node(
         "/team/bjtuss/bjtuselfservice/kmp/account",
     )
 

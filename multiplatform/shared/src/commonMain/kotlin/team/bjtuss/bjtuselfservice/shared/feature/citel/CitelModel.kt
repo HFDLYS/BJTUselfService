@@ -37,6 +37,9 @@ data class CitelState(
     val submissionRevision: Long = 0,
     val filters: AssignmentFilters = AssignmentFilters(),
     val configured: Boolean = false,
+    val problems: Map<Int, CitelCachedProblem> = emptyMap(),
+    val problemBusy: Boolean = false,
+    val problemMessage: String? = null,
 )
 
 class CitelModel(
@@ -78,7 +81,8 @@ class CitelModel(
         val lastSync = cache.metadata(scope, "citel.lastSync")?.toLongOrNull()
         mutableState.value = CitelState(cache.metadata(scope, "citel.enabled") == "true" && credentials?.isValid == true, username, remember,
             tasks, fromCache = lastSync != null || tasks.isNotEmpty(), lastSync = lastSync, filters = state.value.filters,
-            configured = credentials?.isValid == true)
+            configured = credentials?.isValid == true,
+            problems = tasks.mapNotNull { task -> cache.citelProblem(scope, username, task.id)?.let { task.id to it } }.toMap())
         initialized = true
     }
 
@@ -158,7 +162,7 @@ class CitelModel(
                     tasks = if (changed) emptyList() else mutableState.value.tasks,
                     fromCache = if (changed) false else mutableState.value.fromCache,
                     lastSync = if (changed) null else mutableState.value.lastSync, failed = false, message = null,
-                    configured = next.isValid)
+                    configured = next.isValid, problems = if (changed) emptyMap() else mutableState.value.problems)
                 true
             } catch (e: CancellationException) { throw e } catch (e: Exception) {
                 mutableState.value = mutableState.value.copy(message = (e as? CitelFailure)?.userMessage ?: "CITEL 配置保存失败，请重试。", failed = true)
@@ -205,7 +209,7 @@ class CitelModel(
         mutableState.value = mutableState.value.copy(fromCache = mutableState.value.lastSync != null || mutableState.value.tasks.isNotEmpty(), failed = true, message = message)
     }
     fun dismissTask() { if (!state.value.submissionBusy) mutableState.value = state.value.copy(selectedTask = null, submission = null, programmingResult = null, programmingOptions = null, submissionMessage = null) }
-    fun showTask(task: CitelTask) { mutableState.value = state.value.copy(selectedTask = task, submission = null, programmingResult = null, programmingPollingPaused = false, programmingOptions = null, submissionMessage = null) }
+    fun showTask(task: CitelTask) { mutableState.value = state.value.copy(problemMessage = null, selectedTask = task, submission = null, programmingResult = null, programmingPollingPaused = false, programmingOptions = null, submissionMessage = null) }
     suspend fun selectTask(task: CitelTask) {
         initialize()
         mutex.withLock {
@@ -278,6 +282,28 @@ class CitelModel(
             } finally { mutableState.value = state.value.copy(submissionBusy = false) }
         }
     }
+    /** Deliberately separate from selectTask and ordinary synchronization. */
+    suspend fun fetchProblem() {
+        if (state.value.problemBusy) return
+        initialize()
+        mutex.withLock {
+            val task = state.value.selectedTask?.takeIf { it.programming } ?: return@withLock
+            mutableState.value = state.value.copy(problemBusy = true, problemMessage = null)
+            try {
+                val problem = withTimeout(180_000) { remote.problem(loginCredentials(), task, withResults = true) }
+                val cached = CitelCachedProblem(state.value.username, task.id, Clock.System.now().epochSeconds, problem)
+                cache.saveCitelProblem(scope, cached)
+                mutableState.value = state.value.copy(problems = state.value.problems + (task.id to cached),
+                    problemMessage = "题目全文与用例已缓存，可离线复制或导出。")
+            } catch (e: TimeoutCancellationException) {
+                mutableState.value = state.value.copy(problemMessage = "获取全文超时，保留已缓存的题面。")
+            } catch (e: CancellationException) { throw e
+            } catch (e: Exception) {
+                mutableState.value = state.value.copy(problemMessage = (e as? CitelFailure)?.userMessage ?: "获取全文失败，保留已缓存的题面。")
+            } finally { mutableState.value = state.value.copy(problemBusy = false) }
+        }
+    }
+
     private fun loginCredentials(): Credentials = credentials ?: throw CitelFailure("请先设置 CITEL 账号和密码。")
     suspend fun submitProgramming(files: List<HomeworkFileContent>, language: String) {
         if (state.value.submissionBusy) return

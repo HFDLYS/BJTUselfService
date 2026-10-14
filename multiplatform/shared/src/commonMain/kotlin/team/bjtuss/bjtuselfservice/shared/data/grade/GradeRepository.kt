@@ -112,6 +112,8 @@ class DefaultGradeRepository(
     private val local: GradeLocalDataSource,
     private val remote: GradeRemoteDataSource,
     private val programRemote: TrainingProgramRemoteDataSource,
+    /** 远端数据成功写入缓存后调用（记录同步时间，供离线读取方判断新旧）。 */
+    private val onSynced: () -> Unit = {},
 ) : GradeRepository {
     private val accountScope = accountScope.trim().also {
         require(it.isNotEmpty()) { "accountScope cannot be blank" }
@@ -149,6 +151,7 @@ class DefaultGradeRepository(
                 selectedGradeIds = temporarySelectedIds,
             )
             local.replaceSnapshot(accountScope, remoteGrades, normalizedRecords, remoteCourseTypes)
+            runCatching(onSynced)
             val persistedGrades = local.grades(accountScope)
             val selectedIds = gradeIdsForSelectionRecords(persistedGrades, normalizedRecords)
             GradeRefreshResult.Success(

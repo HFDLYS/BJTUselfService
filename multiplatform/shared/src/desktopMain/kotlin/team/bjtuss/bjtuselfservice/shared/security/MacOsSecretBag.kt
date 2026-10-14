@@ -8,6 +8,7 @@ internal const val MACOS_SECRET_BAG_ACCOUNT = "primary"
 internal const val LEGACY_CREDENTIALS_SERVICE = "team.bjtuss.bjtuselfservice.kmp.credentials"
 internal const val LEGACY_CACHE_KEY_SERVICE = "team.bjtuss.bjtuselfservice.kmp.cache-key"
 internal const val LEGACY_PHYSICS_LAB_SERVICE = "team.bjtuss.bjtuselfservice.kmp.physicslab"
+internal const val LEGACY_PHYSICS_DEMO_SERVICE = "team.bjtuss.bjtuselfservice.kmp.credentials.phydemo"
 internal const val LEGACY_CITEL_SERVICE = "team.bjtuss.bjtuselfservice.kmp.citel"
 internal const val LEGACY_PRIMARY_ACCOUNT = "primary"
 
@@ -57,6 +58,12 @@ internal class MacOsSecretBag(
         persist(map)
         runCatching { legacy?.clear(CredentialVaultOperation.CLEAR) }
         Unit
+    }
+
+    /** Live settings wipe keeps only the encryption key for the already-open empty database. */
+    fun clearPersonalData() = synchronized(lock) {
+        val map = loadMap()
+        persist(map.filterKeys { it == MacOsSecretKeys.CACHE_KEY })
     }
 
     fun clearAll() = synchronized(lock) {
@@ -201,3 +208,11 @@ private const val SECRET_BAG_VERSION: Byte = 1
 private const val MAX_SECRET_BAG_ENTRIES = 64
 private const val MAX_SECRET_BAG_KEY_BYTES = 256
 private const val MAX_SECRET_BAG_VALUE_BYTES = 64 * 1024
+
+/** Service-wide deletion removes old account-scoped entries even when no cache remains. */
+internal fun clearLegacyMacOsAppSecrets() {
+    listOf(LEGACY_CREDENTIALS_SERVICE, LEGACY_CACHE_KEY_SERVICE, LEGACY_PHYSICS_LAB_SERVICE,
+        LEGACY_PHYSICS_DEMO_SERVICE, LEGACY_CITEL_SERVICE).forEach { service ->
+        MacOsKeychainItem(service, null).clear(CredentialVaultOperation.CLEAR)
+    }
+}
