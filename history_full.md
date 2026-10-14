@@ -825,3 +825,12 @@
     - 验证：四端构建与 macOS createDistributable 成功，889 单测零失败（清理器 8 项：临时 HOME 删除、独立 Keychain 服务所有账号删除、偏好兄弟节点/共享 plist 保留、App 锁/未知包阻断、符号链接、部分失败保留 App、实时空库保留、临时 App 原生 Trash 往返恢复）。真实机仅运行 dry-run，输出在 `.artifacts/agent-e-dry-run.md`。
     - Computer Use：纯内存 fixture 源码测试页验证获取/复制、卸载前确认/取消、窄宽与深浅色；测试进程已退出，安装版未关闭或替换。额外设置入口 2 测试通过；签名 arm64 模拟器 xcodebuild `BUILD SUCCEEDED`。
     - 未验证：真实 App 完整卸载、真实设置清理后的重登录（按规则不删除真实用户数据）；iOS 实际详情交互、各端原生保存面板；Windows 不提供卸载清理。
+
+
+## 2026-10-14 分支收口（feat/ai-agent-dev，main 基线调整待确认）
+
+- 新建并推送 `feat/ai-agent-dev`，完整保存本机 Alpha 整合、Candidate3 发布引导、Agent A–E 及接受后的合并提交，并纳入独立 #23。保留 Git 历史，不改写远端历史。
+- 逐个验证祖先关系后删除 12 个旧本地分支及 9 个 mine 远端分支；只保留 main 和 dev。上游 origin 与历史标签未动。所有旧引用已保存到忽略目录 `.artifacts/branch-cleanup-2026-10-14/before-cleanup.bundle`，bundle verify 通过。
+- 本地 main 先与 mine/main@8e9e4152 对齐；Candidate3 范围待用户明确（完整代码基线或仅版本号），没有擅自回退已合入功能。
+- 验证：multiplatform 下 `./gradlew :shared:desktopTest :androidApp:assembleDebug :desktopApp:compileKotlin :windowsApp:compileKotlinWindows :shared:compileKotlinIosSimulatorArm64 :shared:compileKotlinIosArm64` 成功，895 测试零失败/零跳过；日志在 `.artifacts/branch-cleanup-2026-10-14/dev-validation.log`。
+- 未验证：本轮仅源码分支整理，未替换已安装 1.8.5-AgentAlpha，也未重新实机验证 #23 界面。

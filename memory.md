@@ -1,14 +1,14 @@
 # BJTUselfService 实时工作记忆
 
 > 最后更新：2026-10-14。
-> 当前分支：`feat/ai-agent-dev`（完整保存 Agent A–E、已接受 PR 的合并记录、Candidate3 发布引导及 #23）。main 正在按用户要求收口到 1.8.4-Candidate3。
+> 当前分支：`feat/ai-agent-dev`，本地与 `mine` 对齐（完整保存 Agent A–E、全部 PR 合并记录、Candidate3 发布引导及 #23）。本地和远端只保留 main/dev；main 当前与 mine/main@8e9e4152 对齐，版本仍为 Candidate2，等待用户明确 Candidate3 是完整代码基线还是仅版本号。
 > KMP 本地应用版本：`1.8.5-AgentAlpha` / Build 38（macOS/Windows 数值版本 1.8.5）。已验证并替换 /Applications 安装版，程序已启动；Skill 已更新为 bjtuss、旧名已清理。正式 Latest 仍为 `v1.8.3-KMP`。
 > 冻结原 Android：`v1.7.1` / versionCode 9（对照 `origin/main@7d94f74`）。
 > 已完成工作的细节见 `history_full.md` 末尾日志。
 
 ## 进行中
 
-- 分支收口：Agent A–E、Candidate3 原有发布引导与独立 #23 已完整整合到 `feat/ai-agent-dev`。正在验证新分支、规范 main 并清理旧分支。
+- main 调整为 Candidate3：已询问用户，待选择“恢复 Candidate3 完整代码基线（Agent 全在 dev）”或“保留 main 已合入 #21/#23，只统一版本号”。main 尚未改变代码；后续不要把未回答的预选项当成授权。dev 整合已完成，895 测试零失败、四端构建通过。旧功能分支均验证为 dev 祖先后清理；备份 `.artifacts/branch-cleanup-2026-10-14/before-cleanup.bundle`。
 
 ## 当前痛点
 
