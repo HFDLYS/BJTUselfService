@@ -1,7 +1,7 @@
 # BJTUselfService 实时工作记忆
 
 > 最后更新：2026-10-14。
-> 当前分支：`feat/ai-agent-uninstall`（PR E 实现中，基于 PR D #25）。C #24、D #25 CI 全绿；E 四端构建/889 测试/签名 iOS 宿主通过，待 PR 审核。
+> 当前分支：`feat/ai-agent-uninstall`（PR E #26，基于 PR D #25，工作区干净）。C #24、D #25 CI 全绿；E 四端构建/889 测试/签名 iOS 宿主通过，CI 运行中，未合并。
 > KMP 应用版本：`1.8.4-Candidate2` / Build 36（macOS/Windows 安装包数值版本 1.8.4）。正式 Latest 仍为 `v1.8.3-KMP`。
 > 冻结原 Android：`v1.7.1` / versionCode 9（对照 `origin/main@7d94f74`）。
 > 已完成工作的细节见 `history_full.md` 末尾日志。
@@ -44,7 +44,7 @@
     - 打包启动器真实 `citel show 9265 --fetch --json` 退出 0：6 用例（4 公开，2 结果页），输入/期望输出完整；离线 show/export 退出 0，13 文件（problem.md + 6 对 I/O），逐文件字节与缓存一致。产物仅在忽略目录 `.artifacts/agent-d-real-export`。
     - Mac fixture UI 在 E 的 `--agent-ui-smoke` 中实际点击获取全文、复制反馈，窄宽/深浅色正常；源码测试包与安装版使用不同 Bundle ID，测试结束已退出。
     - 未验证：四端原生保存面板、iOS 实际详情页操作；Windows 实机 CITEL 登录；题面图片仍保留原链接，不离线下载 assets。
-  - PR E（`feat/ai-agent-uninstall`，基于 D #25）：Mac `agent uninstall-app [--yes]` 默认无副作用预览，执行前检查 App 包与锁，清理缓存目录、自己的 Preferences 节点、所有本 App Keychain 服务与管理的 Skill/脚本，最后原生 Trash API 移 App 到废纸篓。设置页共用清理器，新增卸载前清理；运行中保留空数据库和其加密密钥，避免破坏仍打开的 SQLite，下次退出 App 后用 CLI 完成删除。
+  - PR E #26（`feat/ai-agent-uninstall`，基于 D #25）：Mac `agent uninstall-app [--yes]` 默认无副作用预览，执行前检查 App 包与锁，清理缓存目录、自己的 Preferences 节点、所有本 App Keychain 服务与管理的 Skill/脚本，最后原生 Trash API 移 App 到废纸篓。设置页共用清理器，新增卸载前清理；运行中保留空数据库和其加密密钥，避免破坏仍打开的 SQLite，下次退出 App 后用 CLI 完成删除。
     - 验证：四端构建与 macOS createDistributable 成功，889 单测零失败（清理器 8 项：临时 HOME 删除、独立 Keychain 服务所有账号删除、偏好兄弟节点/共享 plist 保留、App 锁/未知包阻断、符号链接、部分失败保留 App、实时空库保留、临时 App 原生 Trash 往返恢复）。真实机仅运行 dry-run，输出在 `.artifacts/agent-e-dry-run.md`。
     - Computer Use：纯内存 fixture 源码测试页验证获取/复制、卸载前确认/取消、窄宽与深浅色；测试进程已退出，安装版未关闭或替换。额外设置入口 2 测试通过；签名 arm64 模拟器 xcodebuild `BUILD SUCCEEDED`。
     - 未验证：真实 App 完整卸载、真实设置清理后的重登录（按规则不删除真实用户数据）；iOS 实际详情交互、各端原生保存面板；Windows 不提供卸载清理。
@@ -90,6 +90,8 @@
 - 验证码发布级正确率需至少 300 张独立留出集。
 
 ## 接下来
+
+- AI Agent 叠层 PR 按 #21 → #22 → #24 → #25 → #26 审核合入；#24/#25 CI 全绿，#26 本地验证通过、CI 运行中。合并由用户决定，尚未替换安装版 App。
 
 1. 在真机已装的 Beta3（SideStore 保留扩展）上验证小组件共享容器与各尺寸显示。
 2. 准备 1.8.4 正式发布时：核对版本号清单（见 `AGENTS.md`）、写 `docs/releases/<tag>.md`，等待用户批准打标签。
