@@ -54,6 +54,8 @@ val AGENT_USAGE = """
       exams
       grades                          需要在 App 设置里允许
       citel                           CITEL 任务列表（元数据）
+      citel show <id> [--fetch] [--json]  缓存题面与用例；--fetch 才联网
+      citel export <id> --out <新目录> [--fetch]  导出 problem.md 和 tests/N.in、N.out
       cache read <courses|homework|exams|grades|citel|calendar> [同上选项]
       cache update [grades,courses,homework,exams]   用记住的账号后台登录并刷新（App 开着时请在 App 里刷新）
       install [--no-claude] | uninstall | doctor   安装/移除 Skill 与启动脚本，检查环境（仅桌面端）

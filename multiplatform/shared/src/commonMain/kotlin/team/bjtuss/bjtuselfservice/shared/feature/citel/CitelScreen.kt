@@ -25,6 +25,14 @@ import team.bjtuss.bjtuselfservice.shared.feature.assignment.*
 import team.bjtuss.bjtuselfservice.shared.feature.homework.HomeworkSummaryBanner
 import team.bjtuss.bjtuselfservice.shared.feature.shell.AppErrorBanner
 import team.bjtuss.bjtuselfservice.shared.feature.shell.TopScrollColumn
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.foundation.text.selection.SelectionContainer
+import team.bjtuss.bjtuselfservice.shared.domain.homework.HomeworkFileContent
+import team.bjtuss.bjtuselfservice.shared.files.CoursewareDirectoryGateway
+import team.bjtuss.bjtuselfservice.shared.files.UnavailableCoursewareDirectoryGateway
+import team.bjtuss.bjtuselfservice.shared.files.HomeworkFileSaveResult
+import team.bjtuss.bjtuselfservice.shared.files.safeExportFileName
 import team.bjtuss.bjtuselfservice.shared.files.HomeworkFileGateway
 import team.bjtuss.bjtuselfservice.shared.files.UnavailableHomeworkFileGateway
 
@@ -32,7 +40,8 @@ import team.bjtuss.bjtuselfservice.shared.files.UnavailableHomeworkFileGateway
 @Composable
 fun CitelWorkspace(model: CitelModel, holdNetwork: Boolean, onOpen: (String) -> Unit, modifier: Modifier = Modifier,
     fileGateway: HomeworkFileGateway = UnavailableHomeworkFileGateway,
-    showDetailSheet: Boolean = true, onOpenTask: ((CitelTask) -> Unit)? = null) {
+    showDetailSheet: Boolean = true, onOpenTask: ((CitelTask) -> Unit)? = null,
+    directoryGateway: CoursewareDirectoryGateway = UnavailableCoursewareDirectoryGateway) {
     val state by model.state.collectAsState()
     val filters = state.filters
     val pendingOnly = filters.hideSubmitted
@@ -79,7 +88,7 @@ fun CitelWorkspace(model: CitelModel, holdNetwork: Boolean, onOpen: (String) -> 
     }
     if (showDetailSheet) state.selectedTask?.let {
         AppleSheet(onDismissRequest = model::dismissTask, title = "作业详情", needsFullHeight = true, scrollableBody = true) {
-            CitelDetailWorkspace(model, fileGateway, onOpen, holdNetwork)
+            CitelDetailWorkspace(model, fileGateway, onOpen, holdNetwork, directoryGateway = directoryGateway)
         }
     }
     if (showFilters) AppleSheet(onDismissRequest = { showFilters = false }, title = "作业筛选", needsFullHeight = true, scrollableBody = true) {
@@ -132,12 +141,18 @@ private fun CitelDetailLine(label: String, value: String) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CitelDetailWorkspace(model: CitelModel, fileGateway: HomeworkFileGateway, onOpen: (String) -> Unit,
-    holdNetwork: Boolean = false, modifier: Modifier = Modifier) {
+    holdNetwork: Boolean = false, modifier: Modifier = Modifier,
+    directoryGateway: CoursewareDirectoryGateway = UnavailableCoursewareDirectoryGateway) {
     val state by model.state.collectAsState()
     val scope = rememberCoroutineScope()
     val task = state.selectedTask ?: run { Text("未选择作业。"); return }
     var showUpload by remember(task.id) { mutableStateOf(false) }
     var now by remember { mutableStateOf(Clock.System.now().epochSeconds) }
+    val clipboard = LocalClipboardManager.current
+    val cachedProblem = state.problems[task.id]
+    val markdown = remember(task, cachedProblem) { cachedProblem?.let { citelProblemMarkdown(task, it) } }
+    var exportBusy by remember(task.id) { mutableStateOf(false) }
+    var exportMessage by remember(task.id) { mutableStateOf<String?>(null) }
     val result = state.programmingResult
     val accepted = result?.accepted ?: isCitelAccepted(task.status)
     val testing = result?.testing ?: isCitelTesting(task.status)
@@ -166,6 +181,45 @@ fun CitelDetailWorkspace(model: CitelModel, fileGateway: HomeworkFileGateway, on
         if (task.programming) {
             if (result != null) ProgrammingJudgeResult(result, autoRefreshing = testing && !holdNetwork && windowFocused && !state.programmingPollingPaused)
             else if (accepted) Text("已通过（AC），无需再次提交。", color = MaterialTheme.colorScheme.primary)
+        }
+        if (task.programming) {
+            HorizontalDivider()
+            Text("题目全文", style = MaterialTheme.typography.titleMedium)
+            Text(if (cachedProblem == null) "获取后可离线查看题面和测试用例。" else
+                "缓存于 ${citelDateText(cachedProblem.fetchedAt)}，获取全文可更新用例与我的输出。",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Button(onClick = { scope.launch { model.fetchProblem() } }, enabled = !holdNetwork && !state.problemBusy && !state.submissionBusy) {
+                    Text(if (state.problemBusy) "正在获取…" else "获取题目全文")
+                }
+                TextButton(enabled = markdown != null, onClick = {
+                    clipboard.setText(AnnotatedString(markdown.orEmpty())); exportMessage = "Markdown 已复制"
+                }) { Text("复制 Markdown") }
+                OutlinedButton(enabled = markdown != null && fileGateway.isAvailable && !exportBusy, onClick = {
+                    scope.launch {
+                        exportBusy = true
+                        try {
+                            val saved = fileGateway.saveFile(HomeworkFileContent(safeExportFileName("CITEL-${task.id}.md"),
+                                "text/markdown", markdown.orEmpty().encodeToByteArray()))
+                            exportMessage = saved.citelExportMessage()
+                        } catch (_: Exception) { exportMessage = "保存失败，请重试。"
+                        } finally { exportBusy = false }
+                    }
+                }) { Text("保存 Markdown") }
+                OutlinedButton(enabled = cachedProblem != null && directoryGateway.isDirectoryExportAvailable && !exportBusy, onClick = {
+                    scope.launch {
+                        exportBusy = true
+                        try { exportMessage = exportCitelProblem(task, cachedProblem!!, directoryGateway).citelExportMessage()
+                        } catch (_: Exception) { exportMessage = "导出失败，请重试。"
+                        } finally { exportBusy = false }
+                    }
+                }) { Text("导出文件夹") }
+            }
+            if (state.problemBusy || exportBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
+            state.problemMessage?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+            exportMessage?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+            if (markdown != null) SelectionContainer { Text(markdown, style = MaterialTheme.typography.bodyMedium) }
+            HorizontalDivider()
         }
         task.grade?.let { CitelDetailLine(if (task.programming) "题目分值" else "评分", it) }
         if (!task.completed) Text(task.deadlineStatus(now))
@@ -248,4 +302,10 @@ internal fun ProgrammingJudgeResult(result: CitelProgrammingResult, autoRefreshi
             }
         }
     }
+}
+
+private fun HomeworkFileSaveResult.citelExportMessage(): String? = when (this) {
+    HomeworkFileSaveResult.Saved -> "已保存"
+    HomeworkFileSaveResult.Cancelled -> null
+    is HomeworkFileSaveResult.Failed -> "无法保存，请重试。"
 }

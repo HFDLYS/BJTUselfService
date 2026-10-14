@@ -4,6 +4,7 @@ import team.bjtuss.bjtuselfservice.shared.domain.homework.stableKey
 import team.bjtuss.bjtuselfservice.shared.feature.homework.HomeworkUiState
 import team.bjtuss.bjtuselfservice.shared.feature.homework.homeworkDetailToMarkdown
 import team.bjtuss.bjtuselfservice.shared.feature.phyvlab.PhyVlabUiState
+import team.bjtuss.bjtuselfservice.shared.feature.citel.citelProblemMarkdown
 import team.bjtuss.bjtuselfservice.shared.feature.citel.CitelState
 import team.bjtuss.bjtuselfservice.shared.feature.citel.citelDateText
 import team.bjtuss.bjtuselfservice.shared.feature.citel.submissionStatusText
@@ -15,6 +16,7 @@ internal fun aggregateAssignmentMarkdown(item: AggregatedAssignment, homework: H
         return homeworkDetailToMarkdown(task, homework.detail.takeIf { selected },
             homework.submittedAttachments.takeIf { selected }.orEmpty())
     }
+    item.citel?.let { task -> citel.problems[task.id]?.let { return citelProblemMarkdown(task, it) } }
     return buildString {
         val title = item.physical?.title ?: item.citel?.title.orEmpty()
         appendLine("# $title\n")
