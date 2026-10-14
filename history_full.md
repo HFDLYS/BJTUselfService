@@ -739,3 +739,36 @@
 - 外层 ZIP：`upload-artifact@v4` 把文件时间按 UTC 写进 DOS 时间，单设 TZ 不够。四端通过 `scripts/stage-actions-artifact.py` 创建上传副本，仅副本 mtime 加 8 小时；原包保留真实 epoch，内容与签名不变。
 - 验证：YAML 解析、9 个 Bash 步骤 `bash -n`、JVM 时区、模拟 IPA 的北京时间跨日/真实 epoch/ZIP 时间/无 UTC 扩展字段/符号链接/内容哈希均通过；首轮 CI `38429777141` 的 IPA 内 30 个条目均为北京时间，CRC 与签名复验通过。
 - 未验证：第二轮 CI 外层 ZIP 时间的实际结果未在 memory 中记录；Windows/MSI、Android/APK、macOS/DMG 需后续四端打包确认。既有 Actions 产物与 GitHub 自身 UTC 运行时间不变。
+
+## 2026-10-14 第二节错峰上课时间（PR #16，`feat/staggered-second-slot`）
+
+- 改动：第二节教室在逸夫教学楼（YF）/思源西楼（SX）时按 10:30–12:20。设置页新增开关「错峰上课时间」（默认开，`AppPreferences.staggeredSecondSlot`）。规则在 `domain/course/StaggeredClassTime.kt`（楼名或 `YF/SX+数字` 教室号；思源楼/思源东楼/威海逸夫楼不算；实验/考试不参与）。
+- 精确时间覆盖：课程详情（含“（错峰）”）、按日列表卡片与整节均错峰时的节次标签、首页“现在/下一节”与日程、iOS 小组件快照 start/end、日历导出。
+- 只下移不加节：课表网格色块顶边下移约 1/8 格（≤7dp）、底边压到格线；iOS 周视图按 `staggerMinutes` 归回原大节，同样微移。快照新增可选字段 `staggerMinutes`，旧小组件忽略。
+- 验证：`:shared:desktopTest` 全过（含新增 `StaggeredClassTimeRenderTest`，合成课表出图于 `shared/build/reports/staggered-class-time/`，浅/深色、整节错峰、混排、关闭开关均人工看过）；iOS 签名模拟器 `xcodebuild` Debug（含小组件 Swift）`BUILD SUCCEEDED`；`:androidApp:assembleDebug`、`:desktopApp:compileKotlin`、`:windowsApp:compileKotlinWindows`、`:shared:compileKotlinIos{SimulatorArm64,Arm64}` 通过；PR CI 全绿。
+- 未验证：真实课表里 YF/SX 地点文本格式（按既有 fixture `海淀西校区,思源西楼,SX501` 推断）；模拟器/真机中的设置页开关、首页卡片和 iOS 周视图小组件实际观感。
+
+## 2026-10-14 Android 桌面课表小组件（PR #17 `feat/android-widgets`，经 PR #19 `fix/merge-android-widgets` 补合入 main，1.8.4-Candidate2 / Build 36）
+
+- 改动：临近课程（2×2/4×2）、今日课程（4×2/4×4）、本周课表（4×4），与 iOS 同一份快照与版式规则。展示逻辑在 shared `feature/widget/CourseWidgetModel.kt`（可测，与 Swift 一一对应）；快照写到应用私有目录 `files/course-widget.json`（`CourseWidgetStore.android.kt`），写入后回调 `CourseWidgetUpdater.updateAll`；渲染为原生 RemoteViews（`androidApp/.../kmp/widget/`），不引入 Glance 等新库。
+- 版式：以 iOS 尺寸为基准按实际宽高等比缩放字号（0.9–1.25），两栏共用字号，单行按估算宽度缩字；周视图按行高/列宽计算每块可放几行。深浅色走 values-night，类别文字色在 Android 12+ 用资源色；Android 12+ 按桌面上报的每个尺寸各排一份；容器 16dp 圆角（Android 12+ 用系统圆角）。
+- 刷新：非唤醒 RTC 闹钟，上课时段逐分钟、其它时间按课程起止且最多 15 分钟；不申请精确闹钟权限。
+- 同分支附带 iOS 中号“临近课程”溢出修复：栏标签/课名/地点/时间加 `minimumScaleFactor`，剩余时间窄栏短写“1 小时 15 分”。
+- 排版教训：RemoteViews 超出卡片的内容会被直接裁掉，不像 iOS 按行截断；中文字体行高实测约 1.7 倍字号（`line` 常量），估高要偏大；先 `shrinkToFit` 整体缩小保住完整版式，再决定是否丢次要内容（今日课程脚注）；小号“下一节”是核心信息，按“整体缩小 → 长课名压成一行 → 最后才丢它”让步（`planSmall`）。桌面上报高度比实际显示小约 30dp，估高时补回 18dp（`SIZE_SLACK_DP`）；课名只超出可用宽度 15% 以内时缩字单行；XML 与代码里不要各加一份外边距。
+- 合并事故：#17 的 base 是 `feat/staggered-second-slot`，该分支在 #17 合并前 33 秒已通过 #16 合入 main，#17 的改动（`1f37b8e`）因此没有进入 main，`debug-1.8.4-Candidate` 的 APK 没有小组件。PR #19 无冲突补合 `1f37b8e`，并把版本改为 1.8.4-Candidate2（Android versionCode/iOS CFBundleVersion 35→36，`AppUpdateChecker.CURRENT_VERSION` 及测试）；打包标签 `debug-1.8.4-Candidate2`（`ea0f760f`）。教训：叠加分支的 PR 合并前先确认 base 仍是 main，或先把 base 改成 main。
+- 背景：此前一版 Android 小组件 PR #15 因实现质量不达标被用户关闭，远端分支已删除；#17 为独立实现。
+- 验证：`:shared:desktopTest` 全过（新增 `CourseWidgetModelTest`）；`:androidApp:assembleDebug`、`lintDebug`、桌面/Windows/iOS Kotlin 编译通过；iOS 签名模拟器 xcodebuild 成功。Pixel 10 Pro XL 模拟器（API 37）用合成快照实测三种小组件、深浅色、错峰下移、分钟倒计时刷新。Candidate2 debug 包 `adb install -r` 到荣耀 AAK-AN00 与小米 25091RP04C 成功。
+- 未验证：Android 12 以下系统；真实登录后由 App 写入快照的链路；iOS 溢出修复的实际观感（只编译）。
+
+## 2026-10-14 取消 PR 触发 iOS IPA 打包（PR #18，`fix/ci-no-pr-ios-package`）
+
+- 改动：`kmp-package.yml` 的 `pull_request` 触发器按 `iosApp/**` 等路径触发，iOS 任务的 `if` 未排除 PR 事件，修改 iOS 相关文件的 PR 也会打 Debug IPA。移除 `pull_request` 触发器；打包改为推 `v*`/`debug-*` 标签或手动 `workflow_dispatch`。PR 检查只剩 `kmp-security-check`。
+- 验证：仅 CI。之后 PR #20 只触发 `kmp-security-check` 的 2 项（Android 编译、iOS 编译与 macOS 测试），没有打包任务。
+
+## 2026-10-14 去掉荣耀 honorcard 标记，修复 MagicOS 找不到小组件（PR #20，`fix/honor-widget-visibility`）
+
+- 现象：带 `com.hihonor.widget.type=honorcard` 的 Candidate2 在荣耀 AAK-AN00（MagicOS 11.0.0.109 / Android 17）上，服务卡片与经典小组件入口都找不到本应用。
+- 改动：删除 `AndroidManifest.xml` 三个小组件 receiver 上的 honorcard meta-data，只保留标准 AppWidget。
+- 原因/决策：荣耀卡片除该标记外，还需在荣耀开发者平台「智慧服务」登记服务（签合作协议、包名与 versionCode/minSdk、SHA256 证书指纹、各规格 4 倍截图、AppWidgetProvider 类名、测试名单与审核）。荣耀文档称该标记不影响原有显示，但实测未登记时 MagicOS 会把小组件整体隐藏。用户决定不接入荣耀服务卡片，走标准小组件；后续只视情况优化 Android 小组件显示。若将来接入，审核要求还包括：系统裁圆角、不用透明背景、安全边距 ≥12dp、文字用 dp、列表按压反馈（浅色 5% 黑/深色 10% 白）、深色背景 `#262626`、未登录/加载/无网兜底、点击直达落地页。
+- 验证：`./gradlew :androidApp:assembleDebug` 成功；`aapt2 dump xmltree` 确认 APK 无 hihonor、三个 provider 仍在；荣耀 `adb install -r` 后 `dumpsys appwidget` 识别三个 provider，用户确认桌面经典小组件列表可见；小米 25091RP04C（Android 16）同样识别。PR CI：Android 编译通过；用户合并时 iOS 编译与 macOS 测试仍在运行（结果未记录）。
+- 未验证：荣耀上添加后的实际渲染、尺寸与刷新；折叠屏尺寸。
