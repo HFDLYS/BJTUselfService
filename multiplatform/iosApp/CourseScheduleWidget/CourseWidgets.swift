@@ -126,7 +126,7 @@ private struct UpNextMedium: View {
             return Text("\(dayName(upNext.primary.start, now: model.now))第一节")
         }
         if upNext.primary.isOngoing(at: model.now) {
-            return Text("当前 · 还剩 \(remainingText(until: upNext.primary.end, now: model.now))")
+            return Text("当前 · 还剩 \(remainingText(until: upNext.primary.end, now: model.now, short: true))")
         }
         return Text("下一节")
     }
@@ -139,19 +139,23 @@ private struct UpNextMedium: View {
                     .fill(Color(hex: occurrence.session.color))
                     .frame(width: 4)
                 VStack(alignment: .leading, spacing: tight ? 1 : 2) {
+                    // 长课名（“马克思主义基本原理”）先缩到 0.7 倍再截断。
                     Text(occurrence.session.name)
                         .font(.title3.weight(.bold))
                         .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     let detail = occurrence.session.place.isEmpty ? occurrence.session.teacher : occurrence.session.place
                     if !detail.isEmpty {
                         Text(detail)
                             .font(tight ? .footnote : .subheadline)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                     Text(timeRange(occurrence))
                         .font((tight ? Font.footnote : .subheadline).monospacedDigit())
                         .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
             }
             .fixedSize(horizontal: false, vertical: true)
@@ -168,6 +172,8 @@ private struct ColumnLabel: View {
             .font(tight ? .footnote : .subheadline)
             .foregroundStyle(.secondary)
             .lineLimit(1)
+            // 中号半栏只有约 140pt：“当前 · 还剩 1 小时 15 分”放不下时先缩字，不截断。
+            .minimumScaleFactor(0.7)
     }
 }
 
@@ -362,6 +368,7 @@ private struct TodayRow: View {
                     Text(occurrence.session.name)
                         .font(.subheadline.weight(.semibold))
                         .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                     if ongoing { Badge(text: "进行中", color: color) }
                     if occurrence.session.isLab { Badge(text: "实验", color: .secondary) }
                     if occurrence.session.kind == "exam" { Badge(text: "考试", color: .secondary) }
@@ -796,11 +803,12 @@ private func roomAndTeacher(_ session: CourseWidgetSession) -> String {
 }
 
 /// “13 分钟”“1 小时 5 分钟”：按整分钟向上取整，不显示秒。
-func remainingText(until end: Date, now: Date) -> String {
+/// `short` 用于窄栏标签：超过 1 小时写“1 小时 5 分”，省掉末尾的“钟”。
+func remainingText(until end: Date, now: Date, short: Bool = false) -> String {
     let minutes = max(1, Int((end.timeIntervalSince(now) / 60).rounded(.up)))
     if minutes < 60 { return "\(minutes) 分钟" }
     let hours = minutes / 60, rest = minutes % 60
-    return rest == 0 ? "\(hours) 小时" : "\(hours) 小时 \(rest) 分钟"
+    return rest == 0 ? "\(hours) 小时" : "\(hours) 小时 \(rest) 分\(short ? "" : "钟")"
 }
 
 private func detailLine(_ session: CourseWidgetSession) -> String {

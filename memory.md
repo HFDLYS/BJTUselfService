@@ -1,18 +1,27 @@
 # BJTUselfService 实时工作记忆
 
 > 最后更新：2026-10-14。
-> 当前分支：`feat/staggered-second-slot`，基于 `mine/main@4dcb378`（PR #13、#14 已合入）。
+> 当前分支：`feat/android-widgets`（基于 `feat/staggered-second-slot`）。PR #16（错峰上课）CI 全绿、待合入；打包标签 `debug-1.8.4-Beta-staggered` 成功。
 > KMP 应用版本：`1.8.4-Beta3` / Build 35（macOS/Windows 安装包数值版本 1.8.4）。正式 Latest 仍为 `v1.8.3-KMP`。
 > 冻结原 Android：`v1.7.1` / versionCode 9（对照 `origin/main@7d94f74`）。
 > 已完成工作的细节见 `history_full.md` 末尾日志。
 
 ## 进行中
 
-- 第二节错峰上课（`feat/staggered-second-slot`，未提交）：第二节教室在逸夫教学楼（YF）/思源西楼（SX）时按 10:30–12:20。设置页新增开关「错峰上课时间」（默认开，`AppPreferences.staggeredSecondSlot`）。规则在 `domain/course/StaggeredClassTime.kt`（楼名或 `YF/SX+数字` 教室号；思源楼/思源东楼/威海逸夫楼不算；实验/考试不参与）。
+- 第二节错峰上课（PR #16，`feat/staggered-second-slot`，CI 全绿，待合入）：第二节教室在逸夫教学楼（YF）/思源西楼（SX）时按 10:30–12:20。设置页新增开关「错峰上课时间」（默认开，`AppPreferences.staggeredSecondSlot`）。规则在 `domain/course/StaggeredClassTime.kt`（楼名或 `YF/SX+数字` 教室号；思源楼/思源东楼/威海逸夫楼不算；实验/考试不参与）。
   - 精确时间：课程详情（含“（错峰）”）、按日列表卡片与整节均错峰时的节次标签、首页“现在/下一节”与日程、iOS 小组件快照 start/end、日历导出。
   - 只下移不加节：课表网格色块顶边下移约 1/8 格（≤7dp）、底边压到格线；iOS 周视图按 `staggerMinutes` 归回原大节，同样微移。快照新增可选字段 `staggerMinutes`，旧小组件忽略。
   - 已验证：`:shared:desktopTest` 全过（含新增 `StaggeredClassTimeRenderTest`，合成课表出图于 `shared/build/reports/staggered-class-time/`，浅/深色、整节错峰、混排、关闭开关均人工看过）；iOS 签名模拟器 `xcodebuild` Debug（含小组件 Swift）`BUILD SUCCEEDED`；`:androidApp:assembleDebug`、`:desktopApp:compileKotlin`、`:windowsApp:compileKotlinWindows`、`:shared:compileKotlinIos{SimulatorArm64,Arm64}` 通过。
   - 未验证：真实课表里 YF/SX 地点文本格式（按既有 fixture `海淀西校区,思源西楼,SX501` 推断）；模拟器/真机中的设置页开关、首页卡片和 iOS 周视图小组件实际观感。
+- Android 桌面小组件（`feat/android-widgets`，基于 PR #16 分支）：临近课程（2×2/4×2）、今日课程（4×2/4×4）、本周课表（4×4），与 iOS 同一份快照与版式规则。
+  - 实现：展示逻辑在 shared `feature/widget/CourseWidgetModel.kt`（可测，与 Swift 一一对应）；快照写到应用私有目录 `files/course-widget.json`（`CourseWidgetStore.android.kt`），写入后回调 `CourseWidgetUpdater.updateAll`；渲染为原生 RemoteViews（`androidApp/.../kmp/widget/`），不引入 Glance 等新库。
+  - 版式：以 iOS 尺寸为基准按实际宽高等比缩放字号（0.9–1.25），两栏共用字号，单行按估算宽度缩字；周视图按行高/列宽计算每块可放几行。深浅色走 values-night，类别文字色在 Android 12+ 用资源色。Android 12+ 按桌面上报的每个尺寸各排一份。
+  - 刷新：非唤醒 RTC 闹钟，上课时段逐分钟、其它时间按课程起止且最多 15 分钟；不申请精确闹钟权限。
+  - 荣耀：receiver 加 `com.hihonor.widget.type=honorcard`；容器 16dp 圆角（Android 12+ 用系统圆角）。
+  - 同分支附带 iOS 中号“临近课程”溢出修复：栏标签/课名/地点/时间加 `minimumScaleFactor`，剩余时间窄栏短写“1 小时 15 分”。
+  - 已验证：`:shared:desktopTest` 全过（新增 `CourseWidgetModelTest`）；`:androidApp:assembleDebug`、`lintDebug`、桌面/Windows/iOS Kotlin 编译通过；iOS 签名模拟器 xcodebuild 成功。Pixel 10 Pro XL 模拟器（API 37）用合成快照实测三种小组件、深浅色、错峰下移、分钟倒计时刷新。
+  - 未验证：荣耀真机（服务中心入口、16dp 容器、折叠屏尺寸）；Android 12 以下系统；真实登录后由 App 写入快照的链路；iOS 溢出修复的实际观感（只编译）。
+  - 备注：此前有一版 Android 小组件 PR #15（`feat/android-course-widgets`）已关闭未合并，本次为独立实现。
 
 ## 当前痛点
 

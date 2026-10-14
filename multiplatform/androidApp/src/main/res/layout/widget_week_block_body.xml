@@ -1,0 +1,30 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/week_block_body"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingStart="3dp"
+    android:paddingEnd="3dp"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp">
+    <TextView
+        android:id="@+id/week_block_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="10.5dp"
+        android:textColor="@color/widget_text_primary"
+        android:maxLines="4"
+        android:ellipsize="end"
+        android:includeFontPadding="false"
+        android:fontFamily="sans-serif-medium" />
+    <TextView
+        android:id="@+id/week_block_place"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="9dp"
+        android:textColor="@color/widget_text_primary"
+        android:maxLines="3"
+        android:ellipsize="end"
+        android:includeFontPadding="false"
+        android:alpha="0.8" android:layout_marginTop="2dp" />
+</LinearLayout>

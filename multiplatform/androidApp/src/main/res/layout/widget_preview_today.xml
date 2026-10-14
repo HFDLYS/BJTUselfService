@@ -1,0 +1,35 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:clipToOutline="true"
+    android:padding="@dimen/widget_padding">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="10.14" android:textSize="14sp" android:textColor="@color/widget_text_primary" android:maxLines="1" android:includeFontPadding="false" android:fontFamily="sans-serif-medium" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="周三" android:textSize="14sp" android:textColor="@color/widget_weekday" android:maxLines="1" android:includeFontPadding="false" android:fontFamily="sans-serif-medium" android:layout_marginStart="4dp" />
+            <FrameLayout android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="第 5 周" android:textSize="11sp" android:textColor="@color/widget_text_primary" android:maxLines="1" android:includeFontPadding="false" android:background="@drawable/widget_capsule" android:paddingStart="7dp" android:paddingEnd="7dp" android:paddingTop="2dp" android:paddingBottom="2dp" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:orientation="horizontal">
+            <ImageView android:layout_width="3dp" android:layout_height="match_parent" android:scaleType="fitXY" android:src="@drawable/widget_bar" android:tint="#D9574E" />
+            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="6dp" android:orientation="vertical">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="大学物理" android:textSize="15sp" android:textColor="@color/widget_text_primary" android:maxLines="1" android:includeFontPadding="false" android:fontFamily="sans-serif-medium" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="思源西楼 SX305  王老师" android:textSize="12sp" android:textColor="@color/widget_text_secondary" android:maxLines="1" android:includeFontPadding="false" android:layout_marginTop="2dp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="10:30 - 12:20" android:textSize="12sp" android:textColor="@color/widget_text_primary" android:maxLines="1" android:includeFontPadding="false" android:layout_marginTop="2dp" />
+            </LinearLayout>
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:orientation="horizontal">
+            <ImageView android:layout_width="3dp" android:layout_height="match_parent" android:scaleType="fitXY" android:src="@drawable/widget_bar" android:tint="#16A4A4" />
+            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="6dp" android:orientation="vertical">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="排球" android:textSize="15sp" android:textColor="@color/widget_text_primary" android:maxLines="1" android:includeFontPadding="false" android:fontFamily="sans-serif-medium" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="体育馆  赵老师" android:textSize="12sp" android:textColor="@color/widget_text_secondary" android:maxLines="1" android:includeFontPadding="false" android:layout_marginTop="2dp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="14:10 - 16:00" android:textSize="12sp" android:textColor="@color/widget_text_primary" android:maxLines="1" android:includeFontPadding="false" android:layout_marginTop="2dp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

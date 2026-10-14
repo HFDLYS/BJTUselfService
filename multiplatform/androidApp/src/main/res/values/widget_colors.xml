@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 桌面小组件配色：与 iOS 小组件、课程表色块同源；深色在 values-night。 -->
+<resources>
+    <color name="widget_background">#FFFFFFFF</color>
+    <color name="widget_text_primary">#FF1C1C1E</color>
+    <color name="widget_text_secondary">#FF8A8A8E</color>
+    <color name="widget_text_tertiary">#FFB8B8BC</color>
+    <color name="widget_separator">#FFDCDCE0</color>
+    <color name="widget_fill_badge">#1A000000</color>
+    <color name="widget_today_column">#0F000000</color>
+    <color name="widget_weekday">#FFE84554</color>
+    <color name="widget_kind_required_container">#FFF6D2D0</color>
+    <color name="widget_kind_required_content">#FF7D1F1A</color>
+    <color name="widget_kind_required_stroke">#8C7D1F1A</color>
+    <color name="widget_kind_limited_container">#FFF4D7E6</color>
+    <color name="widget_kind_limited_content">#FF9C3F70</color>
+    <color name="widget_kind_limited_stroke">#8C9C3F70</color>
+    <color name="widget_kind_elective_container">#FFDCE4FC</color>
+    <color name="widget_kind_elective_content">#FF2F4DB5</color>
+    <color name="widget_kind_elective_stroke">#8C2F4DB5</color>
+    <color name="widget_kind_pe_container">#FFD3F0EE</color>
+    <color name="widget_kind_pe_content">#FF0E6B69</color>
+    <color name="widget_kind_pe_stroke">#8C0E6B69</color>
+    <color name="widget_kind_unknown_container">#FFE7E7E9</color>
+    <color name="widget_kind_unknown_content">#FF5F6368</color>
+    <color name="widget_kind_unknown_stroke">#8C5F6368</color>
+    <color name="widget_kind_lab_container">#FFEADBFA</color>
+    <color name="widget_kind_lab_content">#FF64368E</color>
+    <color name="widget_kind_lab_stroke">#8C64368E</color>
+    <color name="widget_kind_exam_container">#FFFFE6C8</color>
+    <color name="widget_kind_exam_content">#FFAF641C</color>
+    <color name="widget_kind_exam_stroke">#8CAF641C</color>
+</resources>

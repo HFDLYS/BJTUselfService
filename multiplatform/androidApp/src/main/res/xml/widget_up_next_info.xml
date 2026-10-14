@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Google 小组件规范：targetCell 给 Android 12+，minWidth/minHeight 给旧系统（n×73−16dp）；30 分钟兜底刷新，
+     实际按课程起止由闹钟重排。 -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_up_next_description"
+    android:initialLayout="@layout/widget_loading"
+    android:previewLayout="@layout/widget_preview_up_next"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="110dp"
+    android:maxResizeWidth="530dp"
+    android:maxResizeHeight="260dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen" />
