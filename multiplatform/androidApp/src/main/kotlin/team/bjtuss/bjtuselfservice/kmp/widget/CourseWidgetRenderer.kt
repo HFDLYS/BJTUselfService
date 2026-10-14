@@ -57,7 +57,9 @@ internal class CourseWidgetRenderer(private val context: Context) {
 
     private fun setCanvas(family: CourseWidgetSize, width: Float, height: Float) {
         widthDp = width
-        heightDp = height
+        // 桌面上报的尺寸是保守下限：Pixel 启动器上实测比实际显示小约 30dp（2 行格子上报 226、实际 256）。
+        // 估高时补回 18dp（取一半，留余量给上报值更接近实际的桌面），否则两节课明明放得下却被缩小、留出空位。
+        heightDp = height + SIZE_SLACK_DP
         val (baseWidth, baseHeight) = when (family) {
             CourseWidgetSize.SMALL -> 158f to 158f
             CourseWidgetSize.MEDIUM -> 338f to 158f
@@ -247,8 +249,7 @@ internal class CourseWidgetRenderer(private val context: Context) {
     private fun planSmall(upNext: WidgetUpNext, model: CourseWidgetDisplayModel): SmallPlan {
         val start = scale
         fun usable() = heightDp - 32f - 28f * scale - (if (upNext.isFutureDay) 24f * scale else 0f)
-        fun lines(forceOne: Boolean) =
-            if (forceOne) 1 else estimatedLines(upNext.primary.session.name, 17f * scale, textWidthSmall()).coerceIn(1, 2)
+        fun lines(forceOne: Boolean) = smallNameLines(upNext.primary.session.name, 17f * scale, forceOne)
         fun needed(forceOne: Boolean, withSecondary: Boolean) =
             smallPrimaryHeight(upNext.primary, model, lines(forceOne)) +
                 (if (withSecondary && upNext.secondary != null) smallSecondaryHeight() else 0f)
@@ -275,6 +276,8 @@ internal class CourseWidgetRenderer(private val context: Context) {
                 if (upNext.isFutureDay) root.add(statusLine(model.todayStatus))
                 root.add(group(detailedBlock(upNext.primary, model, smallPlan.nameMaxLines), 9f))
                 upNext.secondary?.takeIf { smallPlan.showSecondary }?.let { secondary ->
+                    // 放得下两节时，多出的高度均分：一半留在两节课之间，一半在底部，不全堆在卡片下方。
+                    root.spacer()
                     root.add(group(views(R.layout.widget_block_title).apply {
                         tintBar(R.id.bar, accent(secondary))
                         setTextViewText(R.id.block_name, secondary.session.name)
@@ -304,6 +307,10 @@ internal class CourseWidgetRenderer(private val context: Context) {
     /** 小号“下一节”标题行的估算高度：上边距 9 + 课名 + 时间。 */
     private fun smallSecondaryHeight(): Float = 9f * scale + 15f * line * scale + 2f + 12f * 1.4f * scale
 
+    /** 课名放几行：全宽放得下、或只要缩小不超过 15% 就能单行放下时是 1 行，否则 2 行。 */
+    private fun smallNameLines(name: String, size: Float, forceOne: Boolean = false): Int =
+        if (forceOne || textWidth(name, size) <= textWidthSmall() / 0.85f) 1 else 2
+
     /** 小号课程块文字可用宽度：内边距 32、色条 3、间距 6。 */
     private fun textWidthSmall() = widthDp - 32f - 3f - 6f
 
@@ -311,8 +318,10 @@ internal class CourseWidgetRenderer(private val context: Context) {
         views(R.layout.widget_block_detailed).apply {
             tintBar(R.id.bar, accent(occurrence))
             setTextViewText(R.id.block_name, occurrence.session.name)
-            size(R.id.block_name, 17f)
-            setInt(R.id.block_name, "setMaxLines", nameMaxLines)
+            val lines = if (nameMaxLines == 1) 1 else smallNameLines(occurrence.session.name, 17f * scale)
+            if (lines == 1) fit(R.id.block_name, occurrence.session.name, 17f, textWidthSmall(), 0.8f)
+            else size(R.id.block_name, 17f)
+            setInt(R.id.block_name, "setMaxLines", lines)
             val detail = occurrence.session.roomAndTeacher()
             setTextViewText(R.id.block_detail, detail)
             fit(R.id.block_detail, detail, 12.5f, textWidthSmall())
@@ -416,7 +425,7 @@ internal class CourseWidgetRenderer(private val context: Context) {
      */
     fun today(model: CourseWidgetDisplayModel, family: CourseWidgetSize, width: Float, heightDp: Float): RemoteViews {
         setCanvas(family, width, heightDp)
-        return frame { root -> todayContent(root, model, family == CourseWidgetSize.LARGE, heightDp) }
+        return frame { root -> todayContent(root, model, family == CourseWidgetSize.LARGE, this.heightDp) }
     }
 
     private fun todayContent(root: RemoteViews, model: CourseWidgetDisplayModel, large: Boolean, heightDp: Float) {
@@ -765,6 +774,9 @@ internal class CourseWidgetRenderer(private val context: Context) {
     private fun dp(value: Float): Int = (value * context.resources.displayMetrics.density + 0.5f).toInt()
 
     companion object {
+        /** 见 setCanvas：桌面上报高度与实际显示高度的差，取实测的一半。 */
+        private const val SIZE_SLACK_DP = 18f
+
         private val gapLayouts = intArrayOf(
             R.layout.widget_week_gap_1, R.layout.widget_week_gap_2, R.layout.widget_week_gap_3,
             R.layout.widget_week_gap_4, R.layout.widget_week_gap_5, R.layout.widget_week_gap_6, R.layout.widget_week_gap_7,
