@@ -5,7 +5,7 @@ name: Agent CLI smoke (Windows)
 on:
   push:
     branches:
-      - "feat/ai-agent"
+      - "feat/ai-agent*"
   pull_request:
     paths:
       - ".github/workflows/agent-cli-windows.yml"
@@ -66,3 +66,23 @@ jobs:
           if ($json.schemaVersion -ne 1 -or -not $json.error) { throw "unexpected JSON" }
           $bad = Invoke-Cli "agent calendar --from 2026-13-01"
           if ($bad.Code -ne 64) { throw "expected usage exit 64" }
+
+      - name: Install skill and call through bjtu.cmd
+        run: |
+          $exe = (Resolve-Path "windowsApp\build\compose\binaries\main\app\BJTUselfServiceKMP\BJTUselfServiceKMP.exe").Path
+          $psi = New-Object Diagnostics.ProcessStartInfo $exe, "agent install --no-claude"
+          $psi.RedirectStandardOutput = $true; $psi.RedirectStandardError = $true; $psi.UseShellExecute = $false
+          $psi.StandardOutputEncoding = [Text.Encoding]::UTF8; $psi.StandardErrorEncoding = [Text.Encoding]::UTF8
+          $p = [Diagnostics.Process]::Start($psi); $out = $p.StandardOutput.ReadToEnd(); $err = $p.StandardError.ReadToEnd(); $p.WaitForExit()
+          Write-Host "install exit=$($p.ExitCode)`n$out`n$err"
+          if ($p.ExitCode -ne 0) { throw "install failed" }
+          $cmd = Join-Path $env:LOCALAPPDATA "BJTUselfServiceKMP\bin\bjtu.cmd"
+          $skill = Join-Path $env:USERPROFILE ".agents\skills\bjtu-self-service\SKILL.md"
+          if (-not (Test-Path $cmd) -or -not (Test-Path $skill)) { throw "files missing" }
+          $json = & $cmd status --json | Out-String
+          Write-Host "bjtu.cmd status exit=$LASTEXITCODE`n$json"
+          if ($LASTEXITCODE -ne 2) { throw "expected exit 2 through bjtu.cmd" }
+          if (($json | ConvertFrom-Json).schemaVersion -ne 1) { throw "bad JSON through bjtu.cmd" }
+          & $exe agent uninstall | Out-String | Write-Host
+          if ((Test-Path $cmd) -or (Test-Path $skill)) { throw "uninstall left files" }
+          exit 0

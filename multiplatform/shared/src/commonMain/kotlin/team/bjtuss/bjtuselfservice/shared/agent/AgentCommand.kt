@@ -29,11 +29,6 @@ object AgentExit {
 
 const val AGENT_SCHEMA_VERSION = 1
 
-/** 数据范围开关（PR B 在设置页提供 UI）；成绩默认不开放。 */
-object AgentScopes {
-    const val GRADES_SETTING = "agent.scope.grades"
-}
-
 /** 打开缓存的结果由平台层提供；命令本身是纯逻辑，便于测试。 */
 fun interface AgentSnapshotProvider {
     fun load(today: LocalDate): AgentSnapshotResult
@@ -54,6 +49,7 @@ val AGENT_USAGE = """
       grades                          需要在 App 设置里允许
       citel                           CITEL 任务列表（元数据）
       cache read <courses|homework|exams|grades|citel|calendar> [同上选项]
+      install [--no-claude] | uninstall | doctor   安装/移除 Skill 与启动脚本，检查环境（仅桌面端）
     范围: --today | --tomorrow | --week [N] | --date YYYY-MM-DD | --from YYYY-MM-DD --to YYYY-MM-DD
           （calendar 默认今天起 7 天；courses 默认本周）
     筛选（可组合，多值用逗号或重复参数）:
