@@ -37,6 +37,15 @@ private const val CAPTCHA_VERIFICATION_ARGUMENT = "--verify-captcha-model="
 private const val SYNC_STATUS_SMOKE_ARGUMENT = "--sync-status-smoke"
 
 fun main(args: Array<String>) {
+    if (args.firstOrNull() == "agent") {
+        // AI Agent 命令行：在任何 AWT 类加载前切到 headless，不出现 Dock 图标、不打开窗口。
+        System.setProperty("java.awt.headless", "true")
+        val code = team.bjtuss.bjtuselfservice.shared.agent.runAgentCli(
+            args.drop(1),
+            team.bjtuss.bjtuselfservice.shared.agent.macOsAgentCliPlatform(),
+        )
+        kotlin.system.exitProcess(code)
+    }
     if ("--sync-timing" in args) {
         // Enable only sanitized timing events; general business/debug logs stay off.
         team.bjtuss.bjtuselfservice.shared.logging.SyncTiming.sink = { println(it) }
