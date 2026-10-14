@@ -136,6 +136,22 @@ class AgentCacheUpdateTest {
         assertFalse(File(directory, "bjtuselfservice_cache.db").exists())
     }
 
+    @Test
+    fun invalidOptionsNeverReadSecurityOrCreateLock() {
+        val platform = AgentCliPlatform(directory, { error("must not read key") }, { error("must not read account") })
+        assertEquals(AgentExit.USAGE, runCacheUpdate(listOf("--password", "secret"), platform).exitCode)
+        assertTrue(directory.listFiles().orEmpty().isEmpty())
+    }
+
+    @Test
+    fun failedGateReleasesLockAndPreservesCachedProfile() {
+        writeCache()
+        runCacheUpdate(emptyList(), platform(remember = false))
+        assertNotNull(AgentAppLock.tryAcquire(directory)).close()
+        val store = openExistingCacheStoreReadOnly(File(directory, "bjtuselfservice_cache.db"), key.copyOf())
+        try { assertEquals("20990001", store.cachedProfile("20990001")?.studentId) } finally { store.close() }
+    }
+
     // endregion
 
     private fun writeCache() {

@@ -1,7 +1,7 @@
 # BJTUselfService 实时工作记忆
 
 > 最后更新：2026-10-14。
-> 当前分支：`main`（`ea0f760f`，已含 PR #16 错峰上课、#17 Android 小组件、#18、#19）。2026-10-14 已用 adb 把 `1.8.4-Candidate2` debug 包装到荣耀真机（AAK-AN00），待用户真机验证小组件与错峰时间；下方“进行中”两项已合入，待移入 `history_full.md`。
+> 当前分支：`feat/ai-agent-sync`（PR #24，真实刷新及补充测试已通过）。main 为 `ea0f760f`，已含 PR #16/#17/#18/#19；荣耀 Candidate2 真机验证仍待反馈。
 > KMP 应用版本：`1.8.4-Candidate2` / Build 36（macOS/Windows 安装包数值版本 1.8.4）。正式 Latest 仍为 `v1.8.3-KMP`。
 > 冻结原 Android：`v1.7.1` / versionCode 9（对照 `origin/main@7d94f74`）。
 > 已完成工作的细节见 `history_full.md` 末尾日志。
@@ -35,8 +35,9 @@
       - 写库前先拿锁；不建表、不迁移、不删库。
       - 只读“记住的密码”：不调用会清除凭据的 `AccountSecurityCoordinator.restore()`。记住的账号与缓存账号不一致时拒绝。
     - 退出码：3 登录失败，4 部分失败，6 App 在运行。Skill 规定：数据超过 4 小时时先问用户；同意后 App 关着就跑 `cache update`，App 开着就请用户在 App 里刷新；物理在线、CITEL 等只能在 App 里刷新。
-    - 已验证：`:shared:desktopTest` 863 项全过（编排、锁、四道关卡，其中包括“未记住密码时绝不清除凭据”）；四端编译通过。
-    - 未验证：真实网络登录和刷新（要等打包替换本机 App、关掉 App 后再跑）；Windows 端的验证码模型在 CLI 路径下的加载。
+    - 已验证：`:shared:desktopTest` 865 项全过（本轮新增参数拒绝、失败后释放锁与缓存保留回归）（编排、锁、四道关卡，其中包括“未记住密码时绝不清除凭据”）；四端编译通过。
+    - 2026-10-14 追加验证：`:shared:desktopTest :androidApp:assembleDebug :desktopApp:compileKotlin :windowsApp:compileKotlinWindows :shared:compileKotlinIosSimulatorArm64 :shared:compileKotlinIosArm64 :desktopApp:createDistributable` 成功；865 测试零失败。打包源码启动器真实 `agent cache update --json` 退出 0，login=ok，grades/courses/homework/exams 全 ok，academicCalendar=updated；未替换 /Applications 安装版；随后 status 的 freshness.stale 与 unknown 均为空。
+    - 未验证：Windows 端验证码模型在 CLI 路径下加载；Windows 真实网络刷新。
   - 后续：PR D（CITEL 题面和用例导出 Markdown，只在做题或拉全文时下载 I/O）、PR E（Mac 卸载清理）。
 - 荣耀小组件不可见修复（`fix/honor-widget-visibility`，PR 待合入）：带 `com.hihonor.widget.type=honorcard` 的 Candidate2 在荣耀 AAK-AN00（MagicOS 11.0.0.109 / Android 17）上服务卡片与经典小组件入口都找不到本应用；去掉三个 receiver 上的该 meta-data 后（`.artifacts/honor-no-honorcard-debug.apk`），`dumpsys appwidget` 识别三个 provider，用户确认桌面小组件列表里出现。结论：未配齐荣耀卡片所需配置时，honorcard 标记会让 MagicOS 把小组件整体隐藏；先走标准 AppWidget。小米 25091RP04C（Android 16）系统同样识别。未验证：荣耀上实际添加后的渲染、尺寸与刷新。荣耀「服务卡片/快服务」需在荣耀开发者平台智慧服务登记（签协议、SHA256 指纹、截图、审核），用户 2026-10-14 决定不做；后续只视情况优化安卓小组件显示。
 - 第二节错峰上课（PR #16，`feat/staggered-second-slot`，CI 全绿，待合入）：第二节教室在逸夫教学楼（YF）/思源西楼（SX）时按 10:30–12:20。设置页新增开关「错峰上课时间」（默认开，`AppPreferences.staggeredSecondSlot`）。规则在 `domain/course/StaggeredClassTime.kt`（楼名或 `YF/SX+数字` 教室号；思源楼/思源东楼/威海逸夫楼不算；实验/考试不参与）。
