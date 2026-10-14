@@ -1,7 +1,7 @@
 # BJTUselfService 实时工作记忆
 
 > 最后更新：2026-10-14。
-> 当前分支：`feat/ai-agent-citel`（PR D 实现与验证中，基于 PR #24）。C 已真实刷新通过；Windows CI 旧 Skill 路径误报已在 `2bb94bb5` 修复。main 为 `ea0f760f`。
+> 当前分支：`feat/ai-agent-uninstall`（PR E 实现中，基于 PR D #25）。C #24、D #25 CI 全绿；E 四端构建/889 测试/签名 iOS 宿主通过，待 PR 审核。
 > KMP 应用版本：`1.8.4-Candidate2` / Build 36（macOS/Windows 安装包数值版本 1.8.4）。正式 Latest 仍为 `v1.8.3-KMP`。
 > 冻结原 Android：`v1.7.1` / versionCode 9（对照 `origin/main@7d94f74`）。
 > 已完成工作的细节见 `history_full.md` 末尾日志。
@@ -38,12 +38,16 @@
     - 已验证：`:shared:desktopTest` 865 项全过（本轮新增参数拒绝、失败后释放锁与缓存保留回归）（编排、锁、四道关卡，其中包括“未记住密码时绝不清除凭据”）；四端编译通过。
     - 2026-10-14 追加验证：`:shared:desktopTest :androidApp:assembleDebug :desktopApp:compileKotlin :windowsApp:compileKotlinWindows :shared:compileKotlinIosSimulatorArm64 :shared:compileKotlinIosArm64 :desktopApp:createDistributable` 成功；865 测试零失败。打包源码启动器真实 `agent cache update --json` 退出 0，login=ok，grades/courses/homework/exams 全 ok，academicCalendar=updated；未替换 /Applications 安装版；随后 status 的 freshness.stale 与 unknown 均为空。
     - 未验证：Windows 端验证码模型在 CLI 路径下加载；Windows 真实网络刷新。
-  - PR D（`feat/ai-agent-citel`，基于 #24）：按需获取编程题全文与公开/结果页用例，写入加密 `citel.problem.<模块id>`（校验 CITEL 用户名，切换账号不复用旧题面）。普通同步/打开详情不下载 I/O；详情页可获取、复制、保存 Markdown、导出文件夹；聚合作业导出带缓存全文。CLI `citel show <id> [--fetch] [--json]` / `citel export <id> --out <新目录> [--fetch]`，默认离线，联网前拿 App 锁；导出暂存后移动，拒绝覆盖已有目录。
+  - PR D #25（`feat/ai-agent-citel`，基于 #24）：按需获取编程题全文与公开/结果页用例，写入加密 `citel.problem.<模块id>`（校验 CITEL 用户名，切换账号不复用旧题面）。普通同步/打开详情不下载 I/O；详情页可获取、复制、保存 Markdown、导出文件夹；聚合作业导出带缓存全文。CLI `citel show <id> [--fetch] [--json]` / `citel export <id> --out <新目录> [--fetch]`，默认离线，联网前拿 App 锁；导出暂存后移动，拒绝覆盖已有目录。
     - 2026-10-14 CDP 复核：题目页 4 行 ×5 格，结果页 6 行 ×13 格，I/O text/plain UTF-8 CRLF；结果页链接无 showasplaintext class，按 href 提取；以 a/test/type 匹配公开用例身份，避免 download 参数导致重复。
     - 验证：`:shared:desktopTest :androidApp:assembleDebug :desktopApp:compileKotlin :windowsApp:compileKotlinWindows :shared:compileKotlinIosSimulatorArm64 :shared:compileKotlinIosArm64 :desktopApp:createDistributable` 成功，879 测试零失败；签名 arm64 模拟器 xcodebuild `BUILD SUCCEEDED`。fixture 渲染浅/深色、大字体、缓存详情已看图。
     - 打包启动器真实 `citel show 9265 --fetch --json` 退出 0：6 用例（4 公开，2 结果页），输入/期望输出完整；离线 show/export 退出 0，13 文件（problem.md + 6 对 I/O），逐文件字节与缓存一致。产物仅在忽略目录 `.artifacts/agent-d-real-export`。
-    - 未验证：四端原生保存面板、iOS/macOS 实际详情页操作；Windows 实机 CITEL 登录；题面图片仍保留原链接，不离线下载 assets。
-  - 后续：PR E（Mac 卸载清理，基于 D）。
+    - Mac fixture UI 在 E 的 `--agent-ui-smoke` 中实际点击获取全文、复制反馈，窄宽/深浅色正常；源码测试包与安装版使用不同 Bundle ID，测试结束已退出。
+    - 未验证：四端原生保存面板、iOS 实际详情页操作；Windows 实机 CITEL 登录；题面图片仍保留原链接，不离线下载 assets。
+  - PR E（`feat/ai-agent-uninstall`，基于 D #25）：Mac `agent uninstall-app [--yes]` 默认无副作用预览，执行前检查 App 包与锁，清理缓存目录、自己的 Preferences 节点、所有本 App Keychain 服务与管理的 Skill/脚本，最后原生 Trash API 移 App 到废纸篓。设置页共用清理器，新增卸载前清理；运行中保留空数据库和其加密密钥，避免破坏仍打开的 SQLite，下次退出 App 后用 CLI 完成删除。
+    - 验证：四端构建与 macOS createDistributable 成功，889 单测零失败（清理器 8 项：临时 HOME 删除、独立 Keychain 服务所有账号删除、偏好兄弟节点/共享 plist 保留、App 锁/未知包阻断、符号链接、部分失败保留 App、实时空库保留、临时 App 原生 Trash 往返恢复）。真实机仅运行 dry-run，输出在 `.artifacts/agent-e-dry-run.md`。
+    - Computer Use：纯内存 fixture 源码测试页验证获取/复制、卸载前确认/取消、窄宽与深浅色；测试进程已退出，安装版未关闭或替换。额外设置入口 2 测试通过；签名 arm64 模拟器 xcodebuild `BUILD SUCCEEDED`。
+    - 未验证：真实 App 完整卸载、真实设置清理后的重登录（按规则不删除真实用户数据）；iOS 实际详情交互、各端原生保存面板；Windows 不提供卸载清理。
 - 荣耀小组件不可见修复（`fix/honor-widget-visibility`，PR 待合入）：带 `com.hihonor.widget.type=honorcard` 的 Candidate2 在荣耀 AAK-AN00（MagicOS 11.0.0.109 / Android 17）上服务卡片与经典小组件入口都找不到本应用；去掉三个 receiver 上的该 meta-data 后（`.artifacts/honor-no-honorcard-debug.apk`），`dumpsys appwidget` 识别三个 provider，用户确认桌面小组件列表里出现。结论：未配齐荣耀卡片所需配置时，honorcard 标记会让 MagicOS 把小组件整体隐藏；先走标准 AppWidget。小米 25091RP04C（Android 16）系统同样识别。未验证：荣耀上实际添加后的渲染、尺寸与刷新。荣耀「服务卡片/快服务」需在荣耀开发者平台智慧服务登记（签协议、SHA256 指纹、截图、审核），用户 2026-10-14 决定不做；后续只视情况优化安卓小组件显示。
 - 第二节错峰上课（PR #16，`feat/staggered-second-slot`，CI 全绿，待合入）：第二节教室在逸夫教学楼（YF）/思源西楼（SX）时按 10:30–12:20。设置页新增开关「错峰上课时间」（默认开，`AppPreferences.staggeredSecondSlot`）。规则在 `domain/course/StaggeredClassTime.kt`（楼名或 `YF/SX+数字` 教室号；思源楼/思源东楼/威海逸夫楼不算；实验/考试不参与）。
   - 精确时间：课程详情（含“（错峰）”）、按日列表卡片与整节均错峰时的节次标签、首页“现在/下一节”与日程、iOS 小组件快照 start/end、日历导出。

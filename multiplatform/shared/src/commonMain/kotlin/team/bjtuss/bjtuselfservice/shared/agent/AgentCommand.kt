@@ -59,6 +59,7 @@ val AGENT_USAGE = """
       cache read <courses|homework|exams|grades|citel|calendar> [同上选项]
       cache update [grades,courses,homework,exams]   用记住的账号后台登录并刷新（App 开着时请在 App 里刷新）
       install [--no-claude] | uninstall | doctor   安装/移除 Skill 与启动脚本，检查环境（仅桌面端）
+      uninstall-app [--yes]            Mac 卸载清理：默认预览；--yes 才删除数据并将 App 移到废纸篓
     范围: --today | --tomorrow | --week [N] | --date YYYY-MM-DD | --from YYYY-MM-DD --to YYYY-MM-DD
           （calendar 默认今天起 7 天；courses 默认本周）
     筛选（可组合，多值用逗号或重复参数）:
