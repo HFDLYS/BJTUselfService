@@ -228,17 +228,40 @@ internal class CourseWidgetRenderer(private val context: Context) {
     }
 
     /** 小号：头部 + 大字课程块 + 下一节标题行，整体在剩余空间里略偏上居中。 */
+    /** 小号的取舍结果：课名最多几行、是否显示“下一节”。 */
+    private class SmallPlan(val nameMaxLines: Int, val showSecondary: Boolean)
+
+    private var smallPlan = SmallPlan(2, true)
+
     private fun upNextSmall(model: CourseWidgetDisplayModel): RemoteViews {
         val upNext = if (model.isRestPeriod) null else model.upNext
-        // 头部之前先定缩放：先整体缩小保住完整的课名与时间，再看“下一节”放不放得下。
-        if (upNext != null) {
-            shrinkToFit {
-                val lines = estimatedLines(upNext.primary.session.name, 17f * scale, textWidthSmall()).coerceIn(1, 2)
-                smallPrimaryHeight(upNext.primary, model, lines) <=
-                    heightDp - 32f - 28f * scale - (if (upNext.isFutureDay) 24f * scale else 0f)
+        if (upNext != null) smallPlan = planSmall(upNext, model)
+        return upNextSmallContent(model)
+    }
+
+    /**
+     * 头部之前先定缩放和取舍。RemoteViews 超出卡片的部分会被直接裁掉（不像 iOS 按行截断），
+     * 所以先估算高度；“下一节”是小号的核心信息，优先保住它，按下面的顺序让步：
+     * ① 整体缩小（到 0.82 倍）；② 长课名压成一行；③ 实在放不下才去掉“下一节”。
+     */
+    private fun planSmall(upNext: WidgetUpNext, model: CourseWidgetDisplayModel): SmallPlan {
+        val start = scale
+        fun usable() = heightDp - 32f - 28f * scale - (if (upNext.isFutureDay) 24f * scale else 0f)
+        fun lines(forceOne: Boolean) =
+            if (forceOne) 1 else estimatedLines(upNext.primary.session.name, 17f * scale, textWidthSmall()).coerceIn(1, 2)
+        fun needed(forceOne: Boolean, withSecondary: Boolean) =
+            smallPrimaryHeight(upNext.primary, model, lines(forceOne)) +
+                (if (withSecondary && upNext.secondary != null) smallSecondaryHeight() else 0f)
+        val tiers = if (upNext.secondary == null) listOf(false to false)
+        else listOf(false to true, true to true, false to false)
+        for ((forceOne, withSecondary) in tiers) {
+            scale = start
+            shrinkToFit { needed(forceOne, withSecondary) <= usable() }
+            if (needed(forceOne, withSecondary) <= usable()) {
+                return SmallPlan(if (forceOne) 1 else 2, withSecondary && upNext.secondary != null)
             }
         }
-        return upNextSmallContent(model)
+        return SmallPlan(1, false)
     }
 
     private fun upNextSmallContent(model: CourseWidgetDisplayModel) = frame { root ->
@@ -250,15 +273,8 @@ internal class CourseWidgetRenderer(private val context: Context) {
             }
             upNext != null -> {
                 if (upNext.isFutureDay) root.add(statusLine(model.todayStatus))
-                // RemoteViews 超出卡片的部分会被直接裁掉（不像 iOS 按行截断）：先估算高度，放不下就依次
-                // 去掉“下一节”、再把长课名压成一行，宁可少一行也不露半行。
-                val nameLines = estimatedLines(upNext.primary.session.name, 17f * scale, textWidthSmall()).coerceIn(1, 2)
-                val primaryHeight = smallPrimaryHeight(upNext.primary, model, nameLines)
-                val usable = heightDp - 32f - 28f * scale - (if (upNext.isFutureDay) 24f * scale else 0f)
-                val showSecondary = upNext.secondary != null && primaryHeight + smallSecondaryHeight() <= usable
-                val singleLine = !showSecondary && nameLines > 1 && primaryHeight > usable
-                root.add(group(detailedBlock(upNext.primary, model, if (singleLine) 1 else 2), 9f))
-                upNext.secondary?.takeIf { showSecondary }?.let { secondary ->
+                root.add(group(detailedBlock(upNext.primary, model, smallPlan.nameMaxLines), 9f))
+                upNext.secondary?.takeIf { smallPlan.showSecondary }?.let { secondary ->
                     root.add(group(views(R.layout.widget_block_title).apply {
                         tintBar(R.id.bar, accent(secondary))
                         setTextViewText(R.id.block_name, secondary.session.name)
@@ -279,13 +295,14 @@ internal class CourseWidgetRenderer(private val context: Context) {
 
     /** 小号“当前”块的估算高度：上边距 9 + 课名 + 地点 + 时间（+ 剩余时间）。 */
     private fun smallPrimaryHeight(occurrence: WidgetOccurrence, model: CourseWidgetDisplayModel, nameLines: Int): Float {
-        var height = 9f * scale + nameLines * 17f * line * scale + 2f + 12.5f * line * scale + 2f + 12.5f * line * scale
+        // 含中文的行约 1.7 倍字号，纯数字/字母的时间行实测约 1.4 倍。
+        var height = 9f * scale + nameLines * 17f * line * scale + 2f + 12.5f * line * scale + 2f + 12.5f * 1.4f * scale
         if (occurrence.isOngoing(model.now)) height += 2f + 11.5f * line * scale
         return height
     }
 
     /** 小号“下一节”标题行的估算高度：上边距 9 + 课名 + 时间。 */
-    private fun smallSecondaryHeight(): Float = 9f * scale + 15f * line * scale + 2f + 12f * line * scale
+    private fun smallSecondaryHeight(): Float = 9f * scale + 15f * line * scale + 2f + 12f * 1.4f * scale
 
     /** 小号课程块文字可用宽度：内边距 32、色条 3、间距 6。 */
     private fun textWidthSmall() = widthDp - 32f - 3f - 6f
