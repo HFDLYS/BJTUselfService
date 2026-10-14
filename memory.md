@@ -20,7 +20,13 @@
   - 用户决定（2026-10-14）：零点截止与首页一致，归到前一天 24:00，JSON 给出 `agendaDate`、`midnightDeadline` 和 `notes` 提醒 agent；筛选交给 agent 自己做，默认不再套用 App 作业页的筛选（`--app-filter` 可以显式套用），提供 `--source`、`--course`、`--kind`，并输出 `availableFilters`；`--all` 只表示连同没约的实验一起列出。
   - 未验证：零点截止和筛选这次改动还没在真实数据上跑（安装版是改动前打的包）；App 首页和作业页还没用上“未约实验”过滤。
   - 打包注意：`desktopApp/build.gradle.kts` 写死了 `packageBuildVersion = "35"`，1.8.4 改版本号时漏了，正式发版前要改成和 Build 号一致。
-  - 后续：PR B（Skill 装到 `~/.agents/skills`，设置页“AI 助手”和数据范围开关；本机 `~/.claude/skills` 是指向 `~/.agents/skills` 的软链接，不要重复建链接）、PR C（`cache update`）、PR D（CITEL 题面和用例导出 Markdown，只在做题或拉全文时下载 I/O）、PR E（Mac 卸载清理）。
+  - PR B（`feat/ai-agent-skill`，叠在 PR A 上）：设置页“AI 助手”卡片，只在桌面端显示。功能有：一键安装、重新安装、移除；“允许读取成绩”开关（`AppPreferences.agentGradesAllowed`，默认关）；一句可复制的话，粘贴给 agent 即可用。命令行新增 `agent install [--no-claude]`、`uninstall`、`doctor`。
+    - 安装位置：Skill 写到 `~/.agents/skills/bjtu-self-service/SKILL.md`。启动脚本在 macOS 是 `~/.local/bin/bjtu`，在 Windows 是 `%LOCALAPPDATA%\BJTUselfServiceKMP\bin\bjtu.cmd`，按系统代码页写；Skill 里写的是脚本的绝对路径，所以不用改 PATH。
+    - 只动自己写的文件：脚本里带标记注释，Skill 目录里带标记文件。目标位置已有别人的同名文件时拒绝覆盖，卸载也只删带标记的。
+    - Claude Code：`~/.claude/skills` 本身就是指向 `~/.agents/skills` 的软链接时不再另建；是普通目录时建软链接（Windows 建不了就复制一份）；同名位置被占用时不动。
+    - 已验证：`:shared:desktopTest` 853 项全过（安装器 8 项都在临时 HOME 里跑，包括真的执行生成的脚本、检查参数转发）；四端编译通过。Windows CI 补了 install → 经 `bjtu.cmd` 调用 → uninstall 的检查。
+    - 未验证：设置页卡片的实际观感（深浅色、窄窗口），以及打包后在真机上一键安装、粘贴给 Claude Code 的端到端效果。
+  - 后续：PR C（`cache update`）、PR D（CITEL 题面和用例导出 Markdown，只在做题或拉全文时下载 I/O）、PR E（Mac 卸载清理）。
 - 荣耀小组件不可见修复（`fix/honor-widget-visibility`，PR 待合入）：带 `com.hihonor.widget.type=honorcard` 的 Candidate2 在荣耀 AAK-AN00（MagicOS 11.0.0.109 / Android 17）上服务卡片与经典小组件入口都找不到本应用；去掉三个 receiver 上的该 meta-data 后（`.artifacts/honor-no-honorcard-debug.apk`），`dumpsys appwidget` 识别三个 provider，用户确认桌面小组件列表里出现。结论：未配齐荣耀卡片所需配置时，honorcard 标记会让 MagicOS 把小组件整体隐藏；先走标准 AppWidget。小米 25091RP04C（Android 16）系统同样识别。未验证：荣耀上实际添加后的渲染、尺寸与刷新。荣耀「服务卡片/快服务」需在荣耀开发者平台智慧服务登记（签协议、SHA256 指纹、截图、审核），用户 2026-10-14 决定不做；后续只视情况优化安卓小组件显示。
 - 第二节错峰上课（PR #16，`feat/staggered-second-slot`，CI 全绿，待合入）：第二节教室在逸夫教学楼（YF）/思源西楼（SX）时按 10:30–12:20。设置页新增开关「错峰上课时间」（默认开，`AppPreferences.staggeredSecondSlot`）。规则在 `domain/course/StaggeredClassTime.kt`（楼名或 `YF/SX+数字` 教室号；思源楼/思源东楼/威海逸夫楼不算；实验/考试不参与）。
   - 精确时间：课程详情（含“（错峰）”）、按日列表卡片与整节均错峰时的节次标签、首页“现在/下一节”与日程、iOS 小组件快照 start/end、日历导出。

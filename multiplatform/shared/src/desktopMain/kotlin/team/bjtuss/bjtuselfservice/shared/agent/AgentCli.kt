@@ -42,12 +42,16 @@ fun macOsAgentCliPlatform(): AgentCliPlatform = AgentCliPlatform(
 fun runAgentCli(
     args: List<String>,
     platform: AgentCliPlatform,
+    integration: () -> AgentIntegration = { DesktopAgentIntegration.forCurrentProcess() },
     out: PrintStream = utf8(System.out),
     err: PrintStream = utf8(System.err),
 ): Int {
     // sqlite-jdbc 依赖 SLF4J，未带实现时会往 stderr 打三行警告，干扰 agent 读取错误信息。
     System.setProperty("slf4j.internal.verbosity", "ERROR")
-    val output = runAgentCommand(args, cacheSnapshotProvider(platform), Clock.System.now())
+    val output = when (args.firstOrNull()) {
+        "install", "uninstall", "doctor" -> runIntegrationCommand(args, platform, integration())
+        else -> runAgentCommand(args, cacheSnapshotProvider(platform), Clock.System.now())
+    }
     if (output.stdout.isNotEmpty()) out.print(output.stdout)
     if (output.stderr.isNotEmpty()) err.println(output.stderr)
     out.flush()
@@ -84,7 +88,7 @@ private class CacheAgentSnapshotProvider(private val platform: AgentCliPlatform)
                 ?: return AgentSnapshotResult.Unavailable("缓存里有多个账号，且无法确定当前登录的是哪一个。请在 App 里重新登录一次。")
             AgentSnapshotResult.Ready(
                 snapshot = loadAgentSnapshot(store, account, today),
-                gradesAllowed = store.setting(AgentScopes.GRADES_SETTING) == "true",
+                gradesAllowed = runCatching { store.preferences().agentGradesAllowed }.getOrDefault(false),
                 appVersion = AppUpdateChecker.CURRENT_VERSION,
             )
         } catch (_: Exception) {
@@ -125,3 +129,43 @@ internal fun openExistingCacheStoreReadOnly(databaseFile: File, keyBytes: ByteAr
 
 private fun resolveAgentAccount(store: CacheStore, remembered: () -> String?): String? =
     resolveAgentAccount(store, null) ?: resolveAgentAccount(store, remembered())
+
+/** `install [--no-claude]` / `uninstall` / `doctor`：不需要读缓存（doctor 除外，会顺带检查缓存是否可读）。 */
+internal fun runIntegrationCommand(args: List<String>, platform: AgentCliPlatform, integration: AgentIntegration): AgentOutput =
+    when (args.first()) {
+        "install" -> integration.install(linkClaude = "--no-claude" !in args).toOutput()
+        "uninstall" -> integration.uninstall().toOutput()
+        else -> {
+            val status = integration.status()
+            val cache = cacheSnapshotProvider(platform).load(kotlinx.datetime.LocalDate(2000, 1, 1))
+            val report = buildString {
+                appendLine("# 交大自由行 AI 助手检查")
+                appendLine()
+                appendLine("- 安装状态：" + when {
+                    !status.installable -> status.unavailableReason
+                    !status.installed -> "未安装（在 App 设置“AI 助手”里安装，或运行 agent install）"
+                    status.stale -> "已安装，但版本或 App 路径已变化，请重新安装"
+                    else -> "已安装（${status.installedVersion}）"
+                })
+                appendLine("- Skill：${status.skillPath}")
+                appendLine("- 命令：${status.cliPath}")
+                appendLine("- Claude Code：" + when (status.claude) {
+                    ClaudeSkillLink.ABSENT -> "未检测到 ~/.claude"
+                    ClaudeSkillLink.SHARED -> "与 ~/.agents/skills 共用"
+                    ClaudeSkillLink.LINKED -> "已链接"
+                    ClaudeSkillLink.NOT_LINKED -> "未链接"
+                })
+                appendLine("- 缓存：" + when (cache) {
+                    is AgentSnapshotResult.Ready -> "可读取"
+                    is AgentSnapshotResult.Unavailable -> cache.reason
+                })
+            }
+            val healthy = status.installed && !status.stale && cache is AgentSnapshotResult.Ready
+            AgentOutput(report, exitCode = if (healthy) AgentExit.OK else AgentExit.NO_DATA)
+        }
+    }
+
+private fun AgentInstallResult.toOutput(): AgentOutput = when (this) {
+    is AgentInstallResult.Done -> AgentOutput(message + "\n")
+    is AgentInstallResult.Failed -> AgentOutput("", reason, AgentExit.NO_DATA)
+}

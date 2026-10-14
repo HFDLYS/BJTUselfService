@@ -36,6 +36,8 @@ data class AppPreferences(
     val aggregateAssignments: Boolean = true,
     /** 第二节在逸夫教学楼/思源西楼按 10:30–12:20 显示（错峰上课）。 */
     val staggeredSecondSlot: Boolean = true,
+    /** 是否允许本机 AI Agent 命令行读取成绩（默认否，其余数据由“AI 助手”安装后即可读）。 */
+    val agentGradesAllowed: Boolean = false,
 ) {
     val isPhysicsLabEnabled: Boolean get() = physicsLabEnabled == true
     val isCitelEnabled: Boolean get() = citelEnabled == true
@@ -381,6 +383,7 @@ class CacheStore(
         citelEnabled = setting(SettingKey.CITEL_ENABLED)?.toBooleanStrictOrNull(),
         aggregateAssignments = setting(SettingKey.AGGREGATE_ASSIGNMENTS)?.toBooleanStrictOrNull() ?: true,
         staggeredSecondSlot = booleanSetting(SettingKey.STAGGERED_SECOND_SLOT, true),
+        agentGradesAllowed = booleanSetting(SettingKey.AGENT_GRADES_ALLOWED, false),
         autoSyncPhyVlab = booleanSetting(SettingKey.AUTO_SYNC_PHYVLAB, true),
         currentWeek = setting(SettingKey.CURRENT_WEEK)?.toIntOrNull()?.coerceIn(0, 56) ?: 0,
         checkUpdate = booleanSetting(SettingKey.CHECK_UPDATE, true),
@@ -404,6 +407,7 @@ class CacheStore(
             putSetting(SettingKey.CITEL_ENABLED, preferences.citelEnabled?.toString() ?: "legacy")
             putSetting(SettingKey.AGGREGATE_ASSIGNMENTS, preferences.aggregateAssignments.toString())
             putSetting(SettingKey.STAGGERED_SECOND_SLOT, preferences.staggeredSecondSlot.toString())
+            putSetting(SettingKey.AGENT_GRADES_ALLOWED, preferences.agentGradesAllowed.toString())
             putSetting(SettingKey.AUTO_SYNC_PHYVLAB, preferences.autoSyncPhyVlab.toString())
             putSetting(SettingKey.CURRENT_WEEK, preferences.currentWeek.coerceIn(0, 56).toString())
             putSetting(SettingKey.CHECK_UPDATE, preferences.checkUpdate.toString())
@@ -595,6 +599,7 @@ private object SettingKey {
     const val CITEL_ENABLED = "citel_enabled"
     const val AGGREGATE_ASSIGNMENTS = "aggregate_assignments"
     const val STAGGERED_SECOND_SLOT = "staggered_second_slot"
+    const val AGENT_GRADES_ALLOWED = "agent_grades_allowed"
     const val AUTO_SYNC_PHYVLAB = "auto_sync_phyvlab"
     const val CURRENT_WEEK = "current_week"
     const val CHECK_UPDATE = "check_update"
