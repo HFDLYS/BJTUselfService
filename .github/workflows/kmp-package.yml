@@ -11,12 +11,8 @@ on:
       # debug-* 只打包并上传 Actions 产物，不创建 GitHub Release / pre-release，
       # 因此应用内更新检查不会把它当成全量更新。
       - "debug-*"
-  pull_request:
-    paths:
-      - ".github/workflows/kmp-package.yml"
-      - "multiplatform/scripts/stage-actions-artifact.py"
-      - "multiplatform/scripts/sign-ios-sideload-app.sh"
-      - "multiplatform/iosApp/**"
+  # 不再响应 pull_request：此前 iOS 任务未排除 PR，修改 iosApp/** 的 PR 会打 iOS IPA。
+  # 需要打包时推 debug-* 标签或手动 workflow_dispatch。
   workflow_dispatch:
 
 concurrency:
