@@ -37,6 +37,17 @@ private const val CAPTCHA_VERIFICATION_ARGUMENT = "--verify-captcha-model="
 private const val SYNC_STATUS_SMOKE_ARGUMENT = "--sync-status-smoke"
 
 fun main(args: Array<String>) {
+    if (args.firstOrNull() == "agent") {
+        // Spike: headless before any AWT class loads, so no Dock icon appears.
+        System.setProperty("java.awt.headless", "true")
+        val code = if (args.getOrNull(1) == "spike") {
+            team.bjtuss.bjtuselfservice.shared.agent.runAgentSpikeProbe(args.drop(2))
+        } else {
+            System.err.println("usage: agent spike ...")
+            64
+        }
+        kotlin.system.exitProcess(code)
+    }
     if ("--sync-timing" in args) {
         // Enable only sanitized timing events; general business/debug logs stay off.
         team.bjtuss.bjtuselfservice.shared.logging.SyncTiming.sink = { println(it) }
