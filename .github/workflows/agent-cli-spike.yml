@@ -56,6 +56,8 @@ jobs:
           Write-Host "dpapi exit=$LASTEXITCODE output=[$dpapi]"
           & $exe agent bogus 2>&1 | Out-String | Write-Host
           Write-Host "bogus exit=$LASTEXITCODE"
+          if ($LASTEXITCODE -ne 64) { throw "unexpected exit code" }
+          exit 0
 
       - name: Run exe with redirected handles (how agents spawn it)
         run: |
