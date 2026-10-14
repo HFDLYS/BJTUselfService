@@ -1,7 +1,6 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginTop="4dp">
+    android:layout_height="wrap_content">
     <ImageView
         android:id="@+id/row_background"
         android:layout_width="match_parent"

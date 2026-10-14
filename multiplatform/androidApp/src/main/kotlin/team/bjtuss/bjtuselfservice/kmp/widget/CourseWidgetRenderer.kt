@@ -46,16 +46,38 @@ internal class CourseWidgetRenderer(private val context: Context) {
      * 以 iOS 尺寸为基准按实际宽高等比缩放字号，比例与 iOS 一致；限制在 0.9–1.25 之间，避免过大或过小。
      */
     private var scale = 1f
+
+    /**
+     * 行高 / 字号。includeFontPadding=false 下，中文字体（Noto Sans CJK 等）实测约 1.7 倍字号，
+     * 荣耀等厂商字体更矮；估高取偏大值：宁可少放一行，也不让内容被裁掉。
+     */
+    private val line = 1.7f
     private var widthDp = 338f
+    private var heightDp = 158f
 
     private fun setCanvas(family: CourseWidgetSize, width: Float, height: Float) {
         widthDp = width
+        heightDp = height
         val (baseWidth, baseHeight) = when (family) {
             CourseWidgetSize.SMALL -> 158f to 158f
             CourseWidgetSize.MEDIUM -> 338f to 158f
             CourseWidgetSize.LARGE -> 338f to 354f
         }
         scale = minOf(width / baseWidth, height / baseHeight).coerceIn(0.9f, 1.25f)
+    }
+
+    /**
+     * 从当前缩放开始逐步缩小，直到 [fits] 为真（或到下限 0.82）。
+     * 中文字体行高比 iOS 高，按宽度放大后内容可能放不下；先整体缩一点保住完整版式，
+     * 比直接丢内容、改成紧凑样式更好看。
+     */
+    private fun shrinkToFit(fits: () -> Boolean) {
+        var candidate = scale
+        while (true) {
+            scale = candidate
+            if (fits() || candidate <= 0.82f) return
+            candidate = maxOf(0.82f, candidate - 0.04f)
+        }
     }
 
     private fun views(@LayoutRes layout: Int) = RemoteViews(packageName, layout)
@@ -206,7 +228,20 @@ internal class CourseWidgetRenderer(private val context: Context) {
     }
 
     /** 小号：头部 + 大字课程块 + 下一节标题行，整体在剩余空间里略偏上居中。 */
-    private fun upNextSmall(model: CourseWidgetDisplayModel) = frame { root ->
+    private fun upNextSmall(model: CourseWidgetDisplayModel): RemoteViews {
+        val upNext = if (model.isRestPeriod) null else model.upNext
+        // 头部之前先定缩放：先整体缩小保住完整的课名与时间，再看“下一节”放不放得下。
+        if (upNext != null) {
+            shrinkToFit {
+                val lines = estimatedLines(upNext.primary.session.name, 17f * scale, textWidthSmall()).coerceIn(1, 2)
+                smallPrimaryHeight(upNext.primary, model, lines) <=
+                    heightDp - 32f - 28f * scale - (if (upNext.isFutureDay) 24f * scale else 0f)
+            }
+        }
+        return upNextSmallContent(model)
+    }
+
+    private fun upNextSmallContent(model: CourseWidgetDisplayModel) = frame { root ->
         root.add(upNextHeader(model, compact = true))
         val upNext = model.upNext
         when {
@@ -215,8 +250,15 @@ internal class CourseWidgetRenderer(private val context: Context) {
             }
             upNext != null -> {
                 if (upNext.isFutureDay) root.add(statusLine(model.todayStatus))
-                root.add(group(detailedBlock(upNext.primary, model), 9f))
-                upNext.secondary?.let { secondary ->
+                // RemoteViews 超出卡片的部分会被直接裁掉（不像 iOS 按行截断）：先估算高度，放不下就依次
+                // 去掉“下一节”、再把长课名压成一行，宁可少一行也不露半行。
+                val nameLines = estimatedLines(upNext.primary.session.name, 17f * scale, textWidthSmall()).coerceIn(1, 2)
+                val primaryHeight = smallPrimaryHeight(upNext.primary, model, nameLines)
+                val usable = heightDp - 32f - 28f * scale - (if (upNext.isFutureDay) 24f * scale else 0f)
+                val showSecondary = upNext.secondary != null && primaryHeight + smallSecondaryHeight() <= usable
+                val singleLine = !showSecondary && nameLines > 1 && primaryHeight > usable
+                root.add(group(detailedBlock(upNext.primary, model, if (singleLine) 1 else 2), 9f))
+                upNext.secondary?.takeIf { showSecondary }?.let { secondary ->
                     root.add(group(views(R.layout.widget_block_title).apply {
                         tintBar(R.id.bar, accent(secondary))
                         setTextViewText(R.id.block_name, secondary.session.name)
@@ -235,14 +277,25 @@ internal class CourseWidgetRenderer(private val context: Context) {
         }
     }
 
+    /** 小号“当前”块的估算高度：上边距 9 + 课名 + 地点 + 时间（+ 剩余时间）。 */
+    private fun smallPrimaryHeight(occurrence: WidgetOccurrence, model: CourseWidgetDisplayModel, nameLines: Int): Float {
+        var height = 9f * scale + nameLines * 17f * line * scale + 2f + 12.5f * line * scale + 2f + 12.5f * line * scale
+        if (occurrence.isOngoing(model.now)) height += 2f + 11.5f * line * scale
+        return height
+    }
+
+    /** 小号“下一节”标题行的估算高度：上边距 9 + 课名 + 时间。 */
+    private fun smallSecondaryHeight(): Float = 9f * scale + 15f * line * scale + 2f + 12f * line * scale
+
     /** 小号课程块文字可用宽度：内边距 32、色条 3、间距 6。 */
     private fun textWidthSmall() = widthDp - 32f - 3f - 6f
 
-    private fun detailedBlock(occurrence: WidgetOccurrence, model: CourseWidgetDisplayModel) =
+    private fun detailedBlock(occurrence: WidgetOccurrence, model: CourseWidgetDisplayModel, nameMaxLines: Int = 2) =
         views(R.layout.widget_block_detailed).apply {
             tintBar(R.id.bar, accent(occurrence))
             setTextViewText(R.id.block_name, occurrence.session.name)
             size(R.id.block_name, 17f)
+            setInt(R.id.block_name, "setMaxLines", nameMaxLines)
             val detail = occurrence.session.roomAndTeacher()
             setTextViewText(R.id.block_detail, detail)
             fit(R.id.block_detail, detail, 12.5f, textWidthSmall())
@@ -294,9 +347,9 @@ internal class CourseWidgetRenderer(private val context: Context) {
                     },
                 )
                 // 头部与两栏之间至少 iOS 的 12（跨天时 6）；格子比 iOS 高出来的部分在两栏上下均分。
-                root.spacer()
+                root.add(views(R.layout.widget_week_gap_1))
                 root.add(group(columns, if (tight) 6f else 12f))
-                root.spacer()
+                root.add(views(R.layout.widget_week_gap_2))
             }
             else -> {
                 root.spacer()
@@ -355,13 +408,6 @@ internal class CourseWidgetRenderer(private val context: Context) {
             root.spacer(); root.add(rest(model, compact = false)); root.spacer()
             return
         }
-        // 内边距 32 + 头部约 24（+ 脚注 18）；两行式一行连间距约 50dp，单行式约 27dp（均随版式缩放）。
-        val rowHeight = 50f * scale
-        val compactHeight = 27f * scale
-        val headerHeight = 24f * scale
-        val bareRows = ((heightDp - 32f - headerHeight) / rowHeight).toInt()
-        val footerRows = ((heightDp - 32f - headerHeight - 18f * scale) / rowHeight).toInt().coerceIn(2, if (large) 7 else 4)
-        val compactCapacity = ((heightDp - 32f - headerHeight - 18f * scale) / compactHeight).toInt().coerceIn(3, if (large) 12 else 6)
         val nextDay = model.nextDay
         val showsNextDay = model.remainingToday.isEmpty() && nextDay != null
         val plan = if (showsNextDay) nextDay!! else model.today
@@ -369,6 +415,18 @@ internal class CourseWidgetRenderer(private val context: Context) {
         val firstActive = if (showsNextDay) 0
         else occurrences.indexOfFirst { !it.isFinished(model.now) }.let { if (it < 0) occurrences.size else it }
         val pending = occurrences.size - firstActive
+        // 内边距 32 + 头部 28（+ 脚注 25）；两行式一行连间距实测约 66dp，单行式约 38dp（均随版式缩放）。
+        // 估高宁大勿小：RemoteViews 超出卡片的部分会被直接裁掉。
+        // 先保证“应该显示的几节”能用两行式放下：中号 2 节、大号 5 节，放不下就整体缩小。
+        val wanted = minOf(pending, if (large) 5 else 2)
+        shrinkToFit { 32f + 28f * scale + wanted * 67f * scale <= heightDp }
+        val rowHeight = 67f * scale
+        val compactHeight = 38f * scale
+        val headerHeight = 28f * scale
+        val footerHeight = 25f * scale
+        val bareRows = ((heightDp - 32f - headerHeight) / rowHeight).toInt().coerceAtLeast(1)
+        val footerRows = ((heightDp - 32f - headerHeight - footerHeight) / rowHeight).toInt().coerceIn(1, if (large) 7 else 4)
+        val compactCapacity = ((heightDp - 32f - headerHeight - footerHeight) / compactHeight).toInt().coerceIn(2, if (large) 12 else 6)
         // 中号只差一个“已上完 N 节”脚注就能用两行式时，宁可省掉脚注，也不换成单行紧凑行。
         val dropFinishedFooter = !large && pending in (footerRows + 1)..bareRows
         val capacity = if (dropFinishedFooter) bareRows else footerRows
@@ -421,8 +479,9 @@ internal class CourseWidgetRenderer(private val context: Context) {
         // 大号今天放完后还有空位：用轻量单行预告下一个有课日。
         if (large && !showsNextDay && nextDay != null && nextDay.occurrences.isNotEmpty()) {
             var used = 32f + headerHeight + visible.size * (if (compact) compactHeight else rowHeight)
-            if (hiddenUpcoming.isNotEmpty() || hiddenFinished > 0) used += 18f * scale
-            val room = ((heightDp - used - 30f * scale) / (20f * scale)).toInt()
+            if (hiddenUpcoming.isNotEmpty() || hiddenFinished > 0) used += footerHeight
+            // 预告小标题约 34、每行约 24（含间距）。
+            val room = ((heightDp - used - 34f * scale) / (24f * scale)).toInt()
             if (room >= 1) {
                 val rows = nextDay.occurrences.take(room)
                 root.add(group(views(R.layout.widget_next_day_header).apply {
@@ -433,7 +492,7 @@ internal class CourseWidgetRenderer(private val context: Context) {
                         if (total > rows.size) "共 $total 节 剩余 ${total - rows.size} 节未显示" else "共 $total 节")
                     size(R.id.preview_day, 12.5f)
                     size(R.id.preview_count, 11.5f)
-                }, 4f))
+                }, 10f))
                 rows.forEach { occurrence ->
                     root.add(views(R.layout.widget_next_day_row).apply {
                         tintBar(R.id.bar, accent(occurrence), alpha = 178)
