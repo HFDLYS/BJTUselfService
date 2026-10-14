@@ -33,6 +33,19 @@ private const val CAPTCHA_VERIFICATION_ARGUMENT = "--verify-captcha-model="
 private const val CAPTCHA_LOGITS_ARGUMENT = "--dump-captcha-logits="
 
 fun main(args: Array<String>) {
+    if (args.firstOrNull() == "agent") {
+        // Spike: headless before any AWT class loads.
+        System.setProperty("java.awt.headless", "true")
+        val code = when (args.getOrNull(2).takeIf { args.getOrNull(1) == "spike" }) {
+            "info" -> team.bjtuss.bjtuselfservice.shared.agent.runAgentSpikeProbe(listOf("info"))
+            "dpapi" -> runWindowsDpapiSpike()
+            else -> {
+                System.err.println("usage: agent spike info|dpapi")
+                64
+            }
+        }
+        kotlin.system.exitProcess(code)
+    }
     val captchaRecognizer = WindowsTorchCaptchaRecognizer()
     args.firstOrNull { it.startsWith(CAPTCHA_LOGITS_ARGUMENT) }?.let { argument ->
         val image = File(argument.removePrefix(CAPTCHA_LOGITS_ARGUMENT))
