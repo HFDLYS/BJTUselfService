@@ -1,0 +1,45 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="4dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="6dp">
+    <ImageView
+        android:id="@+id/bar"
+        android:layout_width="3dp"
+        android:layout_height="12dp"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_bar"
+        android:importantForAccessibility="no" />
+    <TextView
+        android:id="@+id/row_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:textColor="@color/widget_text_secondary"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:includeFontPadding="false"
+        android:fontFamily="sans-serif-medium" android:layout_marginStart="6dp" />
+    <TextView
+        android:id="@+id/row_detail"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:textSize="11sp"
+        android:textColor="@color/widget_text_tertiary"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:includeFontPadding="false"
+        android:layout_marginStart="6dp" android:layout_weight="1" />
+    <TextView
+        android:id="@+id/row_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="11sp"
+        android:textColor="@color/widget_text_secondary"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:includeFontPadding="false"
+        android:fontFeatureSettings="tnum" android:layout_marginStart="4dp" />
+</LinearLayout>

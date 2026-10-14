@@ -49,5 +49,60 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_previews" />
         </provider>
+        <!-- 课程桌面小组件：与 iOS 小组件同一份快照与版式规则。 -->
+        <receiver
+            android:name=".widget.UpNextCourseWidgetProvider"
+            android:label="@string/widget_up_next_label"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_up_next_info" />
+            <!-- 荣耀 MagicOS：标记为荣耀卡片，进入服务中心等新入口；其它厂商忽略。 -->
+            <meta-data
+                android:name="com.hihonor.widget.type"
+                android:value="honorcard" />
+        </receiver>
+        <receiver
+            android:name=".widget.TodayCourseWidgetProvider"
+            android:label="@string/widget_today_label"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_today_info" />
+            <!-- 荣耀 MagicOS：标记为荣耀卡片，进入服务中心等新入口；其它厂商忽略。 -->
+            <meta-data
+                android:name="com.hihonor.widget.type"
+                android:value="honorcard" />
+        </receiver>
+        <receiver
+            android:name=".widget.WeekCourseWidgetProvider"
+            android:label="@string/widget_week_label"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_week_info" />
+            <!-- 荣耀 MagicOS：标记为荣耀卡片，进入服务中心等新入口；其它厂商忽略。 -->
+            <meta-data
+                android:name="com.hihonor.widget.type"
+                android:value="honorcard" />
+        </receiver>
+        <receiver
+            android:name=".widget.CourseWidgetRefreshReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

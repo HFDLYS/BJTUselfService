@@ -1,0 +1,68 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+    <ImageView
+        android:id="@+id/row_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_compact_row_background"
+        android:importantForAccessibility="no" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
+        android:paddingTop="3dp"
+        android:paddingBottom="3dp">
+        <ImageView
+        android:id="@+id/bar"
+        android:layout_width="3dp"
+        android:layout_height="14dp"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_bar"
+        android:importantForAccessibility="no" />
+        <TextView
+        android:id="@+id/row_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:textColor="@color/widget_text_primary"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:includeFontPadding="false"
+        android:fontFamily="sans-serif-medium" android:layout_marginStart="6dp" />
+        <TextView
+        android:id="@+id/row_badge_ongoing"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="9sp"
+        android:textColor="@color/widget_text_primary"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:includeFontPadding="false"
+        android:fontFamily="sans-serif-medium" android:layout_marginStart="4dp" android:background="@drawable/widget_badge_outline" android:paddingStart="4dp" android:paddingEnd="4dp" android:paddingTop="1dp" android:paddingBottom="1dp" android:text="进行中" android:visibility="gone" />
+        <TextView
+        android:id="@+id/row_detail"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:textSize="11sp"
+        android:textColor="@color/widget_text_secondary"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:includeFontPadding="false"
+        android:layout_marginStart="6dp" android:layout_weight="1" />
+        <TextView
+        android:id="@+id/row_start"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:textColor="@color/widget_text_secondary"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:includeFontPadding="false"
+        android:fontFeatureSettings="tnum" android:layout_marginStart="4dp" />
+    </LinearLayout>
+</FrameLayout>

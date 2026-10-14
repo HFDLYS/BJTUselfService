@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ 跟随启动器的小组件圆角（Google 小组件规范）。 -->
+    <dimen name="widget_corner_radius">@android:dimen/system_app_widget_background_radius</dimen>
+    <dimen name="widget_padding">16dp</dimen>
+</resources>

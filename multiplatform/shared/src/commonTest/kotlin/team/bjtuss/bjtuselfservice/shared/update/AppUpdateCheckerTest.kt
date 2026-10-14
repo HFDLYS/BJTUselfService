@@ -23,7 +23,7 @@ class AppUpdateCheckerTest {
 
     @Test
     fun releaseVersionCanUpgradeThe173Base() {
-        assertTrue(AppUpdateChecker.CURRENT_VERSION == "1.8.4-Beta3")
+        assertTrue(AppUpdateChecker.CURRENT_VERSION == "1.8.4-Candidate2")
         assertTrue(AppUpdateChecker.compareVersions(AppUpdateChecker.CURRENT_VERSION, "1.8.3-KMP") > 0)
         assertTrue(AppUpdateChecker.compareVersions(AppUpdateChecker.CURRENT_VERSION, "1.8.4-Alpha-phydemo-fix2") > 0)
         assertTrue(AppUpdateChecker.compareVersions(AppUpdateChecker.CURRENT_VERSION, "1.8.4-Beta-SheetFix-Widget") > 0)

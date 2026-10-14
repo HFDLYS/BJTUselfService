@@ -15,8 +15,8 @@ android {
         applicationId = "team.bjtuss.bjtuselfservice.kmp"
         minSdk = 28
         targetSdk = 35
-        versionCode = 35
-        versionName = "1.8.4-Beta3"
+        versionCode = 36
+        versionName = "1.8.4-Candidate2"
     }
 
     buildFeatures {
@@ -118,6 +118,8 @@ kotlin {
 dependencies {
     implementation(project(":shared"))
     implementation(libs.androidx.activity.compose)
+    // 桌面小组件读 shared 的时间模型；与 shared 同一版本，不是新依赖。
+    implementation(libs.kotlinx.datetime)
     debugImplementation(libs.compose.material3)
     debugImplementation(libs.compose.ui.tooling)
 }
