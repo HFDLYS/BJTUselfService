@@ -1,5 +1,6 @@
 package team.bjtuss.bjtuselfservice.shared.feature.citel
 
+import team.bjtuss.bjtuselfservice.shared.domain.time.formatDeadlineEpoch
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -109,7 +110,7 @@ internal fun CitelTaskCard(task: CitelTask, onOpen: () -> Unit, source: Assignme
             if (task.programming) CitelTaskLine("评测", task.submissionStatusText())
             task.openTime?.let { CitelTaskLine("开始", citelDateText(it)) }
             task.discountTime?.let { CitelTaskLine("折扣", citelDateText(it) + (task.discount?.let { factor -> " · ×$factor" } ?: "")) }
-            CitelTaskLine("截止", task.dueTime?.let(::citelDateText) ?: "未提供")
+            CitelTaskLine("截止", task.dueTime?.let(::formatDeadlineEpoch) ?: "未提供")
             task.grade?.let { CitelTaskLine(if (task.programming) "题目分值" else "评分", it) }
         }
     }
@@ -161,7 +162,7 @@ fun CitelDetailWorkspace(model: CitelModel, fileGateway: HomeworkFileGateway, on
         CitelDetailLine("类型", if (task.programming) "编程作业" else "实验报告")
         CitelDetailLine("开放时间", task.openTime?.let(::citelDateText) ?: "未提供")
         task.discountTime?.let { CitelDetailLine("折扣开始", citelDateText(it) + (task.discount?.let { factor -> " · ×$factor" } ?: "")) }
-        CitelDetailLine("截止时间", task.dueTime?.let(::citelDateText) ?: "未提供")
+        CitelDetailLine("截止时间", task.dueTime?.let(::formatDeadlineEpoch) ?: "未提供")
         CitelDetailLine("提交状态", result?.displayStatus ?: state.submission?.status ?: task.submissionStatusText())
         if (task.programming) {
             if (result != null) ProgrammingJudgeResult(result, autoRefreshing = testing && !holdNetwork && windowFocused && !state.programmingPollingPaused)
