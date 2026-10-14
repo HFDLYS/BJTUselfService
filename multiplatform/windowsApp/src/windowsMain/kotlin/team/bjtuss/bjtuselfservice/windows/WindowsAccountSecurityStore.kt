@@ -131,6 +131,21 @@ internal fun loadOrCreateWindowsCacheKey(
     return WindowsCacheKey(key, created = true)
 }
 
+/** 只读取已有缓存密钥，不新建（AI Agent 命令行用）；没有则返回 null。 */
+internal fun loadExistingWindowsCacheKey(
+    preferences: Preferences = Preferences.userRoot().node(
+        "/team/bjtuss/bjtuselfservice/kmp/cache",
+    ),
+): ByteArray? {
+    val encoded = preferences.get(CACHE_KEY_PAYLOAD, null) ?: return null
+    val key = Dpapi.cryptUnprotect(
+        Base64.getDecoder().decode(encoded),
+        "team.bjtuss.bjtuselfservice.kmp.cache-key.v1".encodeToByteArray(),
+    )
+    require(key.size == 32) { "Invalid cache encryption key" }
+    return key
+}
+
 private const val CACHE_KEY_PAYLOAD = "cache_key_payload"
 
 /** JNA 绑定 crypt32 的 DPAPI；只在此文件内使用，业务层不接触 JNA。 */

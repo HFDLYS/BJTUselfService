@@ -13,13 +13,11 @@
   - 未验证：真机/模拟器上从旧版本升级后的弹窗顺序；iOS Xcode 构建（只改 Info.plist，交 CI）。
 - AI Agent 接入（`feat/ai-agent`，2026-10-14 从 `release/1.8.4`@adaf5e75 开出，未提交、未推送）：计划在 `docs/agent/ai-agent-plan.md`，用户已批准。形态是 Skill（装到 `~/.agents/skills/bjtu-self-service/`）+ CLI `bjtu`，不做 MCP；CLI 可以读 Keychain/DPAPI 凭据自动登录。命令包括 status、cache read/update、聚合日程 calendar、三个来源聚合的 homework（物理在线只算已选课）、CITEL 题面和测试用例导出 Markdown、Mac 卸载清理。分 Spike + PR A–E 推进。
   - 设计要点：macOS 上 CLI 必须经 App 启动器运行，因为 Keychain ACL 绑定 App 的 CDHash。缓存值有 AES 加密，CLI 要用只读连接打开，不能走 `createDesktopCacheStore` 或 `openCacheStoreWithRecovery`（它们会新建密钥、删库）。
-  - Spike 已做（2026-10-14，记录在 `docs/agent/spike-2026-10-14.md`；探针代码 `shared/.../desktopMain/.../agent/AgentSpikeProbe.kt` 和 `Main.kt` 里的 `agent` 分派还没提交）：
-    - macOS 打包后经启动器运行 CLI 可行：管道 stdout 正常、headless、没有 Dock 图标、同一二进制读 Keychain 不弹框，热启动约 0.1 s。jpackage 运行时里没有 `bin/java`，所以只能走启动器。
-    - Windows 上同样没有 `java.exe`，要在 CI 上实测 GUI exe 的管道输出（推送需授权）。
-    - 本机 `~/.claude/skills` 是指向 `~/.agents/skills` 的软链接，安装器要先判断，不能重复建链接。
-    - CITEL：题面在 `#description`（TeX 原样）；公开用例在 `#pub-testcase-table`，原文要走 `testcase/download_io.php`，因为页内预览会截断；提交过的题在 `result.php` 能拿到全部用例的 I/O。
-    - 物理在线：用户确认“物理实验”课列着全部实验，只算在 wlsy 约上的实验，匹配方式待用真实标题对照。
-  - 下一步：PR A（只读缓存打开、`status`、`cache read`、`homework`、`calendar`）。
+  - Spike 完成（`docs/agent/spike-2026-10-14.md`）：macOS 和 Windows 都只能经 App 自己的启动器或 exe 运行 CLI（jpackage 运行时里没有 java 可执行文件），两端管道输出均已验证（Windows 在 CI 上验证）；Keychain/DPAPI 读取正常。CITEL 题面在 `#description`；公开用例原文走 `download_io.php`，提交过的题在结果页能拿到全部用例（PR D 只在做题或拉全文时才取）。物理在线规则：只有“物理实验”课按约课结果过滤，标题去掉序号和“（难度系数…）”后匹配；匹配不上的交给 Skill 判断。
+  - PR A（同分支，本地已提交）：`bjtu`（macOS/Windows 都是 `<App> agent …`）提供 `status`、`calendar`、`courses`、`homework`（三个来源聚合，未约的实验默认隐藏）、`exams`、`grades`（默认不允许，开关为 `agent.scope.grades`）、`citel`，以及 `cache read` 别名，支持 `--json`（schemaVersion 1）。缓存只读打开（`openExistingCacheStoreReadOnly`），不新建密钥、不迁移、不删库，schema 版本不符时提示先打开 App。App 新增写入 `academic_weeks_v1`（当前学期每个教学周对应的日期），CLI 据此离线换算日期；没有这份缓存时按当前周推算，并在输出里标 `inferred`。参数先校验、再读缓存。
+    - 已验证：`:shared:desktopTest` 844 项全过（新增 22 项）；Android/macOS/Windows/iOS 编译通过；打包后的 macOS 启动器在临时 HOME 下跑 `help`、`status --json`（退出码 2）、参数错误（退出码 64）。
+    - 未验证：用真实缓存跑 CLI（源码版和安装版的签名不同，读钥匙串会弹授权框；2026-10-14 因参数校验顺序的 bug 已经误弹过一次，用户输密码允许了，bug 已修）；Windows 真机；App 写入 `academic_weeks_v1` 的实际效果（需要登录后同步一次）；App 首页和作业聚合页还没用上“未约实验”过滤。
+  - 下一步：用户确认 PR A 的 PR 怎么开（基底 `release/1.8.4` 还没合进 main）；然后做 PR B（Skill 和设置页“AI 助手”）。
 
 ## 当前痛点
 
