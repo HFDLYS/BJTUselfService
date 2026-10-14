@@ -121,4 +121,20 @@ class CourseWidgetSnapshotTest {
         assertEquals("exam", examSession.kind)
         assertEquals(CourseColorCategory.EXAM.tones.accent, examSession.color)
     }
+
+    @Test fun staggeredSessionsKeepRealTimesAndCarryTheShift() {
+        val schedule = HomeSchedulePresentation(
+            courses = listOf(course("错峰课", 9), course("普通课", 9, place = "海淀主校区,思源楼,SY101")),
+            academicWeeks = weeks,
+            today = monday,
+            staggeredClassTimes = true,
+        )
+        val sessions = buildCourseWidgetSnapshot(schedule, monday, generatedAtEpochSeconds = 1L, dayCount = 1)
+            .days.single().sessions.associateBy { it.name }
+        assertEquals(10 * 60 + 30, sessions.getValue("错峰课").startMinute)
+        assertEquals(12 * 60 + 20, sessions.getValue("错峰课").endMinute)
+        assertEquals(20, sessions.getValue("错峰课").staggerMinutes)
+        assertEquals(10 * 60 + 10, sessions.getValue("普通课").startMinute)
+        assertEquals(0, sessions.getValue("普通课").staggerMinutes)
+    }
 }

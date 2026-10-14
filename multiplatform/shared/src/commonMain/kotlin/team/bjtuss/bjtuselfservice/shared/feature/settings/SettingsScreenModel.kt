@@ -105,6 +105,7 @@ class SettingsScreenModel(
     fun setPhysicsLabEnabled(enabled: Boolean) = updatePreferences { copy(physicsLabEnabled = enabled) }
     fun setAggregateAssignments(enabled: Boolean) = updatePreferences { copy(aggregateAssignments = enabled) }
     fun setCitelEnabled(enabled: Boolean) = updatePreferences { copy(citelEnabled = enabled) }
+    fun setStaggeredSecondSlot(enabled: Boolean) = updatePreferences { copy(staggeredSecondSlot = enabled) }
 
     fun setPhyVlabEnabled(enabled: Boolean) = updatePreferences {
         copy(

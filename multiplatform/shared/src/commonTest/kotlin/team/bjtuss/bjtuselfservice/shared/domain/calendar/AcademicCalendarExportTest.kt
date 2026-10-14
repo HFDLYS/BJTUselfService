@@ -261,4 +261,22 @@ class AcademicCalendarExportTest {
         examStatus = "正常",
         detail = "座位 12",
     )
+
+    @Test
+    fun staggeredSecondSlotExportsTheLaterTimeOnlyWhenEnabled() {
+        // 周一第二节：1 * 8 + 1。
+        val course = course("第1周").copy(courseLocationIndex = 9, coursePlace = "海淀主校区,逸夫教学楼,YF302")
+        fun export(staggered: Boolean) = generateAcademicCalendarIcs(
+            courses = listOf(course),
+            exams = emptyList(),
+            academicWeeks = listOf(week(1, LocalDate(2025, 9, 1))),
+            weekRange = 1..1,
+            generatedAt = Instant.parse("2026-08-10T00:00:00Z"),
+            staggeredSecondSlot = staggered,
+        ).events.single()
+
+        assertEquals("2025-09-01T10:30:00", export(true).startLocal)
+        assertEquals("2025-09-01T12:20:00", export(true).endLocal)
+        assertEquals("2025-09-01T10:10:00", export(false).startLocal)
+    }
 }

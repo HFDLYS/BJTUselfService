@@ -732,3 +732,10 @@
 - 实现：`CourseWidgetData.swift` 新增 `weekIsEmpty`、`isRestPeriod`、`todayStatus`、`dayOffset`、`monday(of:)`；`CourseWidgets.swift` 用 `relativeDayPrefix`/`dayName` 取代 `dayLabel`，新增 `RestPeriod`；`WeekCourseWidget.swift` 空周提示。
 - 验证：本地无 Swift 工具链；PR CI `iOS compile and macOS security tests`、`iOS sideload IPA`、`Android compile security check` 均通过。
 - 未验证：未在模拟器/真机查看各尺寸实际排版；中号跨天模式高度为估算，需在小屏 iPhone 上确认不截断。
+
+## 2026-10-14 四端打包北京时间（PR #14，`fix/package-beijing-time`，补记）
+
+- 改动：`kmp-package.yml` 全局设置 `TZ=Asia/Shanghai` 与 JVM 时区；Windows 原生工具设置 `China Standard Time`，保留原中文编码参数。iOS 签名后统一暂存目录 mtime、复验签名，以 `zip -X` 去掉 UTC 扩展时间；APK/MSI/DMG 仅刷新输出文件 mtime，不重写签名包内容。打包日志显式打印北京时间与偏移量。
+- 外层 ZIP：`upload-artifact@v4` 把文件时间按 UTC 写进 DOS 时间，单设 TZ 不够。四端通过 `scripts/stage-actions-artifact.py` 创建上传副本，仅副本 mtime 加 8 小时；原包保留真实 epoch，内容与签名不变。
+- 验证：YAML 解析、9 个 Bash 步骤 `bash -n`、JVM 时区、模拟 IPA 的北京时间跨日/真实 epoch/ZIP 时间/无 UTC 扩展字段/符号链接/内容哈希均通过；首轮 CI `38429777141` 的 IPA 内 30 个条目均为北京时间，CRC 与签名复验通过。
+- 未验证：第二轮 CI 外层 ZIP 时间的实际结果未在 memory 中记录；Windows/MSI、Android/APK、macOS/DMG 需后续四端打包确认。既有 Actions 产物与 GitHub 自身 UTC 运行时间不变。

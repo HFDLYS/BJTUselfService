@@ -95,4 +95,20 @@ class HomeNowSessionTest {
         assertEquals(8 * 60 to 9 * 60 + 50, parseHmRange("08:00–09:50"))
         assertNull(parseHmRange("08:00"))
     }
+
+    @Test
+    fun staggeredSecondSlotUsesTheLaterTimeWhenEnabled() {
+        // 第二节 index = 1*8+4 = 12；默认地点在思源西楼。10:20 时错峰课还没开始。
+        val sessions = pickHomeNowSessions(
+            listOf(course("错峰课", 12)),
+            emptyList(),
+            LocalDateTime(2026, 10, 8, 10, 20),
+            staggeredClassTimes = true,
+        )
+        assertEquals("10:30–12:20", sessions.single().timeRange)
+        assertEquals(false, sessions.single().ongoing)
+        val plain = pickHomeNowSessions(listOf(course("错峰课", 12)), emptyList(), LocalDateTime(2026, 10, 8, 10, 20))
+        assertEquals("10:10–12:00", plain.single().timeRange)
+        assertTrue(plain.single().ongoing)
+    }
 }

@@ -53,6 +53,8 @@ fun CourseCalendarExportSheet(
     systemCalendarGateway: SystemCalendarGateway,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
+    /** 设置「错峰上课时间」；sheet 是独立组合，由调用方读出后传入。 */
+    staggeredClassTimes: Boolean = false,
 ) {
     val maxWeek = courseState.academicWeeks.maxOfOrNull { it.week } ?: COURSE_MAX_WEEK
     val calendarName = if (courseState.scheduleType == CourseScheduleType.CURRENT) {
@@ -131,7 +133,7 @@ fun CourseCalendarExportSheet(
                         feedback = null
                         working = true
                         job = scope.launch {
-                            val generated = courseState.generateCourseExport(startWeek..endWeek, calendarName, includePhysicsLabs, includePhysicsDemos)
+                            val generated = courseState.generateCourseExport(startWeek..endWeek, calendarName, includePhysicsLabs, includePhysicsDemos, staggeredClassTimes)
                             feedback = saveIcs(fileGateway, "$calendarName.ics", generated)
                             working = false
                         }
@@ -145,7 +147,7 @@ fun CourseCalendarExportSheet(
                         feedback = null
                         working = true
                         job = scope.launch {
-                            val generated = courseState.generateCourseExport(startWeek..endWeek, calendarName, includePhysicsLabs, includePhysicsDemos)
+                            val generated = courseState.generateCourseExport(startWeek..endWeek, calendarName, includePhysicsLabs, includePhysicsDemos, staggeredClassTimes)
                             feedback = installSystemCalendar(
                                 gateway = systemCalendarGateway,
                                 name = calendarName,
@@ -288,6 +290,7 @@ private fun CourseScheduleUiState.generateCourseExport(
     calendarName: String,
     includePhysicsLabs: Boolean,
     includePhysicsDemos: Boolean,
+    staggeredClassTimes: Boolean,
 ): CalendarExportResult = generateAcademicCalendarIcs(
     courses = scheduleCourses.filter { it.scheduleEventKind == null },
     physicsLabs = if (includePhysicsLabs) physicsLabs else emptyList(),
@@ -297,6 +300,7 @@ private fun CourseScheduleUiState.generateCourseExport(
     weekRange = range,
     generatedAt = Clock.System.now(),
     calendarName = calendarName,
+    staggeredSecondSlot = staggeredClassTimes,
 )
 
 private suspend fun saveIcs(

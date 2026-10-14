@@ -307,8 +307,9 @@ fun AuthenticatedAppShell(
     // 各触发一次 WidgetKit 全量刷新）；同步时数据连续变化，先等一会儿合并成一次，计算放到后台线程。
     val widgetToday = homeworkState.now.date
     var lastWidgetDays by remember(session) { mutableStateOf<List<team.bjtuss.bjtuselfservice.shared.feature.widget.CourseWidgetDay>?>(null) }
+    val staggeredClassTimes = settingsState.preferences.staggeredSecondSlot
     LaunchedEffect(courseState.courses, homeScheduleEvents, courseState.homeAcademicWeeks, courseState.currentWeek, widgetToday,
-        gradeState.courseTypesByCode) {
+        gradeState.courseTypesByCode, staggeredClassTimes) {
         if (!shouldStartPhyVlabAutoSync(forcedRouteId, nativeTabBarEnabled)) return@LaunchedEffect
         if (courseState.courses.isEmpty() && homeScheduleEvents.isEmpty()) return@LaunchedEffect
         if (courseState.homeAcademicWeeks.isEmpty() && courseState.currentWeek <= 0) return@LaunchedEffect
@@ -328,6 +329,7 @@ fun AuthenticatedAppShell(
                     academicWeeks = weeks,
                     currentWeek = currentWeek,
                     today = widgetToday,
+                    staggeredClassTimes = staggeredClassTimes,
                 ),
                 startDate = widgetStart,
                 generatedAtEpochSeconds = kotlin.time.Clock.System.now().epochSeconds,
@@ -1369,6 +1371,7 @@ fun AuthenticatedAppShell(
                         LocalTopBarClearance provides topBarClearance,
                         LocalReportTopScroll provides reportTopScroll,
                         LocalNativeScrollControllerReporter provides reportNativeScrollController.takeIf { nativeScrollingEnabled },
+                        team.bjtuss.bjtuselfservice.shared.feature.course.LocalStaggeredClassTimes provides staggeredClassTimes,
                     ) {
                         content()
                     }
@@ -1440,7 +1443,7 @@ fun AuthenticatedAppShell(
             ) {
                 val homeToday = homeworkState.now.date
                 val homeSchedulePresentation = remember(courseState.courses, homeScheduleEvents,
-                    courseState.homeAcademicWeeks, courseState.currentWeek, homeToday, gradeState.courseTypesByCode) {
+                    courseState.homeAcademicWeeks, courseState.currentWeek, homeToday, gradeState.courseTypesByCode, staggeredClassTimes) {
                     team.bjtuss.bjtuselfservice.shared.feature.home.HomeSchedulePresentation(
                         courses = courseState.courses,
                         supplementalCourses = homeScheduleEvents,
@@ -1448,6 +1451,7 @@ fun AuthenticatedAppShell(
                         currentWeek = courseState.currentWeek,
                         today = homeToday,
                         courseTypesByCode = gradeState.courseTypesByCode,
+                        staggeredClassTimes = staggeredClassTimes,
                         onOpenSchedule = openScheduleFromHome,
                     )
                 }

@@ -53,7 +53,7 @@ class TwoWeekLabRenderTest {
                                         showCalendarExportSheet = false, onDismissCalendarExport = {}, onRefresh = {}, modifier = Modifier.fillMaxSize())
                                 }
                                 else -> CourseDetailContent(courses.first { it.scheduleEventTypeLabel == if (page == "specialty-detail") "专题实验" else "设计实验" },
-                                    Modifier.fillMaxSize().padding(24.dp))
+                                    false, Modifier.fillMaxSize().padding(24.dp))
                             }
                         }
                     }

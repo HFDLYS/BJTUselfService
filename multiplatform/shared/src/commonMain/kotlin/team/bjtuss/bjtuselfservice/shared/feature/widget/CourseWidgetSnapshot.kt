@@ -9,6 +9,9 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import team.bjtuss.bjtuselfservice.shared.domain.classroomoccupancy.SLOT_TIME_RANGES
 import team.bjtuss.bjtuselfservice.shared.domain.course.Course
+import team.bjtuss.bjtuselfservice.shared.domain.course.STAGGERED_SHIFT_MINUTES
+import team.bjtuss.bjtuselfservice.shared.domain.course.classTimeRange
+import team.bjtuss.bjtuselfservice.shared.domain.course.isStaggered
 import team.bjtuss.bjtuselfservice.shared.domain.course.displayScheduleCourseName
 import team.bjtuss.bjtuselfservice.shared.domain.course.eventDates
 import team.bjtuss.bjtuselfservice.shared.domain.grade.CourseType
@@ -67,6 +70,11 @@ data class CourseWidgetSession(
      * 培养方案还没同步时普通课程为 unknown。
      */
     val kind: String = CourseColorCategory.UNKNOWN.widgetKind,
+    /**
+     * 错峰推迟的分钟数（第二节逸夫教学楼/思源西楼为 20，其余 0）。start/end 已是实际时间；
+     * 周视图减去它找回所属大节，不多占一行，只把色块微微下移。
+     */
+    val staggerMinutes: Int = 0,
 )
 
 /** 默认展开两周：周末/假期前后打开一次 App，小组件也能撑到下周。 */
@@ -90,7 +98,7 @@ internal fun buildCourseWidgetSnapshot(
         val date = startDate.plus(offset, DateTimeUnit.DAY)
         val events = homePhysicsLabsOnDate(schedule, date) + homeExamsOnDate(schedule, date)
         val sessions = (homeCoursesOnDate(schedule, date) + events).mapNotNull { course ->
-            course.toWidgetSession(courseColorCategory(course, courseTypesByCode))
+            course.toWidgetSession(courseColorCategory(course, courseTypesByCode), schedule.staggeredClassTimes)
         }
         CourseWidgetDay(
             date = date.toString(),
@@ -109,9 +117,9 @@ private fun homeExamsOnDate(schedule: HomeSchedulePresentation, date: LocalDate)
     schedule.supplementalCourses.filter { it.scheduleEventKind == "exam" && date.toString() in it.eventDates }
         .distinctBy(Course::id)
 
-private fun Course.toWidgetSession(category: CourseColorCategory): CourseWidgetSession? {
+private fun Course.toWidgetSession(category: CourseColorCategory, staggeredClassTimes: Boolean): CourseWidgetSession? {
     val isEvent = scheduleEventKind != null
-    val range = if (isEvent) scheduleEventTime?.trim().orEmpty() else SLOT_TIME_RANGES.getOrNull(courseLocationIndex / 8).orEmpty()
+    val range = if (isEvent) scheduleEventTime?.trim().orEmpty() else classTimeRange(staggeredClassTimes).orEmpty()
     val (start, end) = parseHmRange(range) ?: return null
     return CourseWidgetSession(
         name = displayScheduleCourseName(courseName.trim()),
@@ -122,6 +130,7 @@ private fun Course.toWidgetSession(category: CourseColorCategory): CourseWidgetS
         isLab = category == CourseColorCategory.LAB,
         color = category.tones.accent,
         kind = category.widgetKind,
+        staggerMinutes = if (isStaggered(staggeredClassTimes)) STAGGERED_SHIFT_MINUTES else 0,
     )
 }
 
