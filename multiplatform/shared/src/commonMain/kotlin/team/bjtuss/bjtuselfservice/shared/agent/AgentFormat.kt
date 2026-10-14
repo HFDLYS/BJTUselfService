@@ -4,6 +4,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -11,6 +12,7 @@ import kotlinx.serialization.json.put
 import kotlin.time.Instant
 import team.bjtuss.bjtuselfservice.shared.domain.calendar.parseExamCalendarTime
 import team.bjtuss.bjtuselfservice.shared.domain.homework.typeLabel
+import team.bjtuss.bjtuselfservice.shared.feature.assignment.AssignmentSource
 import team.bjtuss.bjtuselfservice.shared.feature.citel.completed
 import team.bjtuss.bjtuselfservice.shared.feature.phyvlab.PhyVlabEnrollment
 
@@ -100,17 +102,23 @@ internal fun statusMarkdown(ready: AgentSnapshotResult.Ready): String {
 
 // region calendar
 
+internal const val MIDNIGHT_NOTE = "北京时间 00:00 截止的作业算前一天 24:00 截止（与 App 首页一致）：agendaDate 是归属日，start/dueTime 是实际时刻；提醒用户时请按前一天说。"
+
 internal fun calendarJson(items: List<AgentCalendarItem>, range: Pair<LocalDate, LocalDate>, snapshot: AgentSnapshot): JsonElement =
     buildJsonObject {
         put("from", range.first.toString())
         put("to", range.second.toString())
         put("academicCalendar", if (snapshot.academicWeeksInferred) "inferred" else "cached")
+        put("notes", buildJsonArray { add(JsonPrimitive(MIDNIGHT_NOTE)) })
+        put("availableFilters", availableFilters(snapshot))
         put("items", JsonArray(items.map { item ->
             buildJsonObject {
                 put("kind", item.kind.wire)
                 put("title", item.title)
+                put("agendaDate", item.agendaDate.toString())
                 putTime("start", item.start)
                 putTime("end", item.end)
+                if (item.midnightDeadline) put("midnightDeadline", true)
                 putIfNotNull("location", item.location)
                 putIfNotNull("teacher", item.teacher)
                 putIfNotNull("courseName", item.courseName)
@@ -128,11 +136,15 @@ internal fun calendarMarkdown(items: List<AgentCalendarItem>, range: Pair<LocalD
         appendLine("（没有安排）")
         return@buildString
     }
-    items.groupBy { Instant.fromEpochSeconds(it.start).toLocalDateTime(AGENT_TIME_ZONE).date }.forEach { (date, dayItems) ->
+    items.groupBy { it.agendaDate }.forEach { (date, dayItems) ->
         appendLine()
         appendLine("## $date ${weekday(date)}")
         dayItems.forEach { item ->
-            val time = item.end?.let { "${clock(item.start)}–${clock(it)}" } ?: clock(item.start)
+            val time = when {
+                item.midnightDeadline -> "24:00"
+                item.end != null -> "${clock(item.start)}–${clock(item.end)}"
+                else -> clock(item.start)
+            }
             val label = when (item.kind) {
                 AgentCalendarKind.CLASS -> "课程"
                 AgentCalendarKind.LAB -> "实验"
@@ -142,10 +154,25 @@ internal fun calendarMarkdown(items: List<AgentCalendarItem>, range: Pair<LocalD
                 AgentCalendarKind.ASSIGNMENT_DUE -> "作业截止"
             }
             val detail = listOfNotNull(item.location, item.teacher, item.courseName,
-                item.done?.let { if (it) "已提交" else "未提交" }).joinToString(" · ")
+                item.done?.let { if (it) "已提交" else "未提交" },
+                if (item.midnightDeadline) "即次日 00:00" else null).joinToString(" · ")
             appendLine("- $time [$label] ${item.title}" + if (detail.isNotEmpty()) " — $detail" else "")
         }
     }
+}
+
+/** 告诉调用方可以按什么筛：来源、课程名、日程类型，以及 App 里存的筛选是否生效。 */
+internal fun availableFilters(snapshot: AgentSnapshot): JsonElement = buildJsonObject {
+    put("source", buildJsonArray { AssignmentSource.entries.forEach { add(JsonPrimitive(it.wire)) } })
+    put("kind", buildJsonArray { AgentCalendarKind.entries.forEach { add(JsonPrimitive(it.wire)) } })
+    val courses = buildList {
+        addAll(snapshot.courses.filter { !it.isCurrentSemester }.map { it.courseName.trim() })
+        addAll(snapshot.homework.map { it.courseName })
+        snapshot.phyVlab?.courses?.forEach { add(it.name) }
+        addAll(snapshot.citelTasks.map { it.courseName })
+    }.filter(String::isNotBlank).distinct().sorted()
+    put("course", buildJsonArray { courses.forEach { add(JsonPrimitive(it)) } })
+    put("appFilterActive", snapshot.assignmentFilters.active)
 }
 
 // endregion
@@ -154,6 +181,11 @@ internal fun calendarMarkdown(items: List<AgentCalendarItem>, range: Pair<LocalD
 
 internal fun homeworkJson(items: List<AgentHomeworkItem>, snapshot: AgentSnapshot): JsonElement = buildJsonObject {
     put("physicsLabBookingsAvailable", snapshot.physicsLabs != null)
+    put("notes", buildJsonArray {
+        add(JsonPrimitive(MIDNIGHT_NOTE))
+        add(JsonPrimitive("物理实验课只列出与约课结果匹配上的实验（enrollment=booked）；没约的默认隐藏，--all 可显示。enrollment=unverified 表示没有约课缓存，无法判断。"))
+    })
+    put("availableFilters", availableFilters(snapshot))
     put("items", JsonArray(items.map { item ->
         val a = item.assignment
         buildJsonObject {
@@ -163,6 +195,10 @@ internal fun homeworkJson(items: List<AgentHomeworkItem>, snapshot: AgentSnapsho
             put("submitted", a.submitted)
             putTime("openTime", item.openTime)
             putTime("dueTime", a.dueTime)
+            a.dueTime?.let { due ->
+                put("dueAgendaDate", deadlineAgendaDate(due).toString())
+                if (isMidnightDeadline(due)) put("midnightDeadline", true)
+            }
             a.citel?.let { citel ->
                 put("programming", citel.programming)
                 putTime("discountTime", citel.discountTime?.takeIf { it != a.dueTime })
@@ -196,7 +232,9 @@ internal fun homeworkMarkdown(items: List<AgentHomeworkItem>): String = buildStr
         appendLine("- 来源：${a.source.label} · ${a.courseName}")
         appendLine("- 状态：${if (a.submitted) "已提交" else "未提交"}")
         item.openTime?.let { appendLine("- 开放：${shortTime(it)}") }
-        a.dueTime?.let { appendLine("- 截止：${shortTime(it)}") }
+        a.dueTime?.let { due ->
+            appendLine("- 截止：" + if (isMidnightDeadline(due)) "${deadlineAgendaDate(due)} 24:00（即次日 00:00）" else shortTime(due))
+        }
         when (item.enrollment) {
             PhyVlabEnrollment.BOOKED -> appendLine("- 已约实验：${item.matchedBooking}")
             PhyVlabEnrollment.UNVERIFIED -> appendLine("- 物理实验：没有约课缓存，无法确认是否需要做")
