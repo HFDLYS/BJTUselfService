@@ -1686,7 +1686,7 @@ fun AuthenticatedAppShell(
                             AssignmentSource.PHYVLAB -> PhyVlabDetailWorkspace(phyVlabModel, homeworkFileGateway,
                                 onOpenExternalUrl, modifier = Modifier.fillMaxSize())
                             AssignmentSource.CITEL -> session.citelModel?.let { model ->
-                                CitelDetailWorkspace(model, homeworkFileGateway, onOpenExternalUrl, modifier = Modifier.fillMaxSize())
+                                CitelDetailWorkspace(model, homeworkFileGateway, onOpenExternalUrl, modifier = Modifier.fillMaxSize(), directoryGateway = coursewareDirectoryGateway)
                             }
                         }
                     })
@@ -2124,7 +2124,7 @@ fun AuthenticatedAppShell(
                 session.citelModel?.let { model ->
                     team.bjtuss.bjtuselfservice.shared.feature.citel.CitelWorkspace(
                         model, entryLoggingIn, onOpenExternalUrl, Modifier.fillMaxSize(), fileGateway = homeworkFileGateway,
-                        showDetailSheet = !useNativeSecondaryRoutes,
+                        showDetailSheet = !useNativeSecondaryRoutes, directoryGateway = coursewareDirectoryGateway,
                         onOpenTask = {
                             if (useNativeSecondaryRoutes) onOpenNativeRoute(CITEL_DETAIL_ROUTE_ID)
                         })
@@ -2134,7 +2134,7 @@ fun AuthenticatedAppShell(
                 isRefreshing = citelState.submissionBusy, showBack = true, modifier = modifier, scrollUnderTopBar = true) {
                 session.citelModel?.let { model ->
                     team.bjtuss.bjtuselfservice.shared.feature.citel.CitelDetailWorkspace(model, homeworkFileGateway,
-                        onOpenExternalUrl, entryLoggingIn, Modifier.fillMaxSize())
+                        onOpenExternalUrl, entryLoggingIn, Modifier.fillMaxSize(), directoryGateway = coursewareDirectoryGateway)
                 }
             }
             CitelSettingsRoute -> DestinationPage(title = "CITEL 账号设置", expanded = expanded, refreshable = false,
