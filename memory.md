@@ -1,13 +1,14 @@
 # BJTUselfService 实时工作记忆
 
 > 最后更新：2026-10-14。
-> 当前分支：`feat/android-widgets`（基于 `feat/staggered-second-slot`）。PR #16（错峰上课）、PR #17（Android 小组件）CI 全绿，等待用户验证后合并；打包标签 `debug-1.8.4-Beta-staggered` 成功。
-> KMP 应用版本：`1.8.4-Beta3` / Build 35（macOS/Windows 安装包数值版本 1.8.4）。正式 Latest 仍为 `v1.8.3-KMP`。
+> 当前分支：`main`（`ea0f760f`，已含 PR #16 错峰上课、#17 Android 小组件、#18、#19）。2026-10-14 已用 adb 把 `1.8.4-Candidate2` debug 包装到荣耀真机（AAK-AN00），待用户真机验证小组件与错峰时间；下方“进行中”两项已合入，待移入 `history_full.md`。
+> KMP 应用版本：`1.8.4-Candidate2` / Build 36（macOS/Windows 安装包数值版本 1.8.4）。正式 Latest 仍为 `v1.8.3-KMP`。
 > 冻结原 Android：`v1.7.1` / versionCode 9（对照 `origin/main@7d94f74`）。
 > 已完成工作的细节见 `history_full.md` 末尾日志。
 
 ## 进行中
 
+- 荣耀小组件不可见修复（`fix/honor-widget-visibility`，PR 待合入）：带 `com.hihonor.widget.type=honorcard` 的 Candidate2 在荣耀 AAK-AN00（MagicOS 11.0.0.109 / Android 17）上服务卡片与经典小组件入口都找不到本应用；去掉三个 receiver 上的该 meta-data 后（`.artifacts/honor-no-honorcard-debug.apk`），`dumpsys appwidget` 识别三个 provider，用户确认桌面小组件列表里出现。结论：未配齐荣耀卡片所需配置时，honorcard 标记会让 MagicOS 把小组件整体隐藏；先走标准 AppWidget。小米 25091RP04C（Android 16）系统同样识别。未验证：荣耀上实际添加后的渲染、尺寸与刷新。荣耀「服务卡片/快服务」需在荣耀开发者平台智慧服务登记（签协议、SHA256 指纹、截图、审核），用户 2026-10-14 决定不做；后续只视情况优化安卓小组件显示。
 - 第二节错峰上课（PR #16，`feat/staggered-second-slot`，CI 全绿，待合入）：第二节教室在逸夫教学楼（YF）/思源西楼（SX）时按 10:30–12:20。设置页新增开关「错峰上课时间」（默认开，`AppPreferences.staggeredSecondSlot`）。规则在 `domain/course/StaggeredClassTime.kt`（楼名或 `YF/SX+数字` 教室号；思源楼/思源东楼/威海逸夫楼不算；实验/考试不参与）。
   - 精确时间：课程详情（含“（错峰）”）、按日列表卡片与整节均错峰时的节次标签、首页“现在/下一节”与日程、iOS 小组件快照 start/end、日历导出。
   - 只下移不加节：课表网格色块顶边下移约 1/8 格（≤7dp）、底边压到格线；iOS 周视图按 `staggerMinutes` 归回原大节，同样微移。快照新增可选字段 `staggerMinutes`，旧小组件忽略。
@@ -17,7 +18,7 @@
   - 实现：展示逻辑在 shared `feature/widget/CourseWidgetModel.kt`（可测，与 Swift 一一对应）；快照写到应用私有目录 `files/course-widget.json`（`CourseWidgetStore.android.kt`），写入后回调 `CourseWidgetUpdater.updateAll`；渲染为原生 RemoteViews（`androidApp/.../kmp/widget/`），不引入 Glance 等新库。
   - 版式：以 iOS 尺寸为基准按实际宽高等比缩放字号（0.9–1.25），两栏共用字号，单行按估算宽度缩字；周视图按行高/列宽计算每块可放几行。深浅色走 values-night，类别文字色在 Android 12+ 用资源色。Android 12+ 按桌面上报的每个尺寸各排一份。
   - 刷新：非唤醒 RTC 闹钟，上课时段逐分钟、其它时间按课程起止且最多 15 分钟；不申请精确闹钟权限。
-  - 荣耀：receiver 加 `com.hihonor.widget.type=honorcard`；容器 16dp 圆角（Android 12+ 用系统圆角）。
+  - 荣耀：容器 16dp 圆角（Android 12+ 用系统圆角）；honorcard 标记已在 `fix/honor-widget-visibility` 去掉（见上）。
   - 同分支附带 iOS 中号“临近课程”溢出修复：栏标签/课名/地点/时间加 `minimumScaleFactor`，剩余时间窄栏短写“1 小时 15 分”。
   - 已验证：`:shared:desktopTest` 全过（新增 `CourseWidgetModelTest`）；`:androidApp:assembleDebug`、`lintDebug`、桌面/Windows/iOS Kotlin 编译通过；iOS 签名模拟器 xcodebuild 成功。Pixel 10 Pro XL 模拟器（API 37）用合成快照实测三种小组件、深浅色、错峰下移、分钟倒计时刷新。
   - 未验证：荣耀真机（服务中心入口、16dp 容器、折叠屏尺寸）；Android 12 以下系统；真实登录后由 App 写入快照的链路；iOS 溢出修复的实际观感（只编译）。
