@@ -72,6 +72,7 @@ import androidx.compose.ui.graphics.Color
 import team.bjtuss.bjtuselfservice.shared.domain.course.Course
 import team.bjtuss.bjtuselfservice.shared.domain.course.displayScheduleCourseName
 import team.bjtuss.bjtuselfservice.shared.domain.course.displayTitleWithTeacher
+import team.bjtuss.bjtuselfservice.shared.domain.course.classTimeRange
 import team.bjtuss.bjtuselfservice.shared.feature.course.CourseDetailContent
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Path
@@ -197,6 +198,7 @@ fun HomeWorkspace(
             val detailScroll = rememberScrollState()
             CourseDetailContent(
                 course,
+                homeSchedule.staggeredClassTimes,
                 Modifier.fillMaxWidth().verticalScroll(detailScroll).desktopTouchScroll(detailScroll)
                     .padding(horizontal = 24.dp, vertical = 8.dp).padding(bottom = 20.dp),
             )
@@ -1364,6 +1366,7 @@ private fun AgendaDayDetails(
     canNavigate: () -> Boolean,
 ) {
     var selectedCourse by remember(day.date) { mutableStateOf<Course?>(null) }
+    val staggered = LocalHomeSchedule.current.staggeredClassTimes
     if (day.eventCount == 0) {
         Text("当天没有课程、作业、考试或物理在线安排。", color = MaterialTheme.colorScheme.onSurfaceVariant)
         return
@@ -1417,8 +1420,7 @@ private fun AgendaDayDetails(
         if (day.courses.isNotEmpty()) {
             Text("当天课表", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
             day.courses.forEach { course ->
-                val period = course.courseLocationIndex / 8
-                val time = team.bjtuss.bjtuselfservice.shared.domain.classroomoccupancy.SLOT_TIME_RANGES.getOrNull(period).orEmpty()
+                val time = course.classTimeRange(staggered)?.replace('-', '–').orEmpty()
                 AgendaEventRow(
                     type = "课程",
                     markColor = team.bjtuss.bjtuselfservice.shared.feature.course.courseCategoryAccent(
@@ -1440,6 +1442,7 @@ private fun AgendaDayDetails(
             val detailScroll = rememberScrollState()
             CourseDetailContent(
                 course,
+                staggered,
                 Modifier.fillMaxWidth().verticalScroll(detailScroll).desktopTouchScroll(detailScroll)
                     .padding(horizontal = 24.dp, vertical = 8.dp).padding(bottom = 20.dp),
             )

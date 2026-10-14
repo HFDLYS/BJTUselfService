@@ -59,6 +59,25 @@ import team.bjtuss.bjtuselfservice.shared.feature.shell.TopScrollColumn
 internal fun AssignmentAggregationCard(
     enabled: Boolean,
     onEnabled: (Boolean) -> Unit,
+) = SettingSwitchCard("作业聚合", "聚合课程平台、CITEL和物理在线作业", enabled, onEnabled)
+
+@Composable
+internal fun StaggeredClassTimeCard(
+    enabled: Boolean,
+    onEnabled: (Boolean) -> Unit,
+) = SettingSwitchCard(
+    "错峰上课时间",
+    "第二节在逸夫教学楼（YF）、思源西楼（SX）上课时，按 10:30–12:20 显示",
+    enabled,
+    onEnabled,
+)
+
+@Composable
+private fun SettingSwitchCard(
+    title: String,
+    detail: String,
+    enabled: Boolean,
+    onEnabled: (Boolean) -> Unit,
 ) {
     ElevatedCard(Modifier.fillMaxWidth()) {
         Row(
@@ -67,9 +86,9 @@ internal fun AssignmentAggregationCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("作业聚合", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "聚合课程平台、CITEL和物理在线作业",
+                    detail,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -197,6 +216,7 @@ fun SettingsWorkspace(
         SettingCard("账户", accountName.ifBlank { "未登录" })
 
         AssignmentAggregationCard(state.preferences.aggregateAssignments, model::setAggregateAssignments)
+        StaggeredClassTimeCard(state.preferences.staggeredSecondSlot, model::setStaggeredSecondSlot)
         FeatureSwitchesCard(state.preferences.isPhyVlabEnabled, state.preferences.isPhysicsLabEnabled,
             state.preferences.isCitelEnabled, physicsLabConfigured, citelConfigured,
             model::setPhyVlabEnabled, model::setPhysicsLabEnabled, model::setCitelEnabled,

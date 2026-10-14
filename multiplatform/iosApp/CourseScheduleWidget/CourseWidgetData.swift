@@ -31,6 +31,14 @@ struct CourseWidgetSession: Codable, Hashable {
     let color: Int64
     /// 课程类别：required/limited/elective/pe/unknown/lab/exam；旧快照没有这个字段。
     let kind: String?
+    /// 错峰推迟的分钟数（第二节逸夫教学楼/思源西楼为 20）；旧快照没有这个字段。
+    /// start/end 已是实际时间，周视图减去它找回所属大节。
+    let staggerMinutes: Int?
+
+    /// 排进周视图网格用的“名义时间”：错峰课仍归原大节，不多占一行。
+    var slotStartMinute: Int { startMinute - (staggerMinutes ?? 0) }
+    var slotEndMinute: Int { endMinute - (staggerMinutes ?? 0) }
+    var isStaggered: Bool { (staggerMinutes ?? 0) > 0 }
 }
 
 enum CourseWidgetStore {
@@ -350,12 +358,13 @@ extension CourseWidgetSnapshot {
     static var preview: CourseWidgetSnapshot {
         let calendar = CourseWidgetCalendar.calendar
         let today = calendar.startOfDay(for: .now)
-        func session(_ name: String, _ place: String, _ teacher: String, _ start: Int, _ end: Int, _ color: Int64, _ kind: String) -> CourseWidgetSession {
+        func session(_ name: String, _ place: String, _ teacher: String, _ start: Int, _ end: Int, _ color: Int64, _ kind: String,
+                     stagger: Int = 0) -> CourseWidgetSession {
             CourseWidgetSession(name: name, place: place, teacher: teacher, startMinute: start, endMinute: end,
-                                isLab: kind == "lab", color: color, kind: kind)
+                                isLab: kind == "lab", color: color, kind: kind, staggerMinutes: stagger)
         }
         let math = session("高等数学", "思源楼 101", "张老师", 8 * 60, 9 * 60 + 50, 0xD9574E, "required")
-        let data = session("数据结构", "逸夫楼 302", "李老师", 10 * 60 + 10, 12 * 60, 0xD9574E, "required")
+        let data = session("数据结构", "逸夫教学楼 YF302", "李老师", 10 * 60 + 30, 12 * 60 + 20, 0xD9574E, "required", stagger: 20)
         let physics = session("大学物理", "思源西楼 205", "王老师", 14 * 60 + 10, 16 * 60, 0xC9558A, "limited")
         let sports = session("排球", "体育馆", "赵老师", 8 * 60, 9 * 60 + 50, 0x16A4A4, "pe")
         let lab = session("物理实验", "物理实验中心", "", 13 * 60 + 30, 15 * 60 + 20, 0x9B6BCF, "lab")

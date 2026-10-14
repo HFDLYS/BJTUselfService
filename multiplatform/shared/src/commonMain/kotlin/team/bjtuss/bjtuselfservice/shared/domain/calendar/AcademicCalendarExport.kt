@@ -7,7 +7,7 @@ import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
 import team.bjtuss.bjtuselfservice.shared.domain.classroomoccupancy.OccupancyWeekDate
-import team.bjtuss.bjtuselfservice.shared.domain.classroomoccupancy.SLOT_TIME_RANGES
+import team.bjtuss.bjtuselfservice.shared.domain.course.classTimeRange
 import team.bjtuss.bjtuselfservice.shared.domain.course.Course
 import team.bjtuss.bjtuselfservice.shared.domain.course.parseCourseWeeks
 import team.bjtuss.bjtuselfservice.shared.domain.course.displayCoursePlace
@@ -103,6 +103,8 @@ fun generateAcademicCalendarIcs(
     calendarName: String = "北京交通大学日程",
     physicsLabs: List<team.bjtuss.bjtuselfservice.shared.feature.physicslab.PhysicsLab> = emptyList(),
     physicsDemos: List<team.bjtuss.bjtuselfservice.shared.feature.phydemo.PhysicsDemoBooking> = emptyList(),
+    /** 第二节错峰：逸夫教学楼/思源西楼按 10:30–12:20 导出（同一课程不同地点的变体分别判断）。 */
+    staggeredSecondSlot: Boolean = false,
 ): CalendarExportResult {
     val stamp = generatedAt.toLocalDateTime(TimeZone.UTC).let { dateTime ->
         "${dateTime.date.compact()}T${dateTime.hour.twoDigits()}${dateTime.minute.twoDigits()}${dateTime.second.twoDigits()}Z"
@@ -139,7 +141,7 @@ fun generateAcademicCalendarIcs(
             sortedVariants.forEachIndexed variantLoop@{ variantIndex, entry ->
                 val slotIndex = base.locationIndex / 8
                 val weekdayIndex = base.locationIndex % 8 - 1
-                val time = SLOT_TIME_RANGES.getOrNull(slotIndex)?.parseTimeRange() ?: return@variantLoop
+                val time = entry.value.first().classTimeRange(staggeredSecondSlot)?.parseTimeRange() ?: return@variantLoop
                 if (weekdayIndex !in 0..6) return@variantLoop
                 val weeksAndDates = entry.value
                     .flatMap { parseCourseWeeks(it.courseTime) }

@@ -97,6 +97,10 @@ import team.bjtuss.bjtuselfservice.shared.domain.course.Course
 import team.bjtuss.bjtuselfservice.shared.domain.course.coursesForWeek
 import team.bjtuss.bjtuselfservice.shared.domain.course.displayCoursePlace
 import team.bjtuss.bjtuselfservice.shared.domain.course.parseCourseWeeks
+import team.bjtuss.bjtuselfservice.shared.domain.course.classTimeRange
+import team.bjtuss.bjtuselfservice.shared.domain.course.isStaggered
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.unit.Dp
 import team.bjtuss.bjtuselfservice.shared.domain.grade.CourseType
 import team.bjtuss.bjtuselfservice.shared.domain.grade.courseTypeForCourseName
 import team.bjtuss.bjtuselfservice.shared.domain.grade.displayName
@@ -134,6 +138,25 @@ private val slotLabels = listOf(
     "第七节\n21:00–21:50",
 )
 private const val MILLIS_PER_DAY = 86_400_000L
+
+/** 设置里的「错峰上课时间」；壳层统一提供。原生 sheet 是独立组合，进 sheet 前要读出来显式传。 */
+internal val LocalStaggeredClassTimes = staticCompositionLocalOf { false }
+
+/**
+ * 网格色块的纵向位置。错峰课不新增节次，只把色块微微下移：顶边让出约 1/8 格（最多 7dp），
+ * 底边越过格子内边距压到格线上，读起来是“比这一节晚一点开始、稍晚结束”。
+ */
+private fun Modifier.courseBlockPlacement(course: Course, cellHeight: Dp, staggered: Boolean): Modifier {
+    if (!course.isStaggered(staggered)) {
+        return offset(y = cellHeight * course.eventSlotOffset).height(cellHeight * course.eventSlotHeight)
+    }
+    val shift = (cellHeight * 0.125f).coerceAtMost(7.dp)
+    return offset(y = shift).height(cellHeight - shift + minOf(shift, 2.dp))
+}
+
+/** "10:30-12:20" → "10:30–12:20"，与节次标签的排版一致。 */
+private fun Course.displayClassTime(staggered: Boolean): String? =
+    classTimeRange(staggered)?.replace('-', '–')
 
 @OptIn(
     ExperimentalLayoutApi::class,
@@ -313,6 +336,7 @@ fun CourseScheduleWorkspace(
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                     )
                     state.selectedCourse?.let { course ->
+                        val staggered = LocalStaggeredClassTimes.current
                         // 详情半屏就能放完 → 允许 medium 停靠（半屏透、全屏实）。
                         AppleSheet(
                             onDismissRequest = model::dismissCourseDetails,
@@ -322,6 +346,7 @@ fun CourseScheduleWorkspace(
                             val detailScrollState = rememberScrollState()
                             CourseDetailContent(
                                 course = course,
+                                staggeredClassTimes = staggered,
                                 modifier = Modifier.fillMaxWidth()
                                     .verticalScroll(detailScrollState)
                                     .desktopTouchScroll(detailScrollState)
@@ -448,6 +473,7 @@ fun CourseScheduleWorkspace(
     }
 
     if (showCalendarExportSheet) {
+        val staggered = LocalStaggeredClassTimes.current
         // 导出面板要放课程选择 + 两个动作，半屏放不下 → 全屏展开。
         AppleSheet(
             onDismissRequest = onDismissCalendarExport,
@@ -456,6 +482,7 @@ fun CourseScheduleWorkspace(
         ) {
             CourseCalendarExportSheet(
                 courseState = state,
+                staggeredClassTimes = staggered,
                 fileGateway = fileGateway,
                 systemCalendarGateway = systemCalendarGateway,
                 onDone = onDismissCalendarExport,
@@ -912,6 +939,7 @@ private fun CourseGridCell(
     onOpen: (Int) -> Unit,
     modifier: Modifier,
 ) {
+    val staggered = LocalStaggeredClassTimes.current
     Box(
         modifier = modifier.border(0.5.dp, MaterialTheme.colorScheme.outlineVariant).padding(2.dp),
         contentAlignment = Alignment.Center,
@@ -930,8 +958,7 @@ private fun CourseGridCell(
                         val showLocation = maxWidth >= 56.dp && maxHeight * course.eventSlotHeight >= 52.dp
                         Surface(
                             onClick = { onOpen(course.id) },
-                            modifier = Modifier.fillMaxWidth().offset(y = maxHeight * course.eventSlotOffset)
-                                .height(maxHeight * course.eventSlotHeight),
+                            modifier = Modifier.fillMaxWidth().courseBlockPlacement(course, maxHeight, staggered),
                             color = colors.container,
                             shape = RoundedCornerShape(7.dp),
                             border = androidx.compose.foundation.BorderStroke(
@@ -1701,12 +1728,14 @@ private fun CompactCourseColorBlock(
         courseTypeForCourseName(course.courseId, mapping)
     } ?: CourseType.UNKNOWN
     val colors = scheduleCourseColors(course, courseType)
+    val staggered = LocalStaggeredClassTimes.current
     androidx.compose.foundation.layout.BoxWithConstraints(modifier) {
         Surface(
             onClick = { onOpen(course.id) },
-            modifier = Modifier.fillMaxWidth().offset(y = maxHeight * course.eventSlotOffset)
-                .height(maxHeight * course.eventSlotHeight).semantics {
-                contentDescription = "${displayScheduleCourseName(course.courseName)}，${course.eventDatesLabel()} ${course.scheduleEventTime ?: course.courseTime}，${displayCoursePlace(course.coursePlace)}，点按查看详情"
+            modifier = Modifier.fillMaxWidth().courseBlockPlacement(course, maxHeight, staggered).semantics {
+                val time = course.scheduleEventTime
+                    ?: listOfNotNull(course.displayClassTime(staggered).takeIf { course.isStaggered(staggered) }, course.courseTime).joinToString(" ")
+                contentDescription = "${displayScheduleCourseName(course.courseName)}，${course.eventDatesLabel()} $time，${displayCoursePlace(course.coursePlace)}，点按查看详情"
             },
             color = colors.container,
             shape = RoundedCornerShape(5.dp),
@@ -1722,9 +1751,14 @@ private fun DayScheduleSlotRow(
     courseTypesByCode: Map<String, CourseType>?,
     onOpen: (Int) -> Unit,
 ) {
+    val staggered = LocalStaggeredClassTimes.current
+    // 整节都是错峰课：左侧标签直接写错峰时间；与普通课混在一节时标签不变，错峰课在卡片上单独写时间。
+    val staggeredLabel = slotCourses.firstOrNull()?.takeIf { slotCourses.all { it.isStaggered(staggered) } }
+        ?.displayClassTime(staggered)?.let { "${slotLabel.substringBefore('\n')}\n$it" }
+    val label = staggeredLabel ?: slotLabel
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
         Text(
-            slotLabel,
+            label,
             modifier = Modifier.width(88.dp).padding(top = 12.dp),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1742,7 +1776,7 @@ private fun DayScheduleSlotRow(
                 )
             } else {
                 slotCourses.forEach { course ->
-                    CourseListCard(course, courseTypesByCode, onOpen)
+                    CourseListCard(course, courseTypesByCode, onOpen, showStaggeredTime = staggeredLabel == null)
                 }
             }
         }
@@ -1754,12 +1788,14 @@ private fun CourseListCard(
     course: Course,
     courseTypesByCode: Map<String, CourseType>?,
     onOpen: (Int) -> Unit,
+    showStaggeredTime: Boolean,
 ) {
     // 底色与「色块概览」同源：培养方案课程号 → 课程性质 → 配色；未命中用 UNKNOWN 灰。
     val courseType = courseTypesByCode?.let { mapping ->
         courseTypeForCourseName(course.courseId, mapping)
     } ?: CourseType.UNKNOWN
     val colors = scheduleCourseColors(course, courseType)
+    val staggered = LocalStaggeredClassTimes.current
     // 扁平 Surface：无 elevation 阴影描边，避免外圈偏深、正文区又叠浅色矩形的双层感。
     Surface(
         onClick = { onOpen(course.id) },
@@ -1781,7 +1817,10 @@ private fun CourseListCard(
                 color = colors.onContainer.accessibleAlpha(0.78f),
             )
             Text(
-                course.scheduleEventTime?.let { "${course.eventDatesLabel()} · $it" } ?: course.courseTime,
+                course.scheduleEventTime?.let { "${course.eventDatesLabel()} · $it" }
+                    ?: course.displayClassTime(staggered)?.takeIf { showStaggeredTime && course.isStaggered(staggered) }
+                        ?.let { "$it · ${course.courseTime}" }
+                    ?: course.courseTime,
                 style = MaterialTheme.typography.labelMedium,
                 color = colors.onContainer.accessibleAlpha(0.72f),
             )
@@ -1804,6 +1843,7 @@ private fun CourseDetailPanel(course: Course?, modifier: Modifier) {
         } else {
             CourseDetailContent(
                 course = course,
+                staggeredClassTimes = LocalStaggeredClassTimes.current,
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(detailScrollState)
@@ -1815,7 +1855,7 @@ private fun CourseDetailPanel(course: Course?, modifier: Modifier) {
 }
 
 @Composable
-internal fun CourseDetailContent(course: Course, modifier: Modifier) {
+internal fun CourseDetailContent(course: Course, staggeredClassTimes: Boolean, modifier: Modifier) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text(displayScheduleCourseName(course.courseName), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
         if (course.scheduleEventKind == null) CourseDetailLine("编号", course.courseId)
@@ -1828,7 +1868,10 @@ internal fun CourseDetailContent(course: Course, modifier: Modifier) {
             CourseDetailLine("日期", course.eventDates.joinToString("\n"))
             CourseDetailLine("时间", course.scheduleEventTime)
         } else {
-            CourseDetailLine("时间", "${dayLabels.getOrElse(day) { "未知" }} · ${slotLabels.getOrElse(slot) { "未知" }.replace('\n', ' ')}")
+            val slotName = slotLabels.getOrNull(slot)?.substringBefore('\n') ?: "未知"
+            val time = course.displayClassTime(staggeredClassTimes).orEmpty()
+            val note = if (course.isStaggered(staggeredClassTimes)) "（错峰）" else ""
+            CourseDetailLine("时间", "${dayLabels.getOrElse(day) { "未知" }} · $slotName $time$note".trimEnd())
         }
         CourseDetailLine(
             "类型",

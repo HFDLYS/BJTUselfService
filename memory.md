@@ -1,18 +1,18 @@
 # BJTUselfService 实时工作记忆
 
-> 最后更新：2026-10-13。
-> 当前分支：`fix/package-beijing-time`，基于 `mine/main@9dff5e6`（PR #13 已合入）；四端打包北京时间修复在 PR #14，待合入。
+> 最后更新：2026-10-14。
+> 当前分支：`feat/staggered-second-slot`，基于 `mine/main@4dcb378`（PR #13、#14 已合入）。
 > KMP 应用版本：`1.8.4-Beta3` / Build 35（macOS/Windows 安装包数值版本 1.8.4）。正式 Latest 仍为 `v1.8.3-KMP`。
 > 冻结原 Android：`v1.7.1` / versionCode 9（对照 `origin/main@7d94f74`）。
 > 已完成工作的细节见 `history_full.md` 末尾日志。
 
 ## 进行中
 
-- 四端打包北京时间：`kmp-package.yml` 全局设置 `TZ=Asia/Shanghai` 与 JVM 时区；Windows 原生工具设置 `China Standard Time`，保留原中文编码参数。iOS 签名后统一暂存目录 mtime、复验签名，以 `zip -X` 去掉 UTC 扩展时间；APK/MSI/DMG 仅刷新输出文件 mtime，不重写签名包内容。打包日志显式打印北京时间与偏移量。
-  - 本地验证：YAML 解析、9 个 Bash 步骤 `bash -n`、JVM 时区、模拟 IPA 的北京时间跨日/真实 epoch/ZIP 时间/无 UTC 扩展字段/符号链接/内容哈希均通过，`git diff --check` 通过。
-  - 首轮 CI：`38429777141` 成功；下载实际 IPA 验证 30 个条目的时间全部为北京时间 `2026-10-14 00:29:52`，压缩包 CRC 与签名复验通过。发现 `upload-artifact@v4` 的外层 ZIP 仍把 IPA 文件时间序列化为 UTC `2026-10-13 16:29:52`，单设 TZ 不足以修复。
-  - 外层 ZIP 修复：四端通过 `scripts/stage-actions-artifact.py` 创建上传副本，仅该副本 mtime 加 8 小时，适配 upload-artifact 的 UTC DOS 时间编码；原包保留真实 epoch，内容与签名不变。四种扩展名的内容哈希、原 epoch、跨日时间与重复暂存验证通过，等待第二轮 CI 实际产物验证。
-  - 未验证：Windows/MSI、Android/APK、macOS/DMG 需后续四端打包验证（当前 PR 只打 iOS）。仅修复后续产物，既有 Actions 产物与 GitHub 自身 UTC 运行时间不变。
+- 第二节错峰上课（`feat/staggered-second-slot`，未提交）：第二节教室在逸夫教学楼（YF）/思源西楼（SX）时按 10:30–12:20。设置页新增开关「错峰上课时间」（默认开，`AppPreferences.staggeredSecondSlot`）。规则在 `domain/course/StaggeredClassTime.kt`（楼名或 `YF/SX+数字` 教室号；思源楼/思源东楼/威海逸夫楼不算；实验/考试不参与）。
+  - 精确时间：课程详情（含“（错峰）”）、按日列表卡片与整节均错峰时的节次标签、首页“现在/下一节”与日程、iOS 小组件快照 start/end、日历导出。
+  - 只下移不加节：课表网格色块顶边下移约 1/8 格（≤7dp）、底边压到格线；iOS 周视图按 `staggerMinutes` 归回原大节，同样微移。快照新增可选字段 `staggerMinutes`，旧小组件忽略。
+  - 已验证：`:shared:desktopTest` 全过（含新增 `StaggeredClassTimeRenderTest`，合成课表出图于 `shared/build/reports/staggered-class-time/`，浅/深色、整节错峰、混排、关闭开关均人工看过）；iOS 签名模拟器 `xcodebuild` Debug（含小组件 Swift）`BUILD SUCCEEDED`；`:androidApp:assembleDebug`、`:desktopApp:compileKotlin`、`:windowsApp:compileKotlinWindows`、`:shared:compileKotlinIos{SimulatorArm64,Arm64}` 通过。
+  - 未验证：真实课表里 YF/SX 地点文本格式（按既有 fixture `海淀西校区,思源西楼,SX501` 推断）；模拟器/真机中的设置页开关、首页卡片和 iOS 周视图小组件实际观感。
 
 ## 当前痛点
 

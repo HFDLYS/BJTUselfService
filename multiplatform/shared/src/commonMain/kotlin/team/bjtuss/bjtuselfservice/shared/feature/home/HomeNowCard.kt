@@ -65,6 +65,7 @@ internal fun HomeNowSection(
             homeCoursesOnDate(schedule, today),
             homePhysicsLabsOnDate(schedule, today),
             now,
+            schedule.staggeredClassTimes,
         )
     }
     if (sessions.isEmpty()) return
@@ -86,6 +87,7 @@ internal fun HomeNowSection(
             val detailScroll = rememberScrollState()
             CourseDetailContent(
                 course,
+                schedule.staggeredClassTimes,
                 Modifier.fillMaxWidth().verticalScroll(detailScroll).desktopTouchScroll(detailScroll)
                     .padding(horizontal = 24.dp, vertical = 8.dp).padding(bottom = 20.dp),
             )

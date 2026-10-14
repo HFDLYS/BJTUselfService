@@ -1,8 +1,8 @@
 package team.bjtuss.bjtuselfservice.shared.domain.home
 
 import kotlinx.datetime.LocalDateTime
-import team.bjtuss.bjtuselfservice.shared.domain.classroomoccupancy.SLOT_TIME_RANGES
 import team.bjtuss.bjtuselfservice.shared.domain.course.Course
+import team.bjtuss.bjtuselfservice.shared.domain.course.classTimeRange
 
 /**
  * 首页顶部「现在该去哪」：正在上的课、进行中的实验，或今天还没开始的下一场。
@@ -21,10 +21,11 @@ fun pickHomeNowSessions(
     todayCourses: List<Course>,
     todayLabs: List<Course>,
     now: LocalDateTime,
+    staggeredClassTimes: Boolean = false,
 ): List<HomeNowSession> {
     val minute = now.hour * 60 + now.minute
-    val sessions = todayCourses.mapNotNull { it.toNowSession(isLab = false, minute) } +
-        todayLabs.mapNotNull { it.toNowSession(isLab = true, minute) }
+    val sessions = todayCourses.mapNotNull { it.toNowSession(isLab = false, minute, staggeredClassTimes) } +
+        todayLabs.mapNotNull { it.toNowSession(isLab = true, minute, staggeredClassTimes) }
     val ongoing = sessions.filter { it.ongoing }.sortedBy { it.startMinutes }
     if (ongoing.isNotEmpty()) return ongoing
     return listOfNotNull(
@@ -32,11 +33,11 @@ fun pickHomeNowSessions(
     )
 }
 
-private fun Course.toNowSession(isLab: Boolean, minuteOfDay: Int): HomeNowSession? {
+private fun Course.toNowSession(isLab: Boolean, minuteOfDay: Int, staggeredClassTimes: Boolean): HomeNowSession? {
     val range = if (isLab) {
         scheduleEventTime?.trim().orEmpty()
     } else {
-        SLOT_TIME_RANGES.getOrNull(courseLocationIndex / 8).orEmpty()
+        classTimeRange(staggeredClassTimes).orEmpty()
     }
     val (start, end) = parseHmRange(range) ?: return null
     return HomeNowSession(

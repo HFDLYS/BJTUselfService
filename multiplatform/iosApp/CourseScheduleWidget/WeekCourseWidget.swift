@@ -69,7 +69,7 @@ struct WeekLayout {
         }.map(\.element)
 
         func overlaps(_ occurrence: CourseOccurrence, _ slot: ClosedRange<Int>) -> Bool {
-            occurrence.session.startMinute < slot.upperBound && occurrence.session.endMinute > slot.lowerBound
+            occurrence.session.slotStartMinute < slot.upperBound && occurrence.session.slotEndMinute > slot.lowerBound
         }
         // 上午两节、下午两节始终显示，构成稳定骨架；午间、晚上的大节有课才显示。
         let core: Set<Int> = [0, 1, 3, 4]
@@ -158,11 +158,14 @@ private struct WeekGrid: View {
                 ForEach(layout.blocks) { block in
                     let laneWidth = (columnWidth - gap * CGFloat(block.laneCount - 1)) / CGFloat(block.laneCount)
                     let rows = CGFloat(block.lastRow - block.firstRow + 1)
+                    // 错峰课不多占一行：顶边微微下移，底边越过行间空隙一半，读起来是“稍晚开始、稍晚结束”。
+                    let shift: CGFloat = block.occurrence.session.isStaggered ? min(rowHeight * 0.125, 6) : 0
+                    let overhang: CGFloat = shift > 0 ? min(shift, gap / 2) : 0
                     WeekCourseCell(occurrence: block.occurrence, now: now, narrow: block.laneCount > 1)
-                        .frame(width: laneWidth, height: rows * rowHeight + (rows - 1) * gap)
+                        .frame(width: laneWidth, height: rows * rowHeight + (rows - 1) * gap - shift + overhang)
                         .offset(
                             x: axisWidth + gap + CGFloat(block.column) * (columnWidth + gap) + CGFloat(block.lane) * (laneWidth + gap),
-                            y: headerHeight + gap + CGFloat(block.firstRow) * (rowHeight + gap)
+                            y: headerHeight + gap + CGFloat(block.firstRow) * (rowHeight + gap) + shift
                         )
                 }
 
