@@ -30,6 +30,7 @@ fun createWindowsAccountSecurityStore(): AccountSecurityStore = AccountSecurityS
     physicsLabVault = { WindowsDpapiCredentialVault(service = "team.bjtuss.bjtuselfservice.kmp.physicslab", account = it) },
     physicsDemoVault = { WindowsDpapiCredentialVault(service = "team.bjtuss.bjtuselfservice.kmp.phydemo", account = it) },
     citelVault = { WindowsDpapiCredentialVault(service = "team.bjtuss.bjtuselfservice.kmp.citel", account = it) },
+    phyVlabVault = { WindowsDpapiCredentialVault(service = "team.bjtuss.bjtuselfservice.kmp.phyvlab", account = it) },
 )
 
 class WindowsDpapiCredentialVault(

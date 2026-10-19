@@ -7,6 +7,40 @@ import kotlin.test.assertIs
 
 class AutomaticLoginCoordinatorTest {
     @Test
+    fun ssoChallengeWithoutCaptchaSubmitsDirectlyWithoutRecognizer() = runSuspend {
+        val gateway = SsoGateway(rejection = null)
+        val result = AutomaticLoginCoordinator(gateway, CaptchaRecognizer { error("recognizer should not run") })
+            .login(Credentials("student", "secret"))
+
+        assertEquals(1, assertIs<AutomaticLoginResult.Authenticated>(result).attempts)
+        assertEquals(listOf(""), gateway.answers)
+    }
+
+    @Test
+    fun wrongPasswordStopsAfterOneSubmission() = runSuspend {
+        val gateway = SsoGateway(rejection = LoginFailure.ACCOUNT_REJECTED)
+        val result = assertIs<AutomaticLoginResult.ManualRequired>(
+            AutomaticLoginCoordinator(gateway, UnavailableCaptchaRecognizer).login(Credentials("student", "wrong")),
+        )
+
+        assertEquals(LoginFailure.ACCOUNT_REJECTED, result.reason)
+        assertEquals(1, gateway.answers.size)
+    }
+
+    @Test
+    fun ssoCaptchaGoesStraightToManualEntry() = runSuspend {
+        val gateway = SsoGateway(rejection = null, captcha = true)
+        val result = assertIs<AutomaticLoginResult.ManualRequired>(
+            AutomaticLoginCoordinator(gateway, CaptchaRecognizer { error("recognizer should not run") })
+                .login(Credentials("student", "secret")),
+        )
+
+        assertEquals(LoginFailure.CAPTCHA_REJECTED, result.reason)
+        assertEquals(true, result.challenge?.requiresCaptcha)
+        assertEquals(0, gateway.answers.size)
+    }
+
+    @Test
     fun retriesWithFreshChallengesAndSucceedsOnThirdAttempt() = runSuspend {
         val gateway = FakeAutomationGateway(failuresBeforeSuccess = 2)
         val attempts = mutableListOf<Int>()
@@ -140,6 +174,34 @@ private class FakeAutomationGateway(
 
     private companion object {
         val Profile = StudentProfile("Test", "student", "student", "test")
+    }
+}
+
+private class SsoGateway(
+    private val rejection: LoginFailure?,
+    private val captcha: Boolean = false,
+) : LoginAutomationGateway {
+    val answers = mutableListOf<String>()
+
+    override suspend fun requestCaptchaChallenge(studentId: String): ChallengeResult = ChallengeResult.Ready(
+        CaptchaChallenge(
+            loginPageUrl = "https://sso.bjtu.edu.cn/o/authorize/?state=1",
+            csrfToken = "",
+            captchaId = if (captcha) "captcha.code.fixture" else "",
+            imageBytes = if (captcha) byteArrayOf(1) else ByteArray(0),
+            formFields = mapOf("flowId" to "flow-fixture"),
+            autoRecognizable = false,
+        ),
+    )
+
+    override suspend fun authenticateMis(
+        credentials: Credentials,
+        challenge: CaptchaChallenge,
+        captchaAnswer: String,
+    ): AuthenticationResult {
+        answers += captchaAnswer
+        return rejection?.let(AuthenticationResult::Failed)
+            ?: AuthenticationResult.Success(StudentProfile("Test", "student", "student", "test"))
     }
 }
 
