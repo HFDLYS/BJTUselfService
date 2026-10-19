@@ -39,7 +39,8 @@ fun formatSchoolDeadline(raw: String): String =
 fun formatDeadlineEpoch(epochSeconds: Long): String =
     formatDeadline(Instant.fromEpochSeconds(epochSeconds).toLocalDateTime(schoolZone))
 
-private val chineseDatePattern = Regex("""(\d{4})年(\d{1,2})月(\d{1,2})日\s+(\d{1,2}):(\d{2})""")
+// 物理在线（Moodle）原文在日期和时刻之间可能夹着星期（`2026年10月20日 Tuesday 00:00`），与解析器口径一致。
+private val chineseDatePattern = Regex("""(\d{4})年(\d{1,2})月(\d{1,2})日(?:\s+[^\d\s]+)?\s+(\d{1,2}):(\d{2})""")
 
 /**
  * 物理在线的中文日期（`2026年10月20日 00:00`，后面可能带星期等原文），

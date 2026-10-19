@@ -37,6 +37,9 @@ class DeadlineTextTest {
         assertEquals("2026年10月19日 24:00 · 周一", formatChineseDeadline("2026年10月20日 00:00"))
         assertEquals("2026年10月20日 23:59 · 周二", formatChineseDeadline("2026年10月20日 23:59 周二"))
         assertEquals("未公布", formatChineseDeadline("未公布"))
+        // 物理在线（Moodle）原文在日期和时刻之间带星期。
+        assertEquals("2026年10月23日 24:00 · 周五", formatChineseDeadline("2026年10月24日 Saturday 00:00"))
+        assertEquals("2026年10月23日 24:00 · 周五", formatChineseDeadline("2026年10月24日 星期六 00:00"))
     }
 
     /** 显示的日期必须和首页日程归属的那一天一致。 */

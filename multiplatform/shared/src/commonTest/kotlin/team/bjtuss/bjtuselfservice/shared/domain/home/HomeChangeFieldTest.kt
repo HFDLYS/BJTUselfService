@@ -95,8 +95,28 @@ class HomeChangeFieldTest {
         assertEquals("Audience Analysis", matched?.title)
     }
 
-    private fun homework(title: String, course: String) = Homework(
-            upId = title.hashCode(),
+    /** 新记录的截止时间是显示文字（前一天 24:00），也要匹配到同一份作业，而不是退回同名第一项。 */
+    @Test
+    fun homeworkChangeMatchesMidnightDeadlineDisplayText() {
+        val record = HomeChangeRecord(
+            domain = HomeChangeDomain.HOMEWORK,
+            kind = DataChangeKind.MODIFIED,
+            title = "实验",
+            fields = listOf(
+                HomeChangeField("课程", "课", "课"),
+                HomeChangeField("截止时间", "2026-10-10 24:00", "2026-10-11 24:00"),
+            ),
+        )
+        val matched = matchHomeworkChange(
+            record,
+            listOf(homework("实验", "课", upId = 1, endTime = "2026-10-11 00:00"),
+                homework("实验", "课", upId = 2, endTime = "2026-10-12 00:00")),
+        )
+        assertEquals(2, matched?.upId)
+    }
+
+    private fun homework(title: String, course: String, upId: Int = title.hashCode(), endTime: String = "2026-10-11 00:00") = Homework(
+            upId = upId,
             idSnId = null,
             score = "",
             userId = 0,
@@ -105,7 +125,7 @@ class HomeChangeFieldTest {
             title = title,
             content = "",
             createDate = "",
-            endTime = "2026-10-11 00:00",
+            endTime = endTime,
             openDate = "",
             status = 0,
             submitCount = 0,

@@ -3,6 +3,7 @@ package team.bjtuss.bjtuselfservice.shared.data.homework
 import team.bjtuss.bjtuselfservice.shared.domain.homework.Homework
 import team.bjtuss.bjtuselfservice.shared.domain.homework.HomeworkAttachment
 import team.bjtuss.bjtuselfservice.shared.domain.homework.HomeworkDetail
+import team.bjtuss.bjtuselfservice.shared.domain.homework.homeworkAttachmentFileName
 
 data class SmartCourse(
     val id: Int,
@@ -147,14 +148,18 @@ fun parseHomeworkDetail(
             ?: return@parseObject HomeworkJsonParseResult.Failure("picList[$index]")
         val id = item.int("id") ?: continue
         if (id == 0) continue
+        val sourcePath = item.string("url").orEmpty()
         parsedAttachments += HomeworkAttachment(
             id = id,
-            fileName = item.string("file_name")
-                ?.replace('+', ' ')
-                ?.takeIf(String::isNotBlank)
-                ?: "附件 $id",
+            fileName = homeworkAttachmentFileName(
+                item.string("file_name")
+                    ?.replace('+', ' ')
+                    ?.takeIf(String::isNotBlank)
+                    ?: "附件 $id",
+                sourcePath,
+            ),
             sizeBytes = item.long("pic_size") ?: 0L,
-            sourcePath = item.string("url").orEmpty(),
+            sourcePath = sourcePath,
         )
     }
     HomeworkJsonParseResult.Success(

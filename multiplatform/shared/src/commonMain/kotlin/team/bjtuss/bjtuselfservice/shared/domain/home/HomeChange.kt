@@ -118,7 +118,10 @@ fun matchHomeworkChange(
     val deadline = record.fieldValue("截止时间")
     val named = homework.filter { it.title == record.title }
     val byCourse = if (course == null) named else named.filter { it.courseName == course }
-    val byDeadline = if (deadline == null) byCourse else byCourse.filter { it.endTime == deadline }
+    // 变化记录里的截止时间是显示文字（零点截止写成前一天 24:00），旧记录仍是原文，两种都要认。
+    val byDeadline = if (deadline == null) byCourse else byCourse.filter {
+        it.endTime == deadline || team.bjtuss.bjtuselfservice.shared.domain.time.formatSchoolDeadline(it.endTime) == deadline
+    }
     return byDeadline.firstOrNull() ?: byCourse.firstOrNull() ?: named.firstOrNull()
 }
 
