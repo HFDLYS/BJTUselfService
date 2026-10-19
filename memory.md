@@ -13,8 +13,6 @@
 
 - Agent 后续开发在 `feat/ai-agent-dev`（1.8.5-AgentAlpha / Build 38），A–E 与 #23 完整保留；main 维持 Candidate3 基线。后续新的 Agent PR 以 dev 为基础，发布与合入 main 由用户决定。验证与未验证边界见日志末尾。
 
-- `fix/deadline-24-attachment-ext`（基于 dev，PR 指向 `feat/ai-agent-dev`）：物理在线带星期原文（`日 Saturday 00:00`）的零点截止未改成前一天 24:00、CITEL 题目 Markdown 截止漏改、变化记录按截止匹配作业失效；课程平台老师附件 `file_name` 不带扩展名导致下载丢后缀（从存储路径补，路径也没有时按 Content-Type 补）。本地 Gradle 被 Maven Central 429 限流，仅 CI 验证；debug 包用 workflow_dispatch 触发。
-
 ## 当前痛点
 
 - 智慧教学（课程平台作业/课件，MIS module 28）仍被学校跳到已下线的 `cas.bjtu.edu.cn/o/authorize`，浏览器同样 404，属学校侧问题；待学校改到 SSO 后再适配 `SmartPlatformEndpoint` 握手白名单。

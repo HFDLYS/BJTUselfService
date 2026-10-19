@@ -851,6 +851,13 @@
 - 验证：main 本地/远端一致、祖先关系及版本清单检查通过；dev 源码未变，沿用上一轮 895 测试零失败和四端编译结果。未重新实机验证，安装版保持 Alpha。
 
 
+## 2026-10-19 零点截止补齐与老师附件扩展名修复（PR #28，fix/deadline-24-attachment-ext → feat/ai-agent-dev）
+
+- 改动：物理在线原文日期与时刻之间带星期（如 `2026年10月24日 Saturday 00:00`）时也按前一天 24:00 显示，开放时间同样格式化（`DeadlineText`、`PhyVlabScreen`）；CITEL 题目 Markdown 截止改用 `formatDeadlineEpoch`；首页变化记录用显示后的“24:00”文字也能匹配回原作业（`HomeChange`）。课程平台老师附件 `picList.file_name` 不带扩展名时从存储路径补回，路径也没有时下载阶段按 Content-Type 补（`HomeworkJsonParser`、`HomeworkRemoteDataSource`、`Homework`）。
+- 原因/决策：#23 的零点截止规则漏了这几处；附件行为对齐原 Android 版。只改显示文字，倒计时、过期判断与排序仍按真实时刻。
+- 验证：新增/扩充 `DeadlineTextTest`、`HomeworkJsonParserTest`、`HomeChangeFieldTest`；当时本地 Gradle 被 Maven Central 429 限流，仅 PR CI 验证。2026-10-20 在 #29 分支（含本改动）本地 `:shared:desktopTest` 等四端矩阵通过，906 测试零失败。
+- 未验证：真实物理在线页面原文格式、真实附件下载后的文件名（需真机/桌面点验）。
+
 ## 2026-10-20 MIS 改接统一身份认证 SSO，物理在线改用独立账号（PR #29，fix/mis-sso-auth → feat/ai-agent-dev）
 
 - 改动：MIS 入口 `/home/` → `/auth/nsso/` → `sso.bjtu.edu.cn/o/authorize/`，解析 `#loginForm` 隐藏字段（flowId/state 等）与 `ssoConfig.sm2.publicKey`；密码按页面 sm-crypto 格式（C1C3C2、无 04、base64）加密后 POST `/sso/login`，只在 SSO/MIS HTTPS 内跟随回调（`auth/SchoolLoginProtocol.kt`、`auth/SsoSm2.kt`）。默认免验证码；回显 `var error` 为 411xx 时取 `/api/captcha/getCaptcha` 字母验证码走手动输入，40400 直接提示“学号或密码错误”且不重试（`AutomaticLoginCoordinator`、`LoginScreen`）。注销改为 MIS `slogout` + SSO `logout`，不跟随到明文 http。物理在线改为 Moodle 原生登录（`PhyVlabSessionProtocol`），新增 `PhyVlabAccountModel` 与“物理在线账号设置”页，凭据进四端系统安全存储，保存前真实登录校验；删除 CAS 恢复链路 `PhyVlabSessionRecovery`。
