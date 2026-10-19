@@ -38,6 +38,21 @@ data class HomeworkAttachment(
     val sourcePath: String,
 )
 
+private val attachmentExtensionPattern = Regex("[A-Za-z0-9]{1,8}")
+
+/**
+ * 课程平台 `picList.file_name` 常常不带扩展名（老师上传 `fig2.zip` 后只回 `fig2`），
+ * 真实扩展名只在存储路径 `url` 里。与原 Android 版一致：从路径补扩展名，已带同一扩展名时不重复追加。
+ */
+fun homeworkAttachmentFileName(fileName: String, sourcePath: String): String {
+    val extension = sourcePath.substringBefore('?').substringBefore('#')
+        .substringAfterLast('/').substringAfterLast('\\')
+        .substringAfterLast('.', "")
+        .takeIf(attachmentExtensionPattern::matches)
+        ?: return fileName
+    return if (fileName.endsWith(".$extension", ignoreCase = true)) fileName else "$fileName.$extension"
+}
+
 data class HomeworkDetail(
     val content: String,
     val attachments: List<HomeworkAttachment>,

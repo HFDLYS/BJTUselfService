@@ -7,6 +7,7 @@ import com.fleeksoft.ksoup.nodes.TextNode
 import io.ktor.http.Url
 import kotlinx.coroutines.CancellationException
 import team.bjtuss.bjtuselfservice.shared.domain.homework.HomeworkFileContent
+import team.bjtuss.bjtuselfservice.shared.domain.time.formatDeadlineEpoch
 import team.bjtuss.bjtuselfservice.shared.files.*
 
 /** Fence length follows the content, so a testcase containing Markdown cannot close the block. */
@@ -61,7 +62,7 @@ fun citelProblemMarkdown(task: CitelTask, cached: CitelCachedProblem): String = 
     appendLine("- 课程：${task.courseName}")
     appendLine("- 模块：${task.id}")
     appendLine("- 抓取时间：${citelDateText(cached.fetchedAt)}（北京时间）")
-    appendLine("- 截止：${task.dueTime?.let(::citelDateText) ?: "未提供"}")
+    appendLine("- 截止：${task.dueTime?.let(::formatDeadlineEpoch) ?: "未提供"}")
     appendLine("- 评测：${task.submissionStatusText()}")
     if (problem.gradeLine.isNotBlank()) appendLine("- ${problem.gradeLine}")
     appendLine("- [原题](${task.url})")
