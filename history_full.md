@@ -849,3 +849,11 @@
 
 - main@53bf642a 已正常推送到 mine，并纳入 dev 祖先。此历史合并保留 dev 的完整 Alpha 源码，避免主线基线恢复提交删除 dev 的 Agent 内容；源码逐文件与原 dev@839143b8 比对一致，差异仅三份状态文档。后续 dev 对 main 的 PR 会包含完整 Agent A–E、独立 #23 和 Alpha 版本改动。
 - 验证：main 本地/远端一致、祖先关系及版本清单检查通过；dev 源码未变，沿用上一轮 895 测试零失败和四端编译结果。未重新实机验证，安装版保持 Alpha。
+
+
+## 2026-10-20 MIS 改接统一身份认证 SSO，物理在线改用独立账号（PR #29，fix/mis-sso-auth → feat/ai-agent-dev）
+
+- 改动：MIS 入口 `/home/` → `/auth/nsso/` → `sso.bjtu.edu.cn/o/authorize/`，解析 `#loginForm` 隐藏字段（flowId/state 等）与 `ssoConfig.sm2.publicKey`；密码按页面 sm-crypto 格式（C1C3C2、无 04、base64）加密后 POST `/sso/login`，只在 SSO/MIS HTTPS 内跟随回调（`auth/SchoolLoginProtocol.kt`、`auth/SsoSm2.kt`）。默认免验证码；回显 `var error` 为 411xx 时取 `/api/captcha/getCaptcha` 字母验证码走手动输入，40400 直接提示“学号或密码错误”且不重试（`AutomaticLoginCoordinator`、`LoginScreen`）。注销改为 MIS `slogout` + SSO `logout`，不跟随到明文 http。物理在线改为 Moodle 原生登录（`PhyVlabSessionProtocol`），新增 `PhyVlabAccountModel` 与“物理在线账号设置”页，凭据进四端系统安全存储，保存前真实登录校验；删除 CAS 恢复链路 `PhyVlabSessionRecovery`。
+- 原因/决策：学校 MIS 认证从 cas 换为 sso，旧 CAS 登录与物理在线 OAuth（仍指向已下线 CAS）均失效。commonMain 无大数库，SM3/SM2 自写并用页面自带 sm2.min.js 生成的夹具交叉验证。SSO 字母验证码不交给算式识别模型。修正跳转解析 `takeFrom` 会把旧查询拼进下一跳的问题。
+- 验证：`./gradlew :shared:desktopTest :androidApp:assembleDebug :desktopApp:compileKotlin :windowsApp:compileKotlinWindows :shared:compileKotlinIosSimulatorArm64 :shared:compileKotlinIosArm64` BUILD SUCCESSFUL，906 测试零失败。签名模拟器 xcodebuild（iPhone 17 Pro，Debug）BUILD SUCCEEDED；实机：已存凭据静默 SSO 登录，成绩/课表/考试/演示实验同步完成；物理在线账号保存时真实登录通过、同步完成，杀进程重启后钥匙串恢复仍成功。协议取证用 CDP（浏览器登录抓包）与 curl 假账号探测错误回显。
+- 未验证：SSO 要求验证码的手动流程未在真实服务器触发；Android/macOS/Windows 未实机运行；SSO 注销真实效果未确认。智慧教学（module 28）仍被学校跳到已下线 `cas.bjtu.edu.cn/o/authorize`（浏览器同样 404），未处理。
