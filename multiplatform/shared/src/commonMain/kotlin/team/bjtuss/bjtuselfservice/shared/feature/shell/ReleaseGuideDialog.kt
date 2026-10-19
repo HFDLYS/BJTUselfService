@@ -84,3 +84,18 @@ internal fun Release184GuideDialog(saveFailed: Boolean, onConfirm: () -> Unit) {
         onConfirm = onConfirm,
     )
 }
+
+/** 1.8.5 紧急修复：学校 10 月 20 日切换 MIS 认证后的可用范围说明。 */
+@Composable
+internal fun EmergencyFix185NoticeDialog(saveFailed: Boolean, onConfirm: () -> Unit) {
+    TimedGuideDialog(
+        title = "1.8.5 紧急修复说明",
+        body = "· 登录：已适配 10 月 20 日起启用的 MIS 新统一身份认证方式，课表、成绩、考试等教务系统相关功能可正常使用。\n\n" +
+            "· 课程平台：学校系统迁移尚未完成，课程平台的作业和课件下载暂时无法使用。\n\n" +
+            "· 物理在线：原统一认证登录路径已失效，请到「应用 → 设置 → 物理在线账号设置」填写物理在线的独立账号和密码。\n\n" +
+            "· 验证码：新认证系统有新的验证码方式，适配尚待验证；登录遇到验证码问题请反馈。\n\n" +
+            "· 本版本为紧急修复接入，AI-Agent 接入等新功能仍在开发中，其他功能有待验证。",
+        saveFailed = saveFailed,
+        onConfirm = onConfirm,
+    )
+}

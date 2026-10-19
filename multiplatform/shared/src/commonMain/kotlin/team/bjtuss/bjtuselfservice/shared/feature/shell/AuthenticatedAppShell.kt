@@ -1070,11 +1070,19 @@ fun AuthenticatedAppShell(
     // 「前往下载」，不依赖用户停留在设置页（设置页内按钮触发的结果也走同一弹窗）。
     val showGuideOnThisHost = !entryLoggingIn &&
         (forcedRouteId == null || forcedRouteId == AppSection.HOME.name)
-    val showRelease183Guide = showGuideOnThisHost && settingsState.preferences.release183GuidePending
-    val showRelease184Guide = showGuideOnThisHost && !showRelease183Guide &&
+    // 紧急修复说明关系到能否正常使用，排在旧版本功能介绍之前。
+    val showEmergencyFix185Notice = showGuideOnThisHost &&
+        !settingsState.preferences.emergencyFix185NoticeAcknowledged
+    val showRelease183Guide = showGuideOnThisHost && !showEmergencyFix185Notice &&
+        settingsState.preferences.release183GuidePending
+    val showRelease184Guide = showGuideOnThisHost && !showEmergencyFix185Notice && !showRelease183Guide &&
         !settingsState.preferences.release184GuideAcknowledged
-    val blockingGuideVisible = showRelease183Guide || showRelease184Guide
+    val blockingGuideVisible = showEmergencyFix185Notice || showRelease183Guide || showRelease184Guide
     when {
+        showEmergencyFix185Notice -> EmergencyFix185NoticeDialog(
+            settingsState.saveFailed,
+            settingsModel::acknowledgeEmergencyFix185Notice,
+        )
         showRelease183Guide -> Release183GuideDialog(settingsState.saveFailed, settingsModel::acknowledgeRelease183Guide)
         showRelease184Guide -> Release184GuideDialog(settingsState.saveFailed, settingsModel::acknowledgeRelease184Guide)
         else -> AppUpdateResultDialog(settingsState.updateCheck, settingsModel::dismissUpdateCheck, settingsModel::postponeUpdate)

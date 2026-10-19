@@ -106,6 +106,9 @@ class CacheStoreTest {
             assertFalse(store.preferences().release184GuideAcknowledged)
             store.savePreferences(store.preferences().copy(release184GuideAcknowledged = true))
             assertTrue(store.preferences().release184GuideAcknowledged)
+            assertFalse(store.preferences().emergencyFix185NoticeAcknowledged)
+            store.savePreferences(store.preferences().copy(emergencyFix185NoticeAcknowledged = true))
+            assertTrue(store.preferences().emergencyFix185NoticeAcknowledged)
         } finally { store.close() }
     }
 

@@ -401,8 +401,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}：交大自由行 KMP 正式版
-          prerelease: false
+          # EmergencyFix 标签是紧急修复版：发为 pre-release，应用内更新检查仍能看到（取 releases 列表第一条）。
+          name: ${{ github.ref_name }}：交大自由行 KMP ${{ contains(github.ref_name, 'EmergencyFix') && '紧急修复' || '正式版' }}
+          prerelease: ${{ contains(github.ref_name, 'EmergencyFix') }}
           fail_on_unmatched_files: true
           files: dist/*
           body_path: docs/releases/${{ github.ref_name }}.md

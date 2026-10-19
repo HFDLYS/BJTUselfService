@@ -11,6 +11,7 @@
 
 ## 进行中
 
+- 紧急修复预发布 `v1.8.5-EmergencyFix1`（Build 39）：等 PR #29 合入 `feat/ai-agent-dev` 后，在其上加“1.8.5 紧急修复说明”弹窗（3 秒后可关、只显示一次，优先于 1.8.3/1.8.4 引导）、版本号、`docs/releases/v1.8.5-EmergencyFix1.md`，并让 `kmp-package` 把含 `EmergencyFix` 的标签发为 pre-release（标题“紧急修复”）。以 PR #30 提交；用户合并后打标签发版。
 - Agent 后续开发在 `feat/ai-agent-dev`（1.8.5-AgentAlpha / Build 38），A–E 与 #23 完整保留；main 维持 Candidate3 基线。后续新的 Agent PR 以 dev 为基础，发布与合入 main 由用户决定。验证与未验证边界见日志末尾。
 
 ## 当前痛点

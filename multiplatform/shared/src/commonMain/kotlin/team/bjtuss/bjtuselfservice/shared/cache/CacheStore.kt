@@ -32,6 +32,8 @@ data class AppPreferences(
     val assignmentAggregateGuideAcknowledged: Boolean = false,
     /** 1.8.4 新功能必看弹窗（演示实验、桌面小组件、错峰上课）。 */
     val release184GuideAcknowledged: Boolean = false,
+    /** 1.8.5 紧急修复说明弹窗（MIS 新认证、课程平台不可用、物理在线独立账号）。 */
+    val emergencyFix185NoticeAcknowledged: Boolean = false,
     /** null migrates the previous account-scoped physicslab.enabled setting on session creation. */
     val physicsLabEnabled: Boolean? = null,
     val citelEnabled: Boolean? = null,
@@ -401,6 +403,7 @@ class CacheStore(
         citelGuideAcknowledged = booleanSetting(SettingKey.CITEL_GUIDE_ACKNOWLEDGED, false),
         assignmentAggregateGuideAcknowledged = booleanSetting(SettingKey.ASSIGNMENT_AGGREGATE_GUIDE_ACKNOWLEDGED, false),
         release184GuideAcknowledged = booleanSetting(SettingKey.RELEASE_184_GUIDE_ACKNOWLEDGED, false),
+        emergencyFix185NoticeAcknowledged = booleanSetting(SettingKey.EMERGENCY_FIX_185_NOTICE_ACKNOWLEDGED, false),
     )
 
     fun savePreferences(preferences: AppPreferences) {
@@ -426,6 +429,7 @@ class CacheStore(
             putSetting(SettingKey.CITEL_GUIDE_ACKNOWLEDGED, preferences.citelGuideAcknowledged.toString())
             putSetting(SettingKey.ASSIGNMENT_AGGREGATE_GUIDE_ACKNOWLEDGED, preferences.assignmentAggregateGuideAcknowledged.toString())
             putSetting(SettingKey.RELEASE_184_GUIDE_ACKNOWLEDGED, preferences.release184GuideAcknowledged.toString())
+            putSetting(SettingKey.EMERGENCY_FIX_185_NOTICE_ACKNOWLEDGED, preferences.emergencyFix185NoticeAcknowledged.toString())
         }
     }
 
@@ -620,6 +624,7 @@ private object SettingKey {
     const val CITEL_GUIDE_ACKNOWLEDGED = "citel_guide_acknowledged"
     const val ASSIGNMENT_AGGREGATE_GUIDE_ACKNOWLEDGED = "assignment_aggregate_guide_acknowledged"
     const val RELEASE_184_GUIDE_ACKNOWLEDGED = "release_184_guide_acknowledged"
+    const val EMERGENCY_FIX_185_NOTICE_ACKNOWLEDGED = "emergency_fix_185_notice_acknowledged"
     const val SHOW_PHYVLAB_IN_BOTTOM_NAV = "show_phyvlab_in_bottom_nav"
 }
 

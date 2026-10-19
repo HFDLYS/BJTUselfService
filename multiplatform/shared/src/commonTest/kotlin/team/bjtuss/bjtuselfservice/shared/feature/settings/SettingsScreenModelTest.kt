@@ -47,6 +47,10 @@ class SettingsScreenModelTest {
         assertTrue(stored.redesignGuideAcknowledged)
         model.acknowledgeRelease184Guide()
         assertTrue(stored.release184GuideAcknowledged)
+        assertFalse(stored.emergencyFix185NoticeAcknowledged)
+        model.acknowledgeEmergencyFix185Notice()
+        assertTrue(stored.emergencyFix185NoticeAcknowledged)
+        assertTrue(stored.release184GuideAcknowledged)
     }
 
     @Test
