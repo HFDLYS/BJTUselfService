@@ -107,11 +107,12 @@ internal fun FeatureSwitchesCard(
     onPhysicsLabSettings: () -> Unit, onCitelSettings: () -> Unit,
     physicsDemoEnabled: Boolean = false, physicsDemoConfigured: Boolean = false,
     onPhysicsDemoEnabled: (Boolean) -> Unit = {}, onPhysicsDemoSettings: () -> Unit = {},
+    phyVlabConfigured: Boolean = false, onPhyVlabSettings: () -> Unit = {},
 ) {
     ElevatedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("功能开关", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            FeatureSwitchRow("启用物理在线", phyVlabEnabled, false, onPhyVlabEnabled)
+            FeatureSwitchRow("启用物理在线", phyVlabEnabled, phyVlabConfigured, onPhyVlabEnabled, onPhyVlabSettings)
             FeatureSwitchRow("启用物理实验", physicsLabEnabled, physicsLabConfigured, onPhysicsLabEnabled, onPhysicsLabSettings)
             FeatureSwitchRow("启用演示实验", physicsDemoEnabled, physicsDemoConfigured, onPhysicsDemoEnabled, onPhysicsDemoSettings)
             FeatureSwitchRow("启用 CITEL", citelEnabled, citelConfigured, onCitelEnabled, onCitelSettings)
@@ -158,6 +159,8 @@ fun SettingsWorkspace(
     physicsDemoConfigured: Boolean = false,
     onPhysicsDemoEnabled: (Boolean) -> Unit = {},
     onPhysicsDemoSettings: () -> Unit = {},
+    phyVlabConfigured: Boolean = false,
+    onPhyVlabSettings: () -> Unit = {},
 ) {
     val state by model.state.collectAsState()
     val scope = rememberCoroutineScope()
@@ -230,7 +233,8 @@ fun SettingsWorkspace(
         FeatureSwitchesCard(state.preferences.isPhyVlabEnabled, state.preferences.isPhysicsLabEnabled,
             state.preferences.isCitelEnabled, physicsLabConfigured, citelConfigured,
             model::setPhyVlabEnabled, model::setPhysicsLabEnabled, model::setCitelEnabled,
-            onPhysicsLabSettings, onCitelSettings, physicsDemoEnabled, physicsDemoConfigured, onPhysicsDemoEnabled, onPhysicsDemoSettings)
+            onPhysicsLabSettings, onCitelSettings, physicsDemoEnabled, physicsDemoConfigured, onPhysicsDemoEnabled, onPhysicsDemoSettings,
+            phyVlabConfigured, onPhyVlabSettings)
         // 本机 AI Agent 接入只在桌面端（macOS/Windows 共用 MacOS 家族）。
         val agentIntegration = remember(platform.family) {
             if (platform.family == PlatformFamily.MacOS) platformAgentIntegration() else null

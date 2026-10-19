@@ -8,6 +8,8 @@ data class AccountSecurityStore(
     val physicsLabVault: ((String) -> CredentialVault)? = null,
     val citelVault: ((String) -> CredentialVault)? = null,
     val physicsDemoVault: ((String) -> CredentialVault)? = null,
+    /** 物理在线（Moodle）独立账号：学校统一认证不再覆盖该站点。 */
+    val phyVlabVault: ((String) -> CredentialVault)? = null,
 )
 
 interface AccountPreferences {
@@ -29,6 +31,7 @@ class AccountSecurityCoordinator(
     fun physicsLabVault(accountScope: String): CredentialVault? = store.physicsLabVault?.invoke(accountScope)
     fun physicsDemoVault(accountScope: String): CredentialVault? = store.physicsDemoVault?.invoke(accountScope)
     fun citelVault(accountScope: String): CredentialVault? = store.citelVault?.invoke(accountScope)
+    fun phyVlabVault(accountScope: String): CredentialVault? = store.phyVlabVault?.invoke(accountScope)
 
     val canStoreCredentials: Boolean get() = store.credentialVault != null
 

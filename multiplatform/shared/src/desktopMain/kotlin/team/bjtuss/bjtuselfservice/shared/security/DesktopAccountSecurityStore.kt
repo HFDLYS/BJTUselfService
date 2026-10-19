@@ -26,6 +26,15 @@ fun createDesktopAccountSecurityStore(): AccountSecurityStore = AccountSecurityS
             legacyAccount = accountScope,
         )
     },
+    phyVlabVault = { accountScope ->
+        MacOsBagBackedCredentialVault(
+            bag = productionMacOsSecretBag,
+            key = "phyvlab:$accountScope",
+            // 新槽位没有旧 Keychain 项；沿用同一命名规则，迁移查找只会命中空。
+            legacyService = "team.bjtuss.bjtuselfservice.kmp.phyvlab",
+            legacyAccount = accountScope,
+        )
+    },
     citelVault = { accountScope ->
         MacOsBagBackedCredentialVault(
             bag = productionMacOsSecretBag,

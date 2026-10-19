@@ -63,38 +63,54 @@ class AutomaticLoginCoordinator(
                 }
                 is ChallengeResult.Ready -> {
                     latestChallenge = challenge.challenge
-                    val recognition = try {
-                        captchaRecognizer.recognize(challenge.challenge.imageBytes)
-                    } catch (_: Exception) {
-                        latestFailure = LoginFailure.CAPTCHA_RECOGNITION_FAILED
-                        return@repeat
-                    }
-                    when (recognition) {
-                        is CaptchaRecognitionResult.Failed -> {
-                            latestFailure = LoginFailure.CAPTCHA_RECOGNITION_FAILED
-                        }
-                        is CaptchaRecognitionResult.Success -> {
-                            val authentication = try {
-                                gateway.authenticateMis(
-                                    credentials,
-                                    challenge.challenge,
-                                    recognition.value.answer,
-                                )
+                    val answer = when {
+                        // 统一身份认证默认免验证码：直接提交账号密码。
+                        !challenge.challenge.requiresCaptcha -> ""
+                        // 学校要求的字母数字验证码不是算式模型能识别的，直接交给用户手动输入。
+                        !challenge.challenge.autoRecognizable -> return AutomaticLoginResult.ManualRequired(
+                            challenge = challenge.challenge,
+                            reason = LoginFailure.CAPTCHA_REJECTED,
+                            attempts = attempt,
+                        )
+                        else -> {
+                            val recognition = try {
+                                captchaRecognizer.recognize(challenge.challenge.imageBytes)
                             } catch (_: Exception) {
-                                latestFailure = LoginFailure.NETWORK
+                                latestFailure = LoginFailure.CAPTCHA_RECOGNITION_FAILED
                                 return@repeat
                             }
-                            when (authentication) {
-                                is AuthenticationResult.Success -> {
-                                    return AutomaticLoginResult.Authenticated(
-                                        profile = authentication.profile,
-                                        attempts = attempt,
-                                    )
+                            when (recognition) {
+                                is CaptchaRecognitionResult.Failed -> {
+                                    latestFailure = LoginFailure.CAPTCHA_RECOGNITION_FAILED
+                                    return@repeat
                                 }
-                                is AuthenticationResult.Failed -> {
-                                    latestFailure = authentication.reason
-                                }
+                                is CaptchaRecognitionResult.Success -> recognition.value.answer
                             }
+                        }
+                    }
+                    val authentication = try {
+                        gateway.authenticateMis(credentials, challenge.challenge, answer)
+                    } catch (_: Exception) {
+                        latestFailure = LoginFailure.NETWORK
+                        return@repeat
+                    }
+                    when (authentication) {
+                        is AuthenticationResult.Success -> {
+                            return AutomaticLoginResult.Authenticated(
+                                profile = authentication.profile,
+                                attempts = attempt,
+                            )
+                        }
+                        is AuthenticationResult.Failed -> {
+                            // 密码错误时不再重试：重复提交只会累积失败次数，触发验证码甚至锁定账号。
+                            if (authentication.reason == LoginFailure.ACCOUNT_REJECTED) {
+                                return AutomaticLoginResult.ManualRequired(
+                                    challenge = null,
+                                    reason = LoginFailure.ACCOUNT_REJECTED,
+                                    attempts = attempt,
+                                )
+                            }
+                            latestFailure = authentication.reason
                         }
                     }
                 }

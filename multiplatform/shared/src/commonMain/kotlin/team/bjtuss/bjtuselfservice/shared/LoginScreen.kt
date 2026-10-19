@@ -246,6 +246,7 @@ fun LoginRoute(
         credentials: Credentials,
         persistCredentials: Boolean,
         messageOnSuccess: String? = null,
+        failureWithoutCaptcha: LoginFailure = LoginFailure.MALFORMED_RESPONSE,
     ): LoginState {
         val previousChallenge = manualDialogChallenge
         val result = try {
@@ -258,6 +259,13 @@ fun LoginRoute(
                 manualDialogChallenge = null
                 manualDialogMessage = null
                 finishLogin(result.profile, credentials, persistCredentials)
+            }
+            is ChallengeResult.Ready if !result.challenge.requiresCaptcha -> {
+                // 统一身份认证当前不要求验证码：没有可手动输入的内容，回到登录页就地说明失败原因。
+                captchaAnswer = ""
+                manualDialogChallenge = null
+                manualDialogMessage = null
+                LoginState.Failed(failureWithoutCaptcha, canRetry = true)
             }
             is ChallengeResult.Ready -> {
                 captchaAnswer = ""
@@ -307,6 +315,8 @@ fun LoginRoute(
                 credentials = credentials,
                 persistCredentials = persistCredentials,
             )
+            is AutomaticLoginResult.ManualRequired if automaticResult.reason == LoginFailure.ACCOUNT_REJECTED &&
+                !silentAutoLogin -> LoginState.Failed(LoginFailure.ACCOUNT_REJECTED, canRetry = true)
             is AutomaticLoginResult.ManualRequired -> {
                 if (silentAutoLogin) {
                     // 静默入场时不打断主界面；改弹引导弹窗，由用户确认后回登录页。
@@ -322,6 +332,7 @@ fun LoginRoute(
                     requestManualChallenge(
                         credentials = credentials,
                         persistCredentials = persistCredentials,
+                        failureWithoutCaptcha = automaticResult.reason,
                     )
                 }
             }
@@ -425,6 +436,7 @@ fun LoginRoute(
                                 "验证码未通过，已为你更换一张，请重新输入。"
                             else -> loginFailureMessage(result.reason)
                         },
+                        failureWithoutCaptcha = result.reason,
                     )
                     is AuthenticationResult.Success -> {
                         manualDialogChallenge = null
@@ -1143,7 +1155,8 @@ private fun CaptchaBlock(
                     cursorColor = MaterialTheme.colorScheme.primary,
                 ),
                 keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
+                    // 旧 CAS 是算式验证码；统一身份认证的验证码含字母。
+                    keyboardType = if (challenge?.autoRecognizable == false) KeyboardType.Ascii else KeyboardType.Number,
                     imeAction = ImeAction.Go,
                 ),
                 keyboardActions = KeyboardActions(
@@ -1188,6 +1201,7 @@ private fun ErrorMessage(reason: LoginFailure) {
 
 private fun loginFailureMessage(reason: LoginFailure): String = when (reason) {
     LoginFailure.INVALID_CREDENTIALS -> "请完整填写学号和密码。"
+    LoginFailure.ACCOUNT_REJECTED -> "学号或密码错误，请检查后重试。"
     LoginFailure.CAPTCHA_REJECTED -> "登录未通过，请手动输入当前验证码。"
     LoginFailure.CAPTCHA_RECOGNITION_FAILED -> "验证码自动识别未通过，请手动输入当前验证码。"
     LoginFailure.SESSION_EXPIRED -> "检测到旧会话，但缺少可恢复资料。请清除会话后重试。"

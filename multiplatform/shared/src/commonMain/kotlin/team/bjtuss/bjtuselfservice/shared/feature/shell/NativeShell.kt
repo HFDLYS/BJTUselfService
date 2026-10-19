@@ -66,6 +66,7 @@ fun nativeRouteTitle(routeId: String): String {
         PhysicsLabSettingsRoute -> "物理实验账号设置"
         PhysicsDemoRoute -> "演示实验查询"
         PhysicsDemoSettingsRoute -> "演示实验账号设置"
+        PhyVlabSettingsRoute -> "物理在线账号设置"
         ClassroomDetailRoute -> AppSection.CLASSROOMS.title
         ClassroomOccupancyDetailRoute -> AppSection.CLASSROOM_OCCUPANCY.title
         HomeworkDetailRoute -> "作业详情"

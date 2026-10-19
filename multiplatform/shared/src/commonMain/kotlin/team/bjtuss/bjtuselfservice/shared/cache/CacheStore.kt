@@ -444,6 +444,7 @@ class CacheStore(
         // 独立实验账号是同步设置；清离线副本时保留标记，完整清空时再统一清安全存储。
         val labSettings = listOf("physicslab.enabled", "physicslab.configured", "physicslab.username", "physicslab.twoWeekOverrides",
             "phydemo.enabled", "phydemo.configured", "phydemo.username",
+            "phyvlab.configured", "phyvlab.username",
             "citel.enabled", "citel.remember", "citel.username").mapNotNull { key ->
             metadata(accountScope, key)?.let { key to it }
         }

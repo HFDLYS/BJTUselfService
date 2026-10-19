@@ -97,6 +97,8 @@ fun PhyVlabWorkspace(
     onOpenActivity: (String) -> Unit = {},
     onOpenActivityDetail: (PhyVlabActivity) -> Unit = { model.showActivityDetails(it) },
     onLogout: () -> Unit = {},
+    /** 打开物理在线独立账号设置。 */
+    onOpenAccountSettings: () -> Unit = {},
     /** 由应用壳提供会话感知刷新；独立预览/测试时回退到模型刷新。 */
     onRefresh: (() -> Unit)? = null,
     /** 详情失败时只重试详情请求，不重新清空整页选择状态。 */
@@ -170,7 +172,7 @@ fun PhyVlabWorkspace(
             return
         }
         val failureForBanner = state.failure ?: PhyVlabSyncFailure.SESSION_EXPIRED.takeIf {
-            state.casLoginRequired && state.contentSource == PhyVlabContentSource.CACHE
+            state.accountLoginRequired && state.contentSource == PhyVlabContentSource.CACHE
         }
         // underlap 时横幅收进列表首项；其余路径保持外层旧布局（作业页同款）。
         if (topClearance <= 0.dp) {
@@ -184,14 +186,15 @@ fun PhyVlabWorkspace(
                 )
             }
         }
-        // CAS 失效时如果仍有本地快照，继续展示只读缓存；用户可从右上角重试，
+        // 账号未配置/被拒时如果仍有本地快照，继续展示只读缓存；用户可从右上角重试，
         // 不让校园网外的离线场景退化成空白/登录阻断页。
-        if (state.casLoginRequired && state.contentSource != PhyVlabContentSource.CACHE) {
+        if (state.accountLoginRequired && state.contentSource != PhyVlabContentSource.CACHE) {
             // 短内容不滚动：留在栏下，老居中位置（外层无占位，这里按栏高补回）。
             Box(Modifier.fillMaxSize().padding(top = topClearance), contentAlignment = Alignment.Center) {
-                PhyVlabCasLoginRequiredState(
+                PhyVlabAccountRequiredState(
+                    rejected = state.accountRejected,
                     onRetry = refresh,
-                    onLogout = onLogout,
+                    onOpenSettings = onOpenAccountSettings,
                 )
             }
             return
@@ -1140,19 +1143,26 @@ private fun PhyVlabEmptyState(onRetry: () -> Unit, onOpenWeb: () -> Unit) {
 }
 
 @Composable
-private fun PhyVlabCasLoginRequiredState(onRetry: () -> Unit, onLogout: () -> Unit) {
+private fun PhyVlabAccountRequiredState(rejected: Boolean, onRetry: () -> Unit, onOpenSettings: () -> Unit) {
     Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("需要完成统一身份认证", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             Text(
-                "物理在线需要单独建立 Moodle 会话。App 会先尝试复用当前统一身份认证；" +
-                    "如果仍未成功，请点击右上角刷新再次尝试。不会自动跳转浏览器。",
+                if (rejected) "物理在线账号登录失败" else "需要配置物理在线账号",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                if (rejected) {
+                    "物理在线拒绝了已保存的账号或密码。请在设置中检查后重新保存。"
+                } else {
+                    "物理在线暂不支持学校统一身份认证，需要使用物理在线网站自己的账号和密码。"
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
-            Button(onClick = onRetry) { Text("重新建立认证") }
-            TextButton(onClick = onLogout) { Text("退出并重新登录") }
+            Button(onClick = onOpenSettings) { Text(if (rejected) "检查账号" else "设置账号") }
+            TextButton(onClick = onRetry) { Text("重新同步") }
         }
     }
 }

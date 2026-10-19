@@ -245,6 +245,8 @@ internal fun rememberAuthenticatedSession(
                         labAccounts.forEach { securityCoordinator.physicsLabVault(it)?.clear() }
                         (cacheStore.metadataAccountScopes("phydemo.configured") + profile.studentId).distinct()
                             .forEach { securityCoordinator.physicsDemoVault(it)?.clear() }
+                        (cacheStore.metadataAccountScopes("phyvlab.configured") + profile.studentId).distinct()
+                            .forEach { securityCoordinator.phyVlabVault(it)?.clear() }
                         (cacheStore.metadataAccountScopes("citel.username") + profile.studentId).distinct()
                             .forEach { securityCoordinator.citelVault(it)?.clear() }
                     }.isSuccess
@@ -285,8 +287,19 @@ internal fun rememberAuthenticatedSession(
     val phyVlabRepository = remember {
         DefaultPhyVlabRepository(SchoolPhyVlabRemoteDataSource(transport))
     }
-    val phyVlabSessionProtocol = remember {
-        PhyVlabSessionProtocol(transport)
+    // 物理在线不再走学校统一认证：MoodleSession 缺失时用独立账号登录，账号由设置页保存。
+    // 协议与账号模型互相引用（协议读账号、账号保存前用协议校验），用单元素持有者打破初始化环。
+    val phyVlabAccountHolder = remember(profile.studentId) {
+        arrayOfNulls<team.bjtuss.bjtuselfservice.shared.feature.phyvlab.PhyVlabAccountModel>(1)
+    }
+    val phyVlabSessionProtocol = remember(phyVlabAccountHolder) {
+        PhyVlabSessionProtocol(transport, credentials = { phyVlabAccountHolder[0]?.credentials() })
+    }
+    val phyVlabAccountModel = remember(profile.studentId, cacheStore, securityCoordinator, phyVlabSessionProtocol) {
+        team.bjtuss.bjtuselfservice.shared.feature.phyvlab.PhyVlabAccountModel(
+            profile.studentId, cacheStore, securityCoordinator.phyVlabVault(profile.studentId),
+            signIn = phyVlabSessionProtocol::signInWith,
+        ).also { phyVlabAccountHolder[0] = it }
     }
     val phyVlabLocalDataSource = remember(cacheStore) {
         CacheStorePhyVlabLocalDataSource(cacheStore)
@@ -294,14 +307,12 @@ internal fun rememberAuthenticatedSession(
     val phyVlabModel = remember(
         phyVlabRepository,
         phyVlabSessionProtocol,
-        sessionRecovery,
         phyVlabLocalDataSource,
         profile.studentId,
     ) {
         PhyVlabScreenModel(
             repository = phyVlabRepository,
             sessionProtocol = phyVlabSessionProtocol,
-            reauthenticate = sessionRecovery::attempt,
             localDataSource = phyVlabLocalDataSource,
             changeRecorder = phyvlabChangeRecorder(homeChangeFeed),
             accountScope = profile.studentId,
@@ -346,6 +357,7 @@ internal fun rememberAuthenticatedSession(
         appPreferences,
         mailboxModel,
         phyVlabModel,
+        phyVlabAccountModel,
         physicsDemoModel,
         homeModel,
         homeChangeFeed,
@@ -371,6 +383,7 @@ internal fun rememberAuthenticatedSession(
             phyVlabModel = phyVlabModel,
             physicsLabModel = physicsLabModel,
             physicsDemoModel = physicsDemoModel,
+            phyVlabAccountModel = phyVlabAccountModel,
             citelModel = citelModel,
             aggregateFilterStore = team.bjtuss.bjtuselfservice.shared.feature.assignment.AggregateAssignmentFilterStore(cacheStore, profile.studentId),
             homeModel = homeModel,

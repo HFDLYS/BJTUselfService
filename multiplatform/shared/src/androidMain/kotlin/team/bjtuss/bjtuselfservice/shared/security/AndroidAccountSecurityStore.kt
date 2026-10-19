@@ -18,6 +18,7 @@ fun createAndroidAccountSecurityStore(context: Context): AccountSecurityStore = 
     physicsLabVault = { AndroidKeystoreCredentialVault(context.applicationContext, "team.bjtuss.bjtuselfservice.kmp.physicslab.$it", "secure_physicslab_$it") },
     physicsDemoVault = { AndroidKeystoreCredentialVault(context.applicationContext, "team.bjtuss.bjtuselfservice.kmp.phydemo.$it", "secure_phydemo_$it") },
     citelVault = { AndroidKeystoreCredentialVault(context.applicationContext, "team.bjtuss.bjtuselfservice.kmp.citel.$it", "secure_citel_$it") },
+    phyVlabVault = { AndroidKeystoreCredentialVault(context.applicationContext, "team.bjtuss.bjtuselfservice.kmp.phyvlab.$it", "secure_phyvlab_$it") },
 )
 
 class AndroidKeystoreCredentialVault(

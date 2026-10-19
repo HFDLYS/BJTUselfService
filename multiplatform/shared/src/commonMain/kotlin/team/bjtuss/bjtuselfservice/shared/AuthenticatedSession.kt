@@ -64,6 +64,7 @@ class AuthenticatedSession(
     val citelModel: team.bjtuss.bjtuselfservice.shared.feature.citel.CitelModel? = null,
     val aggregateFilterStore: team.bjtuss.bjtuselfservice.shared.feature.assignment.AggregateAssignmentFilterStore? = null,
     val physicsDemoModel: team.bjtuss.bjtuselfservice.shared.feature.phydemo.PhysicsDemoModel? = null,
+    val phyVlabAccountModel: team.bjtuss.bjtuselfservice.shared.feature.phyvlab.PhyVlabAccountModel? = null,
 ) {
     private val appResumeGenerationState = MutableStateFlow(0L)
     private val appForegroundGenerationState = MutableStateFlow(0L)

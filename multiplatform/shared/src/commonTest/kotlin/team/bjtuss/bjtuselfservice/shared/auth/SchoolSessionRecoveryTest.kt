@@ -14,25 +14,8 @@ class SchoolSessionRecoveryTest {
     @Test
     fun successfulRecoveryRelinksAcademicSystem() = runSuspend {
         val transport = QueueTransport(
-            response("https://cas.bjtu.edu.cn/auth/login/?next=%2Fauth%2Fsso%2F%3Fnext%3D%2F"),
-            response(
-                "https://cas.bjtu.edu.cn/auth/login/?next=%2Fauth%2Fsso%2F%3Fnext%3D%2F",
-                """
-                    <form id="login">
-                      <input name="csrfmiddlewaretoken" value="csrf">
-                      <input id="id_captcha_0" value="cap">
-                    </form>
-                """.trimIndent(),
-            ),
-            response("https://cas.bjtu.edu.cn/image/cap/", body = "fake-image"),
-            response(
-                "https://mis.bjtu.edu.cn/home",
-                """
-                    <section class="name_right"><h3><a>测试用户，欢迎</a></h3>
-                      <div class="nr_con"><span>身份：学生</span><span>部门：测试学院</span></div>
-                    </section>
-                """.trimIndent(),
-            ),
+            response(SSO_AUTHORIZE_FIXTURE_URL, ssoLoginPageFixture()),
+            response("https://mis.bjtu.edu.cn/home/", MIS_HOME_FIXTURE),
             response(
                 "https://mis.bjtu.edu.cn/module/module/10/",
                 "<form id=\"redirect\" action=\"https://aa.bjtu.edu.cn/sso\"></form>",
@@ -41,15 +24,15 @@ class SchoolSessionRecoveryTest {
         )
         val recovery = SchoolSessionRecovery(
             protocol = SchoolLoginProtocol(transport),
-            captchaRecognizer = CaptchaRecognizer {
-                CaptchaRecognitionResult.Success(CaptchaRecognition("1+1=", "2", 1f))
-            },
+            // 统一身份认证默认免验证码：恢复过程不应调用识别模型。
+            captchaRecognizer = CaptchaRecognizer { error("recognizer should not run") },
             credentialsProvider = { Credentials("student", "secret") },
         )
 
         assertTrue(recovery.attempt())
-        assertEquals(6, transport.requests.size)
-        assertTrue(transport.requests[4].url.contains("/module/module/10/"))
+        assertEquals(4, transport.requests.size)
+        assertEquals("https://sso.bjtu.edu.cn/sso/login", transport.requests[1].url)
+        assertTrue(transport.requests[2].url.contains("/module/module/10/"))
     }
 
     @Test

@@ -66,22 +66,21 @@ data class PhyVlabUiState(
     val isLoading: Boolean = false,
     val failure: PhyVlabSyncFailure? = null,
     val failureDetail: String? = null,
-    val casLoginRequired: Boolean = false,
+    /** 需要（重新）配置物理在线独立账号：未配置，或已配置但被 Moodle 拒绝。 */
+    val accountLoginRequired: Boolean = false,
+    /** 已配置的独立账号被拒绝（与“尚未配置”区分提示文字）。 */
+    val accountRejected: Boolean = false,
     val contentSource: PhyVlabContentSource = PhyVlabContentSource.NONE,
     val cachedAtEpochMillis: Long? = null,
 ) {
     val hasLoaded: Boolean
-        get() = failure != null || courses.isNotEmpty() || selectedCourse != null || casLoginRequired
+        get() = failure != null || courses.isNotEmpty() || selectedCourse != null || accountLoginRequired
 }
 
 class PhyVlabScreenModel(
     private val repository: PhyVlabRepository,
+    /** 会话协议在 MoodleSession 过期时用独立账号自动重新登录，失败才显示账号提示。 */
     private val sessionProtocol: PhyVlabSessionProtocol,
-    /**
-     * 可选的 App 内 CAS 恢复入口。物理在线的 MoodleSession 过期时，
-     * 不把用户直接送去系统浏览器；恢复失败才显示重新登录提示。
-     */
-    private val reauthenticate: (suspend () -> Boolean)? = null,
     private val localDataSource: PhyVlabLocalDataSource? = null,
     /** 可选：刷新成功后把活动列表变化写入首页「数据变动」。 */
     private val changeRecorder: DataChangeRecorder<PhyVlabActivity>? = null,
@@ -124,8 +123,8 @@ class PhyVlabScreenModel(
             loadCachedSnapshotIfNeeded()
             phyVlabDebug("refresh start")
             sessionReady = false
-            mutableState.value = mutableState.value.copy(isLoading = true, failure = null, casLoginRequired = false)
-            when (val session = establishSessionWithRecovery()) {
+            mutableState.value = mutableState.value.copy(isLoading = true, failure = null, accountLoginRequired = false, accountRejected = false)
+            when (val session = sessionProtocol.establishSession()) {
                 is PhyVlabSessionResult.Failed -> {
                     phyVlabDebug("session failed reason=${session.reason} detail=${session.detail ?: "none"}")
                     if (session.reason == PhyVlabRemoteFailure.SESSION_EXPIRED &&
@@ -133,14 +132,20 @@ class PhyVlabScreenModel(
                     ) {
                         // 即使恢复入口不可用/失败，也进入统一的“重新建立认证”状态，
                         // 不退回“没有课程→打开浏览器”的旧兜底路径。
-                        mutableState.value = mutableState.value.copy(casLoginRequired = true)
+                        mutableState.value = mutableState.value.copy(accountLoginRequired = true)
                     }
                     publishFailure(session.reason.toUiFailure(), session.detail)
                     return
                 }
-                PhyVlabSessionResult.CasLoginRequired -> {
-                    phyVlabDebug("session requires CAS login")
-                    mutableState.value = mutableState.value.copy(casLoginRequired = true)
+                PhyVlabSessionResult.AccountRequired,
+                PhyVlabSessionResult.CredentialsRejected,
+                -> {
+                    phyVlabDebug("session requires account login rejected=${session == PhyVlabSessionResult.CredentialsRejected}")
+                    mutableState.value = mutableState.value.copy(
+                        isLoading = false,
+                        accountLoginRequired = true,
+                        accountRejected = session == PhyVlabSessionResult.CredentialsRejected,
+                    )
                     return
                 }
                 is PhyVlabSessionResult.Ready -> {
@@ -689,29 +694,15 @@ class PhyVlabScreenModel(
         return false
     }
 
-    private suspend fun establishSessionWithRecovery(): PhyVlabSessionResult {
-        val initial = sessionProtocol.establishSession()
-        val needsRecovery = initial == PhyVlabSessionResult.CasLoginRequired ||
-            (initial is PhyVlabSessionResult.Failed &&
-                initial.reason == PhyVlabRemoteFailure.SESSION_EXPIRED)
-        val recovery = reauthenticate ?: return initial
-        if (!needsRecovery) return initial
-
-        phyVlabDebug("session recovery start")
-        val recovered = runCatching { recovery() }.getOrDefault(false)
-        phyVlabDebug("session recovery result=$recovered")
-        if (!recovered) return initial
-        return sessionProtocol.establishSession()
-    }
-
     private suspend fun ensureSessionForOperation(): Boolean {
         if (sessionReady) return true
-        return when (establishSessionWithRecovery()) {
+        return when (sessionProtocol.establishSession()) {
             is PhyVlabSessionResult.Ready -> {
                 sessionReady = true
                 true
             }
-            PhyVlabSessionResult.CasLoginRequired,
+            PhyVlabSessionResult.AccountRequired,
+            PhyVlabSessionResult.CredentialsRejected,
             is PhyVlabSessionResult.Failed,
             -> {
                 sessionReady = false
