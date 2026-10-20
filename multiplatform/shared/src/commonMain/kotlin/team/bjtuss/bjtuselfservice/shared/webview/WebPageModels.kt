@@ -61,6 +61,7 @@ object SchoolWebDomainPolicy {
     private val allowedHosts = setOf(
         "mis.bjtu.edu.cn",
         "cas.bjtu.edu.cn",
+        "sso.bjtu.edu.cn",
         "aa.bjtu.edu.cn",
         "bksycenter.bjtu.edu.cn",
         "dean.bjtu.edu.cn",

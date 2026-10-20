@@ -34,7 +34,7 @@ fun defaultHostRequestPolicy(host: String): HostRequestPolicy = when (host) {
         minStartIntervalMillis = 400,
         throttleRetryDelaysMillis = listOf(1_000, 2_000, 4_000),
     )
-    "cas.bjtu.edu.cn" -> HostRequestPolicy(maxConcurrent = 1)
+    "cas.bjtu.edu.cn", "sso.bjtu.edu.cn" -> HostRequestPolicy(maxConcurrent = 1)
     // 智慧教学（作业/课件）：原 Android 由 OkHttp 默认每主机 5 并发。
     "123.121.147.7", "bksycenter.bjtu.edu.cn" -> HostRequestPolicy(maxConcurrent = 5)
     else -> HostRequestPolicy(maxConcurrent = 2)

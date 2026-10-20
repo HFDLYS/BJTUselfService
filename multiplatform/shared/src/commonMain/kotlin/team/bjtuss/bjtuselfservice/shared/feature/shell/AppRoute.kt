@@ -301,6 +301,9 @@ internal data object PhysicsDemoRoute : AppRoute
 const val PHYSICS_DEMO_ROUTE_ID = "PHYSICS_DEMO"
 internal data object PhysicsDemoSettingsRoute : AppRoute
 const val PHYSICS_DEMO_SETTINGS_ROUTE_ID = "PHYSICS_DEMO_SETTINGS"
+/** 物理在线独立账号设置：从设置页功能开关或物理在线“设置账号”进入。 */
+internal data object PhyVlabSettingsRoute : AppRoute
+const val PHYVLAB_SETTINGS_ROUTE_ID = "PHYVLAB_SETTINGS"
 
 /** Google predictive-back full-screen surface 的 SystemUI 插值。 */
 internal val androidPredictiveEasing = CubicBezierEasing(0.1f, 0.1f, 0f, 1f)
@@ -330,6 +333,8 @@ internal fun String.toAppRoute(): AppRoute? =
         PhysicsDemoRoute
     } else if (this == PHYSICS_LAB_SETTINGS_ROUTE_ID) {
         PhysicsLabSettingsRoute
+    } else if (this == PHYVLAB_SETTINGS_ROUTE_ID) {
+        PhyVlabSettingsRoute
     } else {
         AppSection.entries.firstOrNull { it.name == this }
     }

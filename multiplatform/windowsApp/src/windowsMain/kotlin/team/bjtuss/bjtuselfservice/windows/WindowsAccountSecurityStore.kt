@@ -30,6 +30,7 @@ fun createWindowsAccountSecurityStore(): AccountSecurityStore = AccountSecurityS
     physicsLabVault = { WindowsDpapiCredentialVault(service = "team.bjtuss.bjtuselfservice.kmp.physicslab", account = it) },
     physicsDemoVault = { WindowsDpapiCredentialVault(service = "team.bjtuss.bjtuselfservice.kmp.phydemo", account = it) },
     citelVault = { WindowsDpapiCredentialVault(service = "team.bjtuss.bjtuselfservice.kmp.citel", account = it) },
+    phyVlabVault = { WindowsDpapiCredentialVault(service = "team.bjtuss.bjtuselfservice.kmp.phyvlab", account = it) },
 )
 
 class WindowsDpapiCredentialVault(
@@ -129,6 +130,21 @@ internal fun loadOrCreateWindowsCacheKey(
     preferences.put(CACHE_KEY_PAYLOAD, Base64.getEncoder().encodeToString(encrypted))
     preferences.flush()
     return WindowsCacheKey(key, created = true)
+}
+
+/** 只读取已有缓存密钥，不新建（AI Agent 命令行用）；没有则返回 null。 */
+internal fun loadExistingWindowsCacheKey(
+    preferences: Preferences = Preferences.userRoot().node(
+        "/team/bjtuss/bjtuselfservice/kmp/cache",
+    ),
+): ByteArray? {
+    val encoded = preferences.get(CACHE_KEY_PAYLOAD, null) ?: return null
+    val key = Dpapi.cryptUnprotect(
+        Base64.getDecoder().decode(encoded),
+        "team.bjtuss.bjtuselfservice.kmp.cache-key.v1".encodeToByteArray(),
+    )
+    require(key.size == 32) { "Invalid cache encryption key" }
+    return key
 }
 
 private const val CACHE_KEY_PAYLOAD = "cache_key_payload"

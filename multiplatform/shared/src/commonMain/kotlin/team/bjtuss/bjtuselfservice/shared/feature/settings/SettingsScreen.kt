@@ -52,6 +52,7 @@ import team.bjtuss.bjtuselfservice.shared.update.annotatedInlineMarkdown
 import team.bjtuss.bjtuselfservice.shared.update.parseReleaseNotes
 import team.bjtuss.bjtuselfservice.shared.feature.scroll.desktopTouchScroll
 import team.bjtuss.bjtuselfservice.shared.feature.shell.AppleSheetOrAlert
+import team.bjtuss.bjtuselfservice.shared.agent.platformAgentIntegration
 import team.bjtuss.bjtuselfservice.shared.feature.shell.LocalTopBarClearance
 import team.bjtuss.bjtuselfservice.shared.feature.shell.TopScrollColumn
 
@@ -106,11 +107,12 @@ internal fun FeatureSwitchesCard(
     onPhysicsLabSettings: () -> Unit, onCitelSettings: () -> Unit,
     physicsDemoEnabled: Boolean = false, physicsDemoConfigured: Boolean = false,
     onPhysicsDemoEnabled: (Boolean) -> Unit = {}, onPhysicsDemoSettings: () -> Unit = {},
+    phyVlabConfigured: Boolean = false, onPhyVlabSettings: () -> Unit = {},
 ) {
     ElevatedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("功能开关", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            FeatureSwitchRow("启用物理在线", phyVlabEnabled, false, onPhyVlabEnabled)
+            FeatureSwitchRow("启用物理在线", phyVlabEnabled, phyVlabConfigured, onPhyVlabEnabled, onPhyVlabSettings)
             FeatureSwitchRow("启用物理实验", physicsLabEnabled, physicsLabConfigured, onPhysicsLabEnabled, onPhysicsLabSettings)
             FeatureSwitchRow("启用演示实验", physicsDemoEnabled, physicsDemoConfigured, onPhysicsDemoEnabled, onPhysicsDemoSettings)
             FeatureSwitchRow("启用 CITEL", citelEnabled, citelConfigured, onCitelEnabled, onCitelSettings)
@@ -157,11 +159,14 @@ fun SettingsWorkspace(
     physicsDemoConfigured: Boolean = false,
     onPhysicsDemoEnabled: (Boolean) -> Unit = {},
     onPhysicsDemoSettings: () -> Unit = {},
+    phyVlabConfigured: Boolean = false,
+    onPhyVlabSettings: () -> Unit = {},
 ) {
     val state by model.state.collectAsState()
     val scope = rememberCoroutineScope()
     var confirmClear by remember { mutableStateOf(false) }
     var confirmWipe by remember { mutableStateOf(false) }
+    var confirmUninstall by remember { mutableStateOf(false) }
     val uriHandler = LocalUriHandler.current
     val pageScrollState = rememberScrollState()
     // 真实偏移上报给壳层算玻璃浓度（手势累加会漂，读列表状态不会）。
@@ -199,6 +204,14 @@ fun SettingsWorkspace(
         }
     }
 
+    if (confirmUninstall) AppleSheetOrAlert(
+        onDismissRequest = { confirmUninstall = false }, title = "卸载前清理？", confirmLabel = "清理并退出登录",
+        onConfirm = { confirmUninstall = false; scope.launch { model.prepareForUninstall() } }, dismissLabel = "取消",
+    ) {
+        Text("删除所有账号的离线数据、应用设置和登录信息，并移除本 App 安装的 AI 助手。成功后退出登录。" +
+            "App 正在运行时保留空数据库和加密密钥；退出 App 后可通过 agent uninstall-app --yes 删除剩余文件和密钥，并将 App 移到废纸篓。")
+    }
+
     // 检查结果弹窗提到 SettingsWorkspace 外层渲染：「前往下载」属于应用壳层导航动作，
     // 挂在页面里时用户不在设置页就永远看不到自动检测出的新版本提示。
 
@@ -220,7 +233,15 @@ fun SettingsWorkspace(
         FeatureSwitchesCard(state.preferences.isPhyVlabEnabled, state.preferences.isPhysicsLabEnabled,
             state.preferences.isCitelEnabled, physicsLabConfigured, citelConfigured,
             model::setPhyVlabEnabled, model::setPhysicsLabEnabled, model::setCitelEnabled,
-            onPhysicsLabSettings, onCitelSettings, physicsDemoEnabled, physicsDemoConfigured, onPhysicsDemoEnabled, onPhysicsDemoSettings)
+            onPhysicsLabSettings, onCitelSettings, physicsDemoEnabled, physicsDemoConfigured, onPhysicsDemoEnabled, onPhysicsDemoSettings,
+            phyVlabConfigured, onPhyVlabSettings)
+        // 本机 AI Agent 接入只在桌面端（macOS/Windows 共用 MacOS 家族）。
+        val agentIntegration = remember(platform.family) {
+            if (platform.family == PlatformFamily.MacOS) platformAgentIntegration() else null
+        }
+        if (agentIntegration != null) {
+            AgentAssistantCard(agentIntegration, state.preferences.agentGradesAllowed, model::setAgentGradesAllowed)
+        }
         ElevatedCard(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("底栏显示", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -340,6 +361,10 @@ fun SettingsWorkspace(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text("清除全部本地数据")
+                    }
+                    OutlinedButton(onClick = { confirmUninstall = true },
+                        enabled = state.dataWipeAction != OfflineCacheActionState.Clearing, modifier = Modifier.fillMaxWidth()) {
+                        Text("卸载前清理（含移除 AI 助手）")
                     }
                 }
                 if (expanded) {

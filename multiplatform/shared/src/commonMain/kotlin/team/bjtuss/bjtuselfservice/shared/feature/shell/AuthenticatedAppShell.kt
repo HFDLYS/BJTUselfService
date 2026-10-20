@@ -283,6 +283,11 @@ fun AuthenticatedAppShell(
     val physicsLabState by physicsLabFlow.collectAsState()
     val physicsDemoFlow = remember(session) { session.physicsDemoModel?.state ?: MutableStateFlow(team.bjtuss.bjtuselfservice.shared.feature.phydemo.PhysicsDemoState()) }
     val physicsDemoState by physicsDemoFlow.collectAsState()
+    val phyVlabAccountFlow = remember(session) {
+        session.phyVlabAccountModel?.state ?: MutableStateFlow(team.bjtuss.bjtuselfservice.shared.feature.phyvlab.PhyVlabAccountState())
+    }
+    val phyVlabAccountState by phyVlabAccountFlow.collectAsState()
+    LaunchedEffect(session.phyVlabAccountModel) { session.phyVlabAccountModel?.initialize() }
     val citelFlow = remember(session) { session.citelModel?.state ?: MutableStateFlow(team.bjtuss.bjtuselfservice.shared.feature.citel.CitelState()) }
     val citelState by citelFlow.collectAsState()
     val citelEvents = remember(citelState.tasks, citelEnabled) {
@@ -357,9 +362,13 @@ fun AuthenticatedAppShell(
             homeworkState.source == HomeworkContentSource.CACHE,
             if (homeworkState.failure != null) "课程平台作业同步失败，请检查网络或登录状态。" else null))
         if (phyVlabEnabled) add(AssignmentSourceSync(AssignmentSource.PHYVLAB, phyVlabState.isLoading,
-            phyVlabState.failure != null || phyVlabState.casLoginRequired, phyVlabState.contentSource == PhyVlabContentSource.NETWORK,
+            phyVlabState.failure != null || phyVlabState.accountLoginRequired, phyVlabState.contentSource == PhyVlabContentSource.NETWORK,
             phyVlabState.contentSource == PhyVlabContentSource.CACHE,
-            phyVlabState.failureDetail ?: if (phyVlabState.failure != null || phyVlabState.casLoginRequired) "请检查校园网或重新登录物理在线。" else null))
+            phyVlabState.failureDetail ?: when {
+                phyVlabState.accountLoginRequired -> "请在设置中配置或检查物理在线账号。"
+                phyVlabState.failure != null -> "请检查校园网或重新登录物理在线。"
+                else -> null
+            }))
         if (citelEnabled) add(AssignmentSourceSync(AssignmentSource.CITEL, citelState.refreshing, citelState.failed,
             citelState.lastSync != null && !citelState.fromCache, citelState.fromCache, citelState.message))
     }
@@ -408,7 +417,7 @@ fun AuthenticatedAppShell(
         citelReady = citelState.lastSync != null && !citelState.fromCache,
         phyVlabEnabled = phyVlabEnabled,
         phyVlabBusy = phyVlabEnabled && phyVlabState.isLoading,
-        phyVlabFailed = phyVlabEnabled && (phyVlabState.failure != null || phyVlabState.casLoginRequired),
+        phyVlabFailed = phyVlabEnabled && (phyVlabState.failure != null || phyVlabState.accountLoginRequired),
         phyVlabReady = phyVlabEnabled &&
             (phyVlabState.courses.isNotEmpty() || phyVlabState.agendaEvents.isNotEmpty()),
     )
@@ -485,6 +494,10 @@ fun AuthenticatedAppShell(
         forcedRouteId?.toAppRoute() ?: AppSection.HOME
     }
     val backStack = remember(forcedRouteId) { mutableStateListOf<AppRoute>(initialRoute) }
+    val openPhyVlabSettings: () -> Unit = {
+        if (useNativeSecondaryRoutes) onOpenNativeRoute(PHYVLAB_SETTINGS_ROUTE_ID)
+        else backStack.add(PhyVlabSettingsRoute)
+    }
     val currentRoute = backStack.last()
     val section: AppSection = when (currentRoute) {
         ClassroomDetailRoute -> AppSection.CLASSROOMS
@@ -499,6 +512,7 @@ fun AuthenticatedAppShell(
         PhysicsLabSettingsRoute -> AppSection.PHYSICS_LAB
         PhysicsDemoRoute -> AppSection.MORE
         PhysicsDemoSettingsRoute -> AppSection.SETTINGS
+        PhyVlabSettingsRoute -> AppSection.SETTINGS
         is AppSection -> currentRoute
     }
     val popBackStack: () -> Unit = if (forcedRouteId != null) {
@@ -822,7 +836,7 @@ fun AuthenticatedAppShell(
                                 operation = phyVlabModel::refresh,
                                 sessionExpired = {
                                     val current = phyVlabModel.state.value
-                                    current.failure == PhyVlabSyncFailure.SESSION_EXPIRED || current.casLoginRequired
+                                    current.failure == PhyVlabSyncFailure.SESSION_EXPIRED || current.accountLoginRequired
                                 },
                             )
                         }
@@ -877,7 +891,7 @@ fun AuthenticatedAppShell(
                         operation = phyVlabModel::refresh,
                         sessionExpired = {
                             val current = phyVlabModel.state.value
-                            current.failure == PhyVlabSyncFailure.SESSION_EXPIRED || current.casLoginRequired
+                            current.failure == PhyVlabSyncFailure.SESSION_EXPIRED || current.accountLoginRequired
                         },
                     )
                 }
@@ -1056,11 +1070,26 @@ fun AuthenticatedAppShell(
     // 「前往下载」，不依赖用户停留在设置页（设置页内按钮触发的结果也走同一弹窗）。
     val showGuideOnThisHost = !entryLoggingIn &&
         (forcedRouteId == null || forcedRouteId == AppSection.HOME.name)
-    val showRelease183Guide = showGuideOnThisHost && settingsState.preferences.release183GuidePending
-    val showRelease184Guide = showGuideOnThisHost && !showRelease183Guide &&
+    // 紧急修复说明关系到能否正常使用，排在旧版本功能介绍之前。
+    val showEmergencyFix185Notice = showGuideOnThisHost &&
+        !settingsState.preferences.emergencyFix185NoticeAcknowledged
+    val showPhyVlabAccountNotice = showGuideOnThisHost && !showEmergencyFix185Notice &&
+        settingsState.preferences.phyVlabAccountNoticePending
+    val urgentNoticeVisible = showEmergencyFix185Notice || showPhyVlabAccountNotice
+    val showRelease183Guide = showGuideOnThisHost && !urgentNoticeVisible &&
+        settingsState.preferences.release183GuidePending
+    val showRelease184Guide = showGuideOnThisHost && !urgentNoticeVisible && !showRelease183Guide &&
         !settingsState.preferences.release184GuideAcknowledged
-    val blockingGuideVisible = showRelease183Guide || showRelease184Guide
+    val blockingGuideVisible = urgentNoticeVisible || showRelease183Guide || showRelease184Guide
     when {
+        showEmergencyFix185Notice -> EmergencyFix185NoticeDialog(
+            settingsState.saveFailed,
+            settingsModel::acknowledgeEmergencyFix185Notice,
+        )
+        showPhyVlabAccountNotice -> PhyVlabAccountNoticeDialog(
+            settingsState.saveFailed,
+            settingsModel::acknowledgePhyVlabAccountNotice,
+        )
         showRelease183Guide -> Release183GuideDialog(settingsState.saveFailed, settingsModel::acknowledgeRelease183Guide)
         showRelease184Guide -> Release184GuideDialog(settingsState.saveFailed, settingsModel::acknowledgeRelease184Guide)
         else -> AppUpdateResultDialog(settingsState.updateCheck, settingsModel::dismissUpdateCheck, settingsModel::postponeUpdate)
@@ -1419,7 +1448,7 @@ fun AuthenticatedAppShell(
                     examFailed = examState.failure != null,
                     courseFailed = courseState.failure != null,
                     phyVlabFailed = (phyVlabEnabled &&
-                        (phyVlabState.failure != null || phyVlabState.casLoginRequired)) ||
+                        (phyVlabState.failure != null || phyVlabState.accountLoginRequired)) ||
                         (physicsLabEnabled && physicsLabState.failed) || (physicsDemoState.enabled && physicsDemoState.failed) || (citelState.enabled && citelState.failed),
                     hasAnySource = homeworkState.source != null ||
                         examState.source != null ||
@@ -1679,7 +1708,7 @@ fun AuthenticatedAppShell(
                             AssignmentSource.PHYVLAB -> PhyVlabDetailWorkspace(phyVlabModel, homeworkFileGateway,
                                 onOpenExternalUrl, modifier = Modifier.fillMaxSize())
                             AssignmentSource.CITEL -> session.citelModel?.let { model ->
-                                CitelDetailWorkspace(model, homeworkFileGateway, onOpenExternalUrl, modifier = Modifier.fillMaxSize())
+                                CitelDetailWorkspace(model, homeworkFileGateway, onOpenExternalUrl, modifier = Modifier.fillMaxSize(), directoryGateway = coursewareDirectoryGateway)
                             }
                         }
                     })
@@ -1906,6 +1935,8 @@ fun AuthenticatedAppShell(
                     modifier = Modifier.fillMaxSize(),
                     physicsLabConfigured = physicsLabState.configured,
                     physicsDemoConfigured = physicsDemoState.configured,
+                    phyVlabConfigured = phyVlabAccountState.configured,
+                    onPhyVlabSettings = openPhyVlabSettings,
                     physicsDemoEnabled = physicsDemoState.enabled,
                     onPhysicsDemoEnabled = { enabled -> scope.launch { session.physicsDemoModel?.setEnabled(enabled) } },
                     onPhysicsDemoSettings = {
@@ -2009,9 +2040,9 @@ fun AuthenticatedAppShell(
                 modifier = modifier,
                 scrollUnderTopBar = true,
                 idleStatusText = when {
-                    (phyVlabState.failure != null || phyVlabState.casLoginRequired) &&
+                    (phyVlabState.failure != null || phyVlabState.accountLoginRequired) &&
                         phyVlabState.contentSource == PhyVlabContentSource.CACHE -> "同步失败·正显示缓存"
-                    phyVlabState.failure != null || phyVlabState.casLoginRequired -> "同步失败"
+                    phyVlabState.failure != null || phyVlabState.accountLoginRequired -> "同步失败"
                     phyVlabState.contentSource == PhyVlabContentSource.CACHE -> "未同步·缓存"
                     phyVlabState.contentSource == PhyVlabContentSource.NETWORK &&
                         phyVlabState.failure == null -> "已同步"
@@ -2024,6 +2055,7 @@ fun AuthenticatedAppShell(
                     fileGateway = homeworkFileGateway,
                     onRefresh = refresh,
                     showDetailSheet = !useNativeSecondaryRoutes,
+                    onOpenAccountSettings = openPhyVlabSettings,
                     onOpenCourse = { url -> onOpenExternalUrl(upgradePhyVlabUrlToHttps(url)) },
                     onOpenActivity = { url -> onOpenExternalUrl(upgradePhyVlabUrlToHttps(url)) },
                     onOpenActivityDetail = { activity ->
@@ -2063,6 +2095,20 @@ fun AuthenticatedAppShell(
                 session.physicsDemoModel?.let {
                     team.bjtuss.bjtuselfservice.shared.feature.phydemo.PhysicsDemoSettingsScreen(
                         it, Modifier.fillMaxSize(), onAccountSaved = popBackStack)
+                }
+            }
+            PhyVlabSettingsRoute -> DestinationPage(
+                title = "物理在线账号设置", expanded = expanded, refreshable = false,
+                isRefreshing = phyVlabAccountState.saving, showBack = true,
+                modifier = modifier, scrollUnderTopBar = true,
+            ) {
+                session.phyVlabAccountModel?.let {
+                    team.bjtuss.bjtuselfservice.shared.feature.phyvlab.PhyVlabAccountSettingsScreen(
+                        it, Modifier.fillMaxSize(), onAccountSaved = {
+                            settingsModel.setPhyVlabEnabled(true)
+                            popBackStack()
+                            scope.launch { phyVlabModel.refresh() }
+                        })
                 }
             }
             PhysicsDemoRoute -> DestinationPage(
@@ -2117,7 +2163,7 @@ fun AuthenticatedAppShell(
                 session.citelModel?.let { model ->
                     team.bjtuss.bjtuselfservice.shared.feature.citel.CitelWorkspace(
                         model, entryLoggingIn, onOpenExternalUrl, Modifier.fillMaxSize(), fileGateway = homeworkFileGateway,
-                        showDetailSheet = !useNativeSecondaryRoutes,
+                        showDetailSheet = !useNativeSecondaryRoutes, directoryGateway = coursewareDirectoryGateway,
                         onOpenTask = {
                             if (useNativeSecondaryRoutes) onOpenNativeRoute(CITEL_DETAIL_ROUTE_ID)
                         })
@@ -2127,7 +2173,7 @@ fun AuthenticatedAppShell(
                 isRefreshing = citelState.submissionBusy, showBack = true, modifier = modifier, scrollUnderTopBar = true) {
                 session.citelModel?.let { model ->
                     team.bjtuss.bjtuselfservice.shared.feature.citel.CitelDetailWorkspace(model, homeworkFileGateway,
-                        onOpenExternalUrl, entryLoggingIn, Modifier.fillMaxSize())
+                        onOpenExternalUrl, entryLoggingIn, Modifier.fillMaxSize(), directoryGateway = coursewareDirectoryGateway)
                 }
             }
             CitelSettingsRoute -> DestinationPage(title = "CITEL 账号设置", expanded = expanded, refreshable = false,
@@ -2282,6 +2328,10 @@ fun AuthenticatedAppShell(
                     }
                     entry<PhysicsDemoRoute> {
                         SectionDestination(route = PhysicsDemoRoute, expanded = false, modifier = Modifier.fillMaxSize(),
+                            usesLegacySmartTransport = usesLegacySmartTransportFor(platform.family))
+                    }
+                    entry<PhyVlabSettingsRoute> {
+                        SectionDestination(route = PhyVlabSettingsRoute, expanded = false, modifier = Modifier.fillMaxSize(),
                             usesLegacySmartTransport = usesLegacySmartTransportFor(platform.family))
                     }
                     entry<PhysicsLabSettingsRoute> {
@@ -2511,6 +2561,10 @@ fun AuthenticatedAppShell(
                     }
                     entry<PhysicsDemoRoute> {
                         SectionDestination(route = PhysicsDemoRoute, expanded = false, modifier = Modifier.fillMaxSize(),
+                            usesLegacySmartTransport = usesLegacySmartTransportFor(platform.family))
+                    }
+                    entry<PhyVlabSettingsRoute> {
+                        SectionDestination(route = PhyVlabSettingsRoute, expanded = false, modifier = Modifier.fillMaxSize(),
                             usesLegacySmartTransport = usesLegacySmartTransportFor(platform.family))
                     }
                     entry<PhysicsLabSettingsRoute> {

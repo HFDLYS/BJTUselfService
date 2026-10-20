@@ -15,7 +15,7 @@ class SchoolHomeStatusRemoteDataSource(
 ) : HomeStatusRemoteDataSource {
     override suspend fun fetch(): HomeStatus {
         val response = transport.execute(SchoolHttpRequest(SchoolHttpMethod.GET, STATUS_URL))
-        if (response.looksLikeSessionExpired() || "cas.bjtu.edu.cn" in response.finalUrl) {
+        if (response.looksLikeSessionExpired() || "cas.bjtu.edu.cn" in response.finalUrl || "sso.bjtu.edu.cn" in response.finalUrl) {
             throw HomeStatusRemoteException(HomeStatusFailure.SESSION_EXPIRED)
         }
         if (response.statusCode !in 200..299 || !response.finalUrl.startsWith("https://mis.bjtu.edu.cn/")) {

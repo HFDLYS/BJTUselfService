@@ -22,6 +22,7 @@ fun isCitelUrl(value: String): Boolean = runCatching {
 }.getOrDefault(false)
 
 interface CitelDataSource {
+    suspend fun problem(credentials: Credentials, task: CitelTask, withResults: Boolean = true): CitelProblem = throw CitelFailure("题面获取暂不可用。")
     suspend fun fetch(credentials: Credentials): List<CitelTask>
     suspend fun submission(credentials: Credentials, task: CitelTask): MoodleAssignmentStatus = throw CitelFailure("提交功能暂不可用。")
     suspend fun saveFiles(credentials: Credentials, task: CitelTask, added: List<HomeworkFileContent>, removed: Set<String>): MoodleAssignmentStatus = throw CitelFailure("提交功能暂不可用。")
@@ -73,6 +74,38 @@ class CitelRemote(private val transport: SchoolHttpTransport) : CitelDataSource 
                 }
             } }.awaitAll().flatten().distinctBy { it.id }
         }
+    }
+
+    /** Explicit full-text request; routine fetch never downloads testcase I/O. */
+    override suspend fun problem(credentials: Credentials, task: CitelTask, withResults: Boolean): CitelProblem = mutex.withLock {
+        require(task.programming && isCitelUrl(task.url))
+        val view = page(task.url, credentials)
+        val parsed = parseOffMain { parseCitelProblem(view.bodyText(), task.url) }
+        var cases = parsed.publicCases
+        var resultsFetched = false
+        // Result page only when the cached task indicates a previous submission.
+        if (withResults && task.status.isNotBlank() && parsed.resultUrl != null) {
+            val response = page(parsed.resultUrl, credentials)
+            val result = parseOffMain { parseCitelProgrammingTestResult(response.bodyText(),
+                CitelProgrammingResult(task.status, isCitelAccepted(task.status), emptyList(), task.allowLate == true, resultUrl = parsed.resultUrl)) }
+            val evaluated = result.testCases.map { test ->
+                CitelProblemCase(test.number, "Test Case ${test.number}", test.inputUrl, test.expectedUrl, test.actualUrl,
+                    test.timeLimit, test.memoryLimit, passed = test.passed, result = test.result, timeUsed = test.timeUsed,
+                    public = parsed.publicCases.any { sameCitelInput(it.inputUrl, test.inputUrl) })
+            }
+            cases = evaluated + parsed.publicCases.filter { public -> evaluated.none { sameCitelInput(it.inputUrl, public.inputUrl) } }
+            resultsFetched = true
+        }
+        suspend fun io(url: String?): String? {
+            if (url == null) return null
+            val response = page(url, credentials)
+            if (!response.header("Content-Type").orEmpty().substringBefore(';').trim().equals("text/plain", true)) {
+                throw CitelFailure("CITEL 用例下载未返回纯文本，请重试。")
+            }
+            return parseOffMain { response.bodyText().replace("\r\n", "\n").replace('\r', '\n') }
+        }
+        val downloaded = cases.map { it.copy(input = io(it.inputUrl), expected = io(it.expectedUrl), actual = io(it.actualUrl)) }
+        parsed.copy(cases = downloaded, publicCases = downloaded.filter { it.public }, withResults = resultsFetched)
     }
 
     /** 侧栏会省略历史课程；使用网站自己的只读课程 AJAX，并处理分页。 */

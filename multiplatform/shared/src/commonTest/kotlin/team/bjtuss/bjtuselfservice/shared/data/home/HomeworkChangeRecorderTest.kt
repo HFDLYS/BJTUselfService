@@ -27,7 +27,7 @@ class HomeworkChangeRecorderTest {
         assertEquals("未公布成绩", byLabel.getValue("分数").after)
         assertEquals("未提交", byLabel.getValue("状态").before)
         assertEquals("已提交", byLabel.getValue("状态").after)
-        assertEquals("2026-10-12 00:00", byLabel.getValue("截止时间").after)
+        assertEquals("2026-10-11 24:00", byLabel.getValue("截止时间").after)
     }
 
     private fun homework(subStatus: String, score: String) = Homework(

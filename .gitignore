@@ -17,6 +17,7 @@ local.properties
 
 # Local MIS credentials; never commit this file.
 /MisSecret.md
+/MisSecret.env
 
 # Verification artifacts (baselines, screenshots, audit evidence); local only.
 /.artifacts/

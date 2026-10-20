@@ -14,7 +14,7 @@ fun createDesktopAccountSecurityStore(): AccountSecurityStore = AccountSecurityS
         MacOsBagBackedCredentialVault(
             bag = productionMacOsSecretBag,
             key = "phydemo:$accountScope",
-            legacyService = "team.bjtuss.bjtuselfservice.kmp.credentials.phydemo",
+            legacyService = LEGACY_PHYSICS_DEMO_SERVICE,
             legacyAccount = accountScope,
         )
     },
@@ -23,6 +23,15 @@ fun createDesktopAccountSecurityStore(): AccountSecurityStore = AccountSecurityS
             bag = productionMacOsSecretBag,
             key = MacOsSecretKeys.physicsLab(accountScope),
             legacyService = LEGACY_PHYSICS_LAB_SERVICE,
+            legacyAccount = accountScope,
+        )
+    },
+    phyVlabVault = { accountScope ->
+        MacOsBagBackedCredentialVault(
+            bag = productionMacOsSecretBag,
+            key = "phyvlab:$accountScope",
+            // 新槽位没有旧 Keychain 项；沿用同一命名规则，迁移查找只会命中空。
+            legacyService = "team.bjtuss.bjtuselfservice.kmp.phyvlab",
             legacyAccount = accountScope,
         )
     },
@@ -37,7 +46,7 @@ fun createDesktopAccountSecurityStore(): AccountSecurityStore = AccountSecurityS
 )
 
 private class DesktopAccountPreferences : AccountPreferences {
-    private val preferences = Preferences.userRoot().node(
+    private val preferences get() = Preferences.userRoot().node(
         "/team/bjtuss/bjtuselfservice/kmp/account",
     )
 

@@ -104,7 +104,9 @@ fun SchoolHttpResponse.looksLikeSessionExpired(): Boolean {
     if (
         url.contains("/auth/login") ||
         url.contains("/login/") ||
-        url.contains("cas.bjtu.edu.cn/auth/")
+        url.contains("cas.bjtu.edu.cn/auth/") ||
+        url.contains("sso.bjtu.edu.cn/o/authorize") ||
+        url.contains("sso.bjtu.edu.cn/sso/")
     ) {
         return true
     }

@@ -265,6 +265,8 @@ class CourseScheduleScreenModel(
     private val todayProvider: () -> LocalDate = {
         Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
     },
+    /** 拿到当前学期校历后回调，供离线读取方（AI Agent 命令行）换算日期；写入方自行去重。 */
+    private val onCurrentAcademicWeeks: ((List<OccupancyWeekDate>) -> Unit)? = null,
 ) {
     private val mutableState = MutableStateFlow(
         CourseScheduleUiState(
@@ -620,6 +622,10 @@ class CourseScheduleScreenModel(
                 current.selectedNonTeachingWeekStart
                     ?.let { current.selectedDate ?: it }
             }
+        calendarMappings[CourseScheduleType.CURRENT]?.weeks?.takeIf { it.isNotEmpty() }?.let { currentWeeks ->
+            // 缓存写入失败不影响课表本身。
+            runCatching { onCurrentAcademicWeeks?.invoke(currentWeeks) }
+        }
         mutableState.value = current.copy(
             calendarSemesterLabel = selectedCalendar?.semesterLabel,
             academicWeeks = weeks,

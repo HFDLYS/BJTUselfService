@@ -32,9 +32,10 @@ class MacOsKeychainCredentialVault(
 /** Generic-password Keychain item. Production secrets share one item via [MacOsSecretBag]. */
 internal class MacOsKeychainItem(
     private val service: String,
-    private val account: String,
+    private val account: String?,
 ) {
     fun save(payload: ByteArray, operation: CredentialVaultOperation) {
+        require(account != null)
         val clearStatus = withQuery { SecurityApi.INSTANCE.SecItemDelete(it) }
         if (clearStatus != ERR_SEC_SUCCESS && clearStatus != ERR_SEC_ITEM_NOT_FOUND) {
             throw vaultError(operation, clearStatus)
@@ -44,6 +45,7 @@ internal class MacOsKeychainItem(
     }
 
     fun load(operation: CredentialVaultOperation): ByteArray? {
+        require(account != null)
         val result = PointerByReference()
         val status = withQuery(returnData = true) {
             SecurityApi.INSTANCE.SecItemCopyMatching(it, result)
@@ -83,8 +85,9 @@ internal class MacOsKeychainItem(
         val entries = mutableListOf(
             SecuritySymbols.kSecClass to SecuritySymbols.kSecClassGenericPassword,
             SecuritySymbols.kSecAttrService to cfString(service),
-            SecuritySymbols.kSecAttrAccount to cfString(account),
         )
+        if (account != null) entries += SecuritySymbols.kSecAttrAccount to cfString(account)
+        else entries += SecuritySymbols.kSecMatchLimit to SecuritySymbols.kSecMatchLimitAll
         if (payload != null) {
             entries += SecuritySymbols.kSecValueData to cfData(payload)
         }
@@ -166,6 +169,7 @@ private object SecuritySymbols {
     val kSecValueData: Pointer = library.pointerConstant("kSecValueData")
     val kSecReturnData: Pointer = library.pointerConstant("kSecReturnData")
     val kSecMatchLimit: Pointer = library.pointerConstant("kSecMatchLimit")
+    val kSecMatchLimitAll: Pointer = library.pointerConstant("kSecMatchLimitAll")
     val kSecMatchLimitOne: Pointer = library.pointerConstant("kSecMatchLimitOne")
 }
 

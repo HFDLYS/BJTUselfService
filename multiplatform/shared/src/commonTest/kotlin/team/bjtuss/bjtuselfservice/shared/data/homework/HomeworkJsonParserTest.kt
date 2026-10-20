@@ -64,6 +64,32 @@ class HomeworkJsonParserTest {
         assertEquals(2048L, detail.attachments.single().sizeBytes)
     }
 
+    /** 老师附件的 `file_name` 不带扩展名时，从存储路径补回（真实案例：fig2 → .zip、fig3 → .pdf）。 */
+    @Test
+    fun restoresAttachmentExtensionFromStoragePath() {
+        val detail = assertIs<HomeworkJsonParseResult.Success<*>>(
+            parseHomeworkDetail(
+                """{
+                  "STATUS":"0","homeWork":{"content":""},
+                  "picList":[
+                    {"id":1,"file_name":"fig2","url":"upload/2026/10/abc123.zip"},
+                    {"id":2,"file_name":"fig3","url":"upload/2026/10/def456.PDF?v=1"},
+                    {"id":3,"file_name":"模板.docx","url":"upload/2026/10/x.docx"},
+                    {"id":4,"file_name":"说明","url":"upload/2026/10/noext"},
+                    {"id":5,"file_name":"v1.2","url":"upload/a.b/c.zip"}
+                  ]
+                }""".trimIndent(),
+                fallbackContent = "",
+            ),
+        ).value as team.bjtuss.bjtuselfservice.shared.domain.homework.HomeworkDetail
+
+        assertEquals(
+            listOf("fig2.zip", "fig3.PDF", "模板.docx", "说明", "v1.2.zip"),
+            detail.attachments.map { it.fileName },
+        )
+        assertEquals("upload/2026/10/abc123.zip", detail.attachments.first().sourcePath)
+    }
+
     @Test
     fun skipsMissingIdentityWithoutLeakingBodyOrFailingTheList() {
         val result = assertIs<HomeworkJsonParseResult.Success<List<*>>>(

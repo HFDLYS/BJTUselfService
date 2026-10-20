@@ -843,3 +843,38 @@
 - 验证：multiplatform 下 `./gradlew :shared:desktopTest :androidApp:assembleDebug :desktopApp:compileKotlin :windowsApp:compileKotlinWindows :shared:compileKotlinIosSimulatorArm64 :shared:compileKotlinIosArm64` BUILD SUCCESSFUL，822 测试零失败/零跳过。
 - iOS：JBR Java 21，`xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp -configuration Debug -sdk iphonesimulator -destination platform=iOS\ Simulator,id=6857828A-CCEA-47D0-B26A-93462734DD91 -derivedDataPath ../.artifacts/agent-d-ios CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES DEVELOPMENT_TEAM=34S53DC6T6 ONLY_ACTIVE_ARCH=YES build` BUILD SUCCEEDED；产物宿主/小组件版本与签名复验。日志在 `.artifacts/branch-cleanup-2026-10-14/main-{validation,ios}.log`。
 - 未验证：本轮没有重新安装或交互验证 Candidate3；/Applications 仍为此前验证的 1.8.5-AgentAlpha / Build 38，未重新打包替换、未发布 Release。
+
+
+## 2026-10-14 dev 同步 Candidate3 主线历史（feat/ai-agent-dev，1.8.5-AgentAlpha / Build 38）
+
+- main@53bf642a 已正常推送到 mine，并纳入 dev 祖先。此历史合并保留 dev 的完整 Alpha 源码，避免主线基线恢复提交删除 dev 的 Agent 内容；源码逐文件与原 dev@839143b8 比对一致，差异仅三份状态文档。后续 dev 对 main 的 PR 会包含完整 Agent A–E、独立 #23 和 Alpha 版本改动。
+- 验证：main 本地/远端一致、祖先关系及版本清单检查通过；dev 源码未变，沿用上一轮 895 测试零失败和四端编译结果。未重新实机验证，安装版保持 Alpha。
+
+
+## 2026-10-19 零点截止补齐与老师附件扩展名修复（PR #28，fix/deadline-24-attachment-ext → feat/ai-agent-dev）
+
+- 改动：物理在线原文日期与时刻之间带星期（如 `2026年10月24日 Saturday 00:00`）时也按前一天 24:00 显示，开放时间同样格式化（`DeadlineText`、`PhyVlabScreen`）；CITEL 题目 Markdown 截止改用 `formatDeadlineEpoch`；首页变化记录用显示后的“24:00”文字也能匹配回原作业（`HomeChange`）。课程平台老师附件 `picList.file_name` 不带扩展名时从存储路径补回，路径也没有时下载阶段按 Content-Type 补（`HomeworkJsonParser`、`HomeworkRemoteDataSource`、`Homework`）。
+- 原因/决策：#23 的零点截止规则漏了这几处；附件行为对齐原 Android 版。只改显示文字，倒计时、过期判断与排序仍按真实时刻。
+- 验证：新增/扩充 `DeadlineTextTest`、`HomeworkJsonParserTest`、`HomeChangeFieldTest`；当时本地 Gradle 被 Maven Central 429 限流，仅 PR CI 验证。2026-10-20 在 #29 分支（含本改动）本地 `:shared:desktopTest` 等四端矩阵通过，906 测试零失败。
+- 未验证：真实物理在线页面原文格式、真实附件下载后的文件名（需真机/桌面点验）。
+
+## 2026-10-20 MIS 改接统一身份认证 SSO，物理在线改用独立账号（PR #29，fix/mis-sso-auth → feat/ai-agent-dev）
+
+- 改动：MIS 入口 `/home/` → `/auth/nsso/` → `sso.bjtu.edu.cn/o/authorize/`，解析 `#loginForm` 隐藏字段（flowId/state 等）与 `ssoConfig.sm2.publicKey`；密码按页面 sm-crypto 格式（C1C3C2、无 04、base64）加密后 POST `/sso/login`，只在 SSO/MIS HTTPS 内跟随回调（`auth/SchoolLoginProtocol.kt`、`auth/SsoSm2.kt`）。默认免验证码；回显 `var error` 为 411xx 时取 `/api/captcha/getCaptcha` 字母验证码走手动输入，40400 直接提示“学号或密码错误”且不重试（`AutomaticLoginCoordinator`、`LoginScreen`）。注销改为 MIS `slogout` + SSO `logout`，不跟随到明文 http。物理在线改为 Moodle 原生登录（`PhyVlabSessionProtocol`），新增 `PhyVlabAccountModel` 与“物理在线账号设置”页，凭据进四端系统安全存储，保存前真实登录校验；删除 CAS 恢复链路 `PhyVlabSessionRecovery`。
+- 原因/决策：学校 MIS 认证从 cas 换为 sso，旧 CAS 登录与物理在线 OAuth（仍指向已下线 CAS）均失效。commonMain 无大数库，SM3/SM2 自写并用页面自带 sm2.min.js 生成的夹具交叉验证。SSO 字母验证码不交给算式识别模型。修正跳转解析 `takeFrom` 会把旧查询拼进下一跳的问题。
+- 验证：`./gradlew :shared:desktopTest :androidApp:assembleDebug :desktopApp:compileKotlin :windowsApp:compileKotlinWindows :shared:compileKotlinIosSimulatorArm64 :shared:compileKotlinIosArm64` BUILD SUCCESSFUL，906 测试零失败。签名模拟器 xcodebuild（iPhone 17 Pro，Debug）BUILD SUCCEEDED；实机：已存凭据静默 SSO 登录，成绩/课表/考试/演示实验同步完成；物理在线账号保存时真实登录通过、同步完成，杀进程重启后钥匙串恢复仍成功。协议取证用 CDP（浏览器登录抓包）与 curl 假账号探测错误回显。
+- 未验证：SSO 要求验证码的手动流程未在真实服务器触发；Android/macOS/Windows 未实机运行；SSO 注销真实效果未确认。智慧教学（module 28）仍被学校跳到已下线 `cas.bjtu.edu.cn/o/authorize`（浏览器同样 404），未处理。
+
+## 2026-10-20 紧急修复预发布 1.8.5-EmergencyFix1（PR #30，fix/mis-sso-auth → feat/ai-agent-dev，标签 `v1.8.5-EmergencyFix1`）
+
+- 改动：新增“1.8.5 紧急修复说明”弹窗（MIS 新认证已适配、教务功能正常、课程平台作业/课件暂不可用、物理在线改独立账号、新验证码方式待验证、AI-Agent 仍在开发），其后是独立的“物理在线已自动关闭”弹窗；两者复用 `TimedGuideDialog`（3 秒后可确认、只显示一次），排在 1.8.3/1.8.4 引导之前（`ReleaseGuideDialog.kt`、`AuthenticatedAppShell.kt`）。`CacheStore.prepareRedesignPreferences` 一次性迁移：物理在线开着就关闭（`autoSyncPhyVlab`/`showPhyVlabInBottomNav`），老安装（已有 `redesign_navigation_migrated`）记 `phyvlab_account_notice_pending`，新安装静默关闭；保存独立账号后沿用 #29 自动重新打开。版本 `1.8.5-EmergencyFix1` / Build 39（清单全部文件）。`kmp-package` 发布任务对含 `EmergencyFix` 的标签发 pre-release、标题“紧急修复”。发布说明 `docs/releases/v1.8.5-EmergencyFix1.md`。
+- 原因/决策：学校 10 月 20 日切换 MIS 认证，需尽快发可登录版本；用户实测发现升级后物理在线开关仍开着却无法同步，要求自动关闭并单独提示。
+- 验证：本地 Gradle 无法解析插件（会话网络问题），全部仅 CI 验证：`kmp-security-check` run #104（dc07d31）、#105（f24128b，含新迁移测试）均成功；workflow_dispatch 测试包 run #71、#72 四端成功，用户实测后通过。发版 run #73 首次 Android 依赖下载 `SocketTimeoutException`，重跑失败任务后成功，Release 于 00:36 UTC 发布为 pre-release，四个产物（APK/IPA/DMG/MSI）齐全。会话内推标签与打标签被代理/权限拒绝，标签由用户推送。
+- 未验证：弹窗未经模拟器截图核对浅/深色与文字放大；物理在线迁移只在用户实机走过一次；SSO 验证码流程仍未在真实服务器触发；课程平台仍不可用（学校侧）。
+
+## 2026-10-20 最新代码统一到 main 与分支清理（1.8.5-EmergencyFix1 / Build 39）
+
+- 用户要求将最新版本全部纳入 main，并删除本地和 mine 多余分支。main 合并 mine/fix/mis-sso-auth@031d049b（包含 feat/ai-agent-dev@dca1ce83、Agent A–E、PR #28/#29/#30）；保留原 main@6a72b1c4 完整历史，不重写历史。7 处版本冲突统一采用最新紧急修复分支的原文件，源码与 031d049b 一致。
+- 清理范围：本地 feat/ai-agent-dev、fix/mis-sso-auth；mine 的 feat/ai-agent-dev、fix/mis-sso-auth、fix/deadline-24-attachment-ext、release/v1.8.4-KMP-version，删除前逐一确认提交已在 main 祖先中。上游 origin 和所有标签保留。清理前 Git bundle 与本地文档补丁保存在忽略目录 `.artifacts/branch-cleanup-20261020/`。
+- 本地凭据：MisSecret.env 保存 5 组 dotenv 凭据（10 个键，0600），MisSecret.md 仅含键名索引；Python 内存解析往返核对值一致，Git 忽略两文件。仅提交 .gitignore 规则，不提交凭据或索引。
+- 验证：git diff --check；合并后的应用源码与 031d049b 逐文件一致（仅 .gitignore、memory.md、history_full.md 有差异），沿用既有验证结果；本次不新增业务逻辑、不重跑构建、不安装或实机验证。分支推送后核对本地 main 与 mine/main 一致、各旧分支提交均可从 main 到达。

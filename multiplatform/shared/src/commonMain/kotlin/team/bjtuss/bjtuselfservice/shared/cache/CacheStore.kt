@@ -32,12 +32,18 @@ data class AppPreferences(
     val assignmentAggregateGuideAcknowledged: Boolean = false,
     /** 1.8.4 新功能必看弹窗（演示实验、桌面小组件、错峰上课）。 */
     val release184GuideAcknowledged: Boolean = false,
+    /** 1.8.5 紧急修复说明弹窗（MIS 新认证、课程平台不可用、物理在线独立账号）。 */
+    val emergencyFix185NoticeAcknowledged: Boolean = false,
+    /** 物理在线改用独立账号后，升级时已自动关闭该功能、尚未向用户说明。 */
+    val phyVlabAccountNoticePending: Boolean = false,
     /** null migrates the previous account-scoped physicslab.enabled setting on session creation. */
     val physicsLabEnabled: Boolean? = null,
     val citelEnabled: Boolean? = null,
     val aggregateAssignments: Boolean = true,
     /** 第二节在逸夫教学楼/思源西楼按 10:30–12:20 显示（错峰上课）。 */
     val staggeredSecondSlot: Boolean = true,
+    /** 是否允许本机 AI Agent 命令行读取成绩（默认否，其余数据由“AI 助手”安装后即可读）。 */
+    val agentGradesAllowed: Boolean = false,
 ) {
     val isPhysicsLabEnabled: Boolean get() = physicsLabEnabled == true
     /** 1.8.3 的三个必看弹窗已合并为一个；三项都确认过的用户不再看到合并弹窗。 */
@@ -368,6 +374,19 @@ class CacheStore(
     /** This release transition is independent of version numbers and guide acknowledgement. */
     fun prepareRedesignPreferences(): AppPreferences {
         queries.transaction {
+            // 物理在线原经统一认证登录，1.8.5 起改用独立账号：升级时一律关闭（升级前不可能配好独立账号），
+            // 老用户另弹说明；新安装没有旧开关可误导，只静默关闭默认开启的状态。
+            if (!booleanSetting(SettingKey.PHYVLAB_STANDALONE_ACCOUNT_MIGRATED, false)) {
+                val existingInstall = setting(SettingKey.REDESIGN_NAVIGATION_MIGRATED) != null
+                val wasEnabled = booleanSetting(SettingKey.AUTO_SYNC_PHYVLAB, true) &&
+                    booleanSetting(SettingKey.SHOW_PHYVLAB_IN_BOTTOM_NAV, true)
+                if (wasEnabled) {
+                    putSetting(SettingKey.AUTO_SYNC_PHYVLAB, "false")
+                    putSetting(SettingKey.SHOW_PHYVLAB_IN_BOTTOM_NAV, "false")
+                    if (existingInstall) putSetting(SettingKey.PHYVLAB_ACCOUNT_NOTICE_PENDING, "true")
+                }
+                putSetting(SettingKey.PHYVLAB_STANDALONE_ACCOUNT_MIGRATED, "true")
+            }
             if (!booleanSetting(SettingKey.REDESIGN_NAVIGATION_MIGRATED, false)) {
                 putSetting(SettingKey.BOTTOM_NAVIGATION_ITEMS, "")
                 putSetting(SettingKey.REDESIGN_GUIDE_ACKNOWLEDGED, "false")
@@ -386,6 +405,7 @@ class CacheStore(
         citelEnabled = setting(SettingKey.CITEL_ENABLED)?.toBooleanStrictOrNull(),
         aggregateAssignments = setting(SettingKey.AGGREGATE_ASSIGNMENTS)?.toBooleanStrictOrNull() ?: true,
         staggeredSecondSlot = booleanSetting(SettingKey.STAGGERED_SECOND_SLOT, true),
+        agentGradesAllowed = booleanSetting(SettingKey.AGENT_GRADES_ALLOWED, false),
         autoSyncPhyVlab = booleanSetting(SettingKey.AUTO_SYNC_PHYVLAB, true),
         currentWeek = setting(SettingKey.CURRENT_WEEK)?.toIntOrNull()?.coerceIn(0, 56) ?: 0,
         checkUpdate = booleanSetting(SettingKey.CHECK_UPDATE, true),
@@ -398,6 +418,8 @@ class CacheStore(
         citelGuideAcknowledged = booleanSetting(SettingKey.CITEL_GUIDE_ACKNOWLEDGED, false),
         assignmentAggregateGuideAcknowledged = booleanSetting(SettingKey.ASSIGNMENT_AGGREGATE_GUIDE_ACKNOWLEDGED, false),
         release184GuideAcknowledged = booleanSetting(SettingKey.RELEASE_184_GUIDE_ACKNOWLEDGED, false),
+        emergencyFix185NoticeAcknowledged = booleanSetting(SettingKey.EMERGENCY_FIX_185_NOTICE_ACKNOWLEDGED, false),
+        phyVlabAccountNoticePending = booleanSetting(SettingKey.PHYVLAB_ACCOUNT_NOTICE_PENDING, false),
     )
 
     fun savePreferences(preferences: AppPreferences) {
@@ -410,6 +432,7 @@ class CacheStore(
             putSetting(SettingKey.CITEL_ENABLED, preferences.citelEnabled?.toString() ?: "legacy")
             putSetting(SettingKey.AGGREGATE_ASSIGNMENTS, preferences.aggregateAssignments.toString())
             putSetting(SettingKey.STAGGERED_SECOND_SLOT, preferences.staggeredSecondSlot.toString())
+            putSetting(SettingKey.AGENT_GRADES_ALLOWED, preferences.agentGradesAllowed.toString())
             putSetting(SettingKey.AUTO_SYNC_PHYVLAB, preferences.autoSyncPhyVlab.toString())
             putSetting(SettingKey.CURRENT_WEEK, preferences.currentWeek.coerceIn(0, 56).toString())
             putSetting(SettingKey.CHECK_UPDATE, preferences.checkUpdate.toString())
@@ -422,6 +445,8 @@ class CacheStore(
             putSetting(SettingKey.CITEL_GUIDE_ACKNOWLEDGED, preferences.citelGuideAcknowledged.toString())
             putSetting(SettingKey.ASSIGNMENT_AGGREGATE_GUIDE_ACKNOWLEDGED, preferences.assignmentAggregateGuideAcknowledged.toString())
             putSetting(SettingKey.RELEASE_184_GUIDE_ACKNOWLEDGED, preferences.release184GuideAcknowledged.toString())
+            putSetting(SettingKey.EMERGENCY_FIX_185_NOTICE_ACKNOWLEDGED, preferences.emergencyFix185NoticeAcknowledged.toString())
+            putSetting(SettingKey.PHYVLAB_ACCOUNT_NOTICE_PENDING, preferences.phyVlabAccountNoticePending.toString())
         }
     }
 
@@ -440,6 +465,7 @@ class CacheStore(
         // 独立实验账号是同步设置；清离线副本时保留标记，完整清空时再统一清安全存储。
         val labSettings = listOf("physicslab.enabled", "physicslab.configured", "physicslab.username", "physicslab.twoWeekOverrides",
             "phydemo.enabled", "phydemo.configured", "phydemo.username",
+            "phyvlab.configured", "phyvlab.username",
             "citel.enabled", "citel.remember", "citel.username").mapNotNull { key ->
             metadata(accountScope, key)?.let { key to it }
         }
@@ -602,6 +628,7 @@ private object SettingKey {
     const val CITEL_ENABLED = "citel_enabled"
     const val AGGREGATE_ASSIGNMENTS = "aggregate_assignments"
     const val STAGGERED_SECOND_SLOT = "staggered_second_slot"
+    const val AGENT_GRADES_ALLOWED = "agent_grades_allowed"
     const val AUTO_SYNC_PHYVLAB = "auto_sync_phyvlab"
     const val CURRENT_WEEK = "current_week"
     const val CHECK_UPDATE = "check_update"
@@ -614,6 +641,9 @@ private object SettingKey {
     const val CITEL_GUIDE_ACKNOWLEDGED = "citel_guide_acknowledged"
     const val ASSIGNMENT_AGGREGATE_GUIDE_ACKNOWLEDGED = "assignment_aggregate_guide_acknowledged"
     const val RELEASE_184_GUIDE_ACKNOWLEDGED = "release_184_guide_acknowledged"
+    const val EMERGENCY_FIX_185_NOTICE_ACKNOWLEDGED = "emergency_fix_185_notice_acknowledged"
+    const val PHYVLAB_STANDALONE_ACCOUNT_MIGRATED = "phyvlab_standalone_account_migrated"
+    const val PHYVLAB_ACCOUNT_NOTICE_PENDING = "phyvlab_account_notice_pending"
     const val SHOW_PHYVLAB_IN_BOTTOM_NAV = "show_phyvlab_in_bottom_nav"
 }
 

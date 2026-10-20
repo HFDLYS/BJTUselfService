@@ -654,12 +654,33 @@ private fun SchoolHttpResponse.toFileContent(suggestedName: String): HomeworkFil
     val contentType = headers.entries.firstOrNull { (name, _) ->
         name.equals("Content-Type", ignoreCase = true)
     }?.value?.firstOrNull()?.substringBefore(';')?.trim().orEmpty()
+    // 存储路径也没有扩展名时，按服务端声明的类型补上，避免系统保存成无法打开的无后缀文件。
+    val fileName = if ('.' in suggestedName) suggestedName else
+        mimeExtensions[contentType.lowercase()]?.let { "$suggestedName.$it" } ?: suggestedName
     return HomeworkFileContent(
-        fileName = suggestedName,
+        fileName = fileName,
         contentType = contentType.ifBlank { "application/octet-stream" },
         bytes = body,
     )
 }
+
+private val mimeExtensions = mapOf(
+    "application/pdf" to "pdf",
+    "application/zip" to "zip",
+    "application/x-zip-compressed" to "zip",
+    "application/x-rar-compressed" to "rar",
+    "application/vnd.rar" to "rar",
+    "application/x-7z-compressed" to "7z",
+    "application/msword" to "doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document" to "docx",
+    "application/vnd.ms-excel" to "xls",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" to "xlsx",
+    "application/vnd.ms-powerpoint" to "ppt",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation" to "pptx",
+    "text/plain" to "txt",
+    "image/png" to "png",
+    "image/jpeg" to "jpg",
+)
 
 /** 只记录上传回执的结构，避免把文件名、路径、正文或会话值写入日志。 */
 private fun uploadReceiptShape(response: SchoolHttpResponse): String {

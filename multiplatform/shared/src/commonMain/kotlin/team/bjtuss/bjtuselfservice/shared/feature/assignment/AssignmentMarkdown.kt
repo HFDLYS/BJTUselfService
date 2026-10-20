@@ -1,9 +1,12 @@
 package team.bjtuss.bjtuselfservice.shared.feature.assignment
 
+import team.bjtuss.bjtuselfservice.shared.domain.time.formatDeadlineEpoch
+import team.bjtuss.bjtuselfservice.shared.domain.time.formatChineseDeadline
 import team.bjtuss.bjtuselfservice.shared.domain.homework.stableKey
 import team.bjtuss.bjtuselfservice.shared.feature.homework.HomeworkUiState
 import team.bjtuss.bjtuselfservice.shared.feature.homework.homeworkDetailToMarkdown
 import team.bjtuss.bjtuselfservice.shared.feature.phyvlab.PhyVlabUiState
+import team.bjtuss.bjtuselfservice.shared.feature.citel.citelProblemMarkdown
 import team.bjtuss.bjtuselfservice.shared.feature.citel.CitelState
 import team.bjtuss.bjtuselfservice.shared.feature.citel.citelDateText
 import team.bjtuss.bjtuselfservice.shared.feature.citel.submissionStatusText
@@ -15,6 +18,7 @@ internal fun aggregateAssignmentMarkdown(item: AggregatedAssignment, homework: H
         return homeworkDetailToMarkdown(task, homework.detail.takeIf { selected },
             homework.submittedAttachments.takeIf { selected }.orEmpty())
     }
+    item.citel?.let { task -> citel.problems[task.id]?.let { return citelProblemMarkdown(task, it) } }
     return buildString {
         val title = item.physical?.title ?: item.citel?.title.orEmpty()
         appendLine("# $title\n")
@@ -23,7 +27,7 @@ internal fun aggregateAssignmentMarkdown(item: AggregatedAssignment, homework: H
         item.physical?.let { task ->
             val detail = physical.assignmentDetail.takeIf { physical.selectedActivity?.id == task.id && physical.selectedActivity?.courseId == task.courseId }
             appendLine("- 开放时间：${task.openText ?: "未提供"}")
-            appendLine("- 截止时间：${task.dueText ?: "未提供"}")
+            appendLine("- 截止时间：${task.dueText?.let(::formatChineseDeadline) ?: "未提供"}")
             appendLine("- 提交状态：${detail?.submissionStatus?.ifBlank { null } ?: if (task.completed) "已提交" else "未提交"}")
             detail?.gradeText?.let { appendLine("- 评分：$it") }
             appendLine("\n## 作业要求\n")
@@ -38,7 +42,7 @@ internal fun aggregateAssignmentMarkdown(item: AggregatedAssignment, homework: H
             val selected = citel.selectedTask?.id == task.id && citel.selectedTask?.courseId == task.courseId
             appendLine("- 类型：${if (task.programming) "编程作业" else "实验报告"}")
             appendLine("- 开放时间：${task.openTime?.let(::citelDateText) ?: "未提供"}")
-            appendLine("- 截止时间：${task.dueTime?.let(::citelDateText) ?: "未提供"}")
+            appendLine("- 截止时间：${task.dueTime?.let(::formatDeadlineEpoch) ?: "未提供"}")
             task.discountTime?.let { appendLine("- 折扣开始：${citelDateText(it)}") }
             appendLine("- 提交状态：${if (selected) citel.programmingResult?.displayStatus ?: citel.submission?.status ?: task.submissionStatusText() else task.submissionStatusText()}")
             task.grade?.let { appendLine("- 评分：$it") }
