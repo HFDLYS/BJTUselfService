@@ -61,6 +61,7 @@ class SettingsScreenModel(
     }
     fun acknowledgeRelease184Guide() = updatePreferences { copy(release184GuideAcknowledged = true) }
     fun acknowledgeEmergencyFix185Notice() = updatePreferences { copy(emergencyFix185NoticeAcknowledged = true) }
+    fun acknowledgePhyVlabAccountNotice() = updatePreferences { copy(phyVlabAccountNoticePending = false) }
 
     fun setBottomNavigationItem(routeId: String, enabled: Boolean) {
         val current = mutableState.value.preferences

@@ -57,6 +57,36 @@ class CacheStoreTest {
     }
 
     @Test
+    fun phyVlabStandaloneAccountMigrationDisablesOnceAndNotifiesExistingInstalls() {
+        val upgraded = inMemoryStore()
+        try {
+            upgraded.savePreferences(AppPreferences())
+            upgraded.putSetting("redesign_navigation_migrated", "true")
+            val migrated = upgraded.prepareRedesignPreferences()
+            assertFalse(migrated.isPhyVlabEnabled)
+            assertTrue(migrated.phyVlabAccountNoticePending)
+            upgraded.savePreferences(migrated.copy(phyVlabAccountNoticePending = false, autoSyncPhyVlab = true, showPhyVlabInBottomNav = true))
+            val reopened = upgraded.prepareRedesignPreferences()
+            assertTrue(reopened.isPhyVlabEnabled)
+            assertFalse(reopened.phyVlabAccountNoticePending)
+        } finally { upgraded.close() }
+
+        val fresh = inMemoryStore()
+        try {
+            val migrated = fresh.prepareRedesignPreferences()
+            assertFalse(migrated.isPhyVlabEnabled)
+            assertFalse(migrated.phyVlabAccountNoticePending)
+        } finally { fresh.close() }
+
+        val alreadyOff = inMemoryStore()
+        try {
+            alreadyOff.savePreferences(AppPreferences(autoSyncPhyVlab = false, showPhyVlabInBottomNav = false))
+            alreadyOff.putSetting("redesign_navigation_migrated", "true")
+            assertFalse(alreadyOff.prepareRedesignPreferences().phyVlabAccountNoticePending)
+        } finally { alreadyOff.close() }
+    }
+
+    @Test
     fun freshInstallAndLegacyDefaultBothMigrateToTwoTabs() {
         for (legacyDefault in listOf(false, true)) {
             val store = inMemoryStore()

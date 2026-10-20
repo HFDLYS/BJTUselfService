@@ -99,3 +99,17 @@ internal fun EmergencyFix185NoticeDialog(saveFailed: Boolean, onConfirm: () -> U
         onConfirm = onConfirm,
     )
 }
+
+/** 物理在线改用独立账号：升级时已自动关闭该功能，紧接紧急修复说明单独提示。 */
+@Composable
+internal fun PhyVlabAccountNoticeDialog(saveFailed: Boolean, onConfirm: () -> Unit) {
+    TimedGuideDialog(
+        title = "物理在线已自动关闭",
+        body = "物理在线原来通过统一身份认证登录，该路径已失效，现改为输入物理在线的独立账号和密码。\n\n" +
+            "为避免开关开着却无法同步，本次升级已自动关闭物理在线。\n\n" +
+            "请到「应用 → 设置 → 物理在线账号设置」配置账号密码，保存成功后会自动重新打开；" +
+            "也可以在配置后于「功能开关」中手动打开。",
+        saveFailed = saveFailed,
+        onConfirm = onConfirm,
+    )
+}

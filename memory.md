@@ -11,7 +11,7 @@
 
 ## 进行中
 
-- 紧急修复预发布 `v1.8.5-EmergencyFix1`（Build 39）：等 PR #29 合入 `feat/ai-agent-dev` 后，在其上加“1.8.5 紧急修复说明”弹窗（3 秒后可关、只显示一次，优先于 1.8.3/1.8.4 引导）、版本号、`docs/releases/v1.8.5-EmergencyFix1.md`，并让 `kmp-package` 把含 `EmergencyFix` 的标签发为 pre-release（标题“紧急修复”）。以 PR #30 提交；用户合并后打标签发版。
+- 紧急修复预发布 `v1.8.5-EmergencyFix1`（Build 39）：等 PR #29 合入 `feat/ai-agent-dev` 后，在其上加“1.8.5 紧急修复说明”弹窗（3 秒后可关、只显示一次，优先于 1.8.3/1.8.4 引导）及其后的“物理在线已自动关闭”独立弹窗（升级时 `prepareRedesignPreferences` 一次性关闭物理在线；老安装才弹）、版本号、`docs/releases/v1.8.5-EmergencyFix1.md`，并让 `kmp-package` 把含 `EmergencyFix` 的标签发为 pre-release（标题“紧急修复”）。以 PR #30 提交；CI 绿后用 workflow_dispatch 打测试包（会话内推标签被代理拒绝），用户实测通过并合并后打 `v1.8.5-EmergencyFix1` 发版。
 - Agent 后续开发在 `feat/ai-agent-dev`（1.8.5-AgentAlpha / Build 38），A–E 与 #23 完整保留；main 维持 Candidate3 基线。后续新的 Agent PR 以 dev 为基础，发布与合入 main 由用户决定。验证与未验证边界见日志末尾。
 
 ## 当前痛点

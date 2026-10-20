@@ -1073,15 +1073,22 @@ fun AuthenticatedAppShell(
     // 紧急修复说明关系到能否正常使用，排在旧版本功能介绍之前。
     val showEmergencyFix185Notice = showGuideOnThisHost &&
         !settingsState.preferences.emergencyFix185NoticeAcknowledged
-    val showRelease183Guide = showGuideOnThisHost && !showEmergencyFix185Notice &&
+    val showPhyVlabAccountNotice = showGuideOnThisHost && !showEmergencyFix185Notice &&
+        settingsState.preferences.phyVlabAccountNoticePending
+    val urgentNoticeVisible = showEmergencyFix185Notice || showPhyVlabAccountNotice
+    val showRelease183Guide = showGuideOnThisHost && !urgentNoticeVisible &&
         settingsState.preferences.release183GuidePending
-    val showRelease184Guide = showGuideOnThisHost && !showEmergencyFix185Notice && !showRelease183Guide &&
+    val showRelease184Guide = showGuideOnThisHost && !urgentNoticeVisible && !showRelease183Guide &&
         !settingsState.preferences.release184GuideAcknowledged
-    val blockingGuideVisible = showEmergencyFix185Notice || showRelease183Guide || showRelease184Guide
+    val blockingGuideVisible = urgentNoticeVisible || showRelease183Guide || showRelease184Guide
     when {
         showEmergencyFix185Notice -> EmergencyFix185NoticeDialog(
             settingsState.saveFailed,
             settingsModel::acknowledgeEmergencyFix185Notice,
+        )
+        showPhyVlabAccountNotice -> PhyVlabAccountNoticeDialog(
+            settingsState.saveFailed,
+            settingsModel::acknowledgePhyVlabAccountNotice,
         )
         showRelease183Guide -> Release183GuideDialog(settingsState.saveFailed, settingsModel::acknowledgeRelease183Guide)
         showRelease184Guide -> Release184GuideDialog(settingsState.saveFailed, settingsModel::acknowledgeRelease184Guide)
