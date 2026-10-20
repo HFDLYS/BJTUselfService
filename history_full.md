@@ -864,3 +864,10 @@
 - 原因/决策：学校 MIS 认证从 cas 换为 sso，旧 CAS 登录与物理在线 OAuth（仍指向已下线 CAS）均失效。commonMain 无大数库，SM3/SM2 自写并用页面自带 sm2.min.js 生成的夹具交叉验证。SSO 字母验证码不交给算式识别模型。修正跳转解析 `takeFrom` 会把旧查询拼进下一跳的问题。
 - 验证：`./gradlew :shared:desktopTest :androidApp:assembleDebug :desktopApp:compileKotlin :windowsApp:compileKotlinWindows :shared:compileKotlinIosSimulatorArm64 :shared:compileKotlinIosArm64` BUILD SUCCESSFUL，906 测试零失败。签名模拟器 xcodebuild（iPhone 17 Pro，Debug）BUILD SUCCEEDED；实机：已存凭据静默 SSO 登录，成绩/课表/考试/演示实验同步完成；物理在线账号保存时真实登录通过、同步完成，杀进程重启后钥匙串恢复仍成功。协议取证用 CDP（浏览器登录抓包）与 curl 假账号探测错误回显。
 - 未验证：SSO 要求验证码的手动流程未在真实服务器触发；Android/macOS/Windows 未实机运行；SSO 注销真实效果未确认。智慧教学（module 28）仍被学校跳到已下线 `cas.bjtu.edu.cn/o/authorize`（浏览器同样 404），未处理。
+
+## 2026-10-20 紧急修复预发布 1.8.5-EmergencyFix1（PR #30，fix/mis-sso-auth → feat/ai-agent-dev，标签 `v1.8.5-EmergencyFix1`）
+
+- 改动：新增“1.8.5 紧急修复说明”弹窗（MIS 新认证已适配、教务功能正常、课程平台作业/课件暂不可用、物理在线改独立账号、新验证码方式待验证、AI-Agent 仍在开发），其后是独立的“物理在线已自动关闭”弹窗；两者复用 `TimedGuideDialog`（3 秒后可确认、只显示一次），排在 1.8.3/1.8.4 引导之前（`ReleaseGuideDialog.kt`、`AuthenticatedAppShell.kt`）。`CacheStore.prepareRedesignPreferences` 一次性迁移：物理在线开着就关闭（`autoSyncPhyVlab`/`showPhyVlabInBottomNav`），老安装（已有 `redesign_navigation_migrated`）记 `phyvlab_account_notice_pending`，新安装静默关闭；保存独立账号后沿用 #29 自动重新打开。版本 `1.8.5-EmergencyFix1` / Build 39（清单全部文件）。`kmp-package` 发布任务对含 `EmergencyFix` 的标签发 pre-release、标题“紧急修复”。发布说明 `docs/releases/v1.8.5-EmergencyFix1.md`。
+- 原因/决策：学校 10 月 20 日切换 MIS 认证，需尽快发可登录版本；用户实测发现升级后物理在线开关仍开着却无法同步，要求自动关闭并单独提示。
+- 验证：本地 Gradle 无法解析插件（会话网络问题），全部仅 CI 验证：`kmp-security-check` run #104（dc07d31）、#105（f24128b，含新迁移测试）均成功；workflow_dispatch 测试包 run #71、#72 四端成功，用户实测后通过。发版 run #73 首次 Android 依赖下载 `SocketTimeoutException`，重跑失败任务后成功，Release 于 00:36 UTC 发布为 pre-release，四个产物（APK/IPA/DMG/MSI）齐全。会话内推标签与打标签被代理/权限拒绝，标签由用户推送。
+- 未验证：弹窗未经模拟器截图核对浅/深色与文字放大；物理在线迁移只在用户实机走过一次；SSO 验证码流程仍未在真实服务器触发；课程平台仍不可用（学校侧）。

@@ -2,16 +2,15 @@
 
 > 最后更新：2026-10-20。
 > 当前分支：`feat/ai-agent-dev`（完整保存 Agent A–E、#23 与 Alpha 整合）；main@53bf642a 为 Candidate3 完整代码基线（仅 macOS Build 校正为 37）。本地和 mine 仅保留 main/dev，两条分支各自与远端对齐，main 是 dev 的祖先。
-> KMP 源码版本：main 为 `1.8.4-Candidate3` / Build 37（桌面数值版本 1.8.4）；dev 为 `1.8.5-AgentAlpha` / Build 38（桌面数值版本 1.8.5）。/Applications 安装版仍为 Alpha，bjtuss 已安装；正式 Latest 仍为 `v1.8.3-KMP`。
+> KMP 源码版本：main 为 `1.8.4-Candidate3` / Build 37（桌面数值版本 1.8.4）；dev 为 `1.8.5-EmergencyFix1` / Build 39（桌面数值版本 1.8.5）。/Applications 安装版仍为 Alpha，bjtuss 已安装；正式 Latest 仍为 `v1.8.3-KMP`，最新 Pre-release 为 `v1.8.5-EmergencyFix1`（2026-10-20，标签指向 dev@dca1ce8）。
 > 冻结原 Android：`v1.7.1` / versionCode 9（对照 `origin/main@7d94f74`）。
 > 已完成工作的细节见 `history_full.md` 末尾日志。
-> 认证现状（2026-10-20，PR #29 已合入 dev）：MIS 走统一身份认证 sso.bjtu.edu.cn（SM2 加密密码、默认免验证码）；物理在线用独立账号密码（设置 → 物理在线账号设置）；智慧教学仍卡在学校的旧 CAS 跳转。
+> 认证现状（2026-10-20，PR #29/#30 已合入 dev）：MIS 走统一身份认证 sso.bjtu.edu.cn（SM2 加密密码、默认免验证码）；物理在线用独立账号密码（设置 → 物理在线账号设置）；智慧教学仍卡在学校的旧 CAS 跳转。
 
 > 最近只读操作：2026-10-14 使用已安装 bjtuss 完成本机作业缓存导出；产物仅放 `.artifacts/`，未修改源码、未联网刷新，保留原有暂存与未提交改动。
 
 ## 进行中
 
-- 紧急修复预发布 `v1.8.5-EmergencyFix1`（Build 39）：等 PR #29 合入 `feat/ai-agent-dev` 后，在其上加“1.8.5 紧急修复说明”弹窗（3 秒后可关、只显示一次，优先于 1.8.3/1.8.4 引导）及其后的“物理在线已自动关闭”独立弹窗（升级时 `prepareRedesignPreferences` 一次性关闭物理在线；老安装才弹）、版本号、`docs/releases/v1.8.5-EmergencyFix1.md`，并让 `kmp-package` 把含 `EmergencyFix` 的标签发为 pre-release（标题“紧急修复”）。以 PR #30 提交；CI 绿后用 workflow_dispatch 打测试包（会话内推标签被代理拒绝），用户实测通过并合并后打 `v1.8.5-EmergencyFix1` 发版。
 - Agent 后续开发在 `feat/ai-agent-dev`（1.8.5-AgentAlpha / Build 38），A–E 与 #23 完整保留；main 维持 Candidate3 基线。后续新的 Agent PR 以 dev 为基础，发布与合入 main 由用户决定。验证与未验证边界见日志末尾。
 
 ## 当前痛点
