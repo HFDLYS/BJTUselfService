@@ -385,4 +385,7 @@ internal fun HomeChangeDomain.toAppSection(): AppSection = when (this) {
     HomeChangeDomain.EXAMS -> AppSection.EXAMS
     HomeChangeDomain.HOMEWORK -> AppSection.HOMEWORK
     HomeChangeDomain.PHYVLAB -> AppSection.PHYVLAB
+    HomeChangeDomain.CITEL -> AppSection.CITEL
+    HomeChangeDomain.PHYSICS_LAB -> AppSection.PHYSICS_LAB
+    HomeChangeDomain.PHYSICS_DEMO -> AppSection.MORE
 }

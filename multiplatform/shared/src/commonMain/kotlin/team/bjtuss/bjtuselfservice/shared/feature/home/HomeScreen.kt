@@ -192,6 +192,7 @@ fun HomeWorkspace(
                     onOpenExams = onOpenExams,
                     onOpenPhyVlab = onOpenPhyVlab,
                     onOpenCourse = { selectedChangeCourse = it },
+                    onOpenChangeDomain = onOpenChangeDomain,
                 )
             },
         )
@@ -1528,7 +1529,7 @@ private fun formatPhyVlabAgendaDate(event: PhyVlabEvent): String {
 private fun shortDate(date: LocalDate): String = "${date.month.ordinal + 1}月${date.day}日"
 
 @Composable
-private fun HomeChangeFeedSection(
+internal fun HomeChangeFeedSection(
     changes: List<HomeChangeRecord>,
     onSelectDomain: (HomeChangeDomain) -> Unit,
     onClearAll: () -> Unit,
@@ -1650,6 +1651,7 @@ private fun openHomeChangeRecord(
     onOpenExams: (ExamSchedule) -> Unit,
     onOpenPhyVlab: (PhyVlabEvent) -> Unit,
     onOpenCourse: (Course) -> Unit,
+    onOpenChangeDomain: (HomeChangeDomain) -> Unit,
 ) {
     when (record.domain) {
         HomeChangeDomain.HOMEWORK -> matchHomeworkChange(record, homework)?.let(onOpenHomeworkDetail)
@@ -1659,6 +1661,7 @@ private fun openHomeChangeRecord(
         HomeChangeDomain.COURSES ->
             courses.firstOrNull { it.courseName == record.title }?.let(onOpenCourse)
         HomeChangeDomain.GRADES -> Unit
+        HomeChangeDomain.CITEL, HomeChangeDomain.PHYSICS_LAB, HomeChangeDomain.PHYSICS_DEMO -> onOpenChangeDomain(record.domain)
     }
 }
 

@@ -5,7 +5,7 @@ import team.bjtuss.bjtuselfservice.shared.network.SchoolEndpoints
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import team.bjtuss.bjtuselfservice.shared.data.homework.SmartPlatformEndpoint
-import team.bjtuss.bjtuselfservice.shared.data.homework.followSmartHandshakeRedirects
+import team.bjtuss.bjtuselfservice.shared.data.homework.openSmartPlatform
 import team.bjtuss.bjtuselfservice.shared.domain.course.Course
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpMethod
 import team.bjtuss.bjtuselfservice.shared.network.SchoolHttpRequest
@@ -122,18 +122,14 @@ class SchoolCourseScheduleRemoteDataSource(
     }
 
     private suspend fun landOnSmartPlatform(smart: SmartPlatformEndpoint) {
-        val module = executeHandshakeSoft(
-            SchoolHttpRequest(
-                method = SchoolHttpMethod.GET,
-                url = SchoolEndpoints.SMART_MODULE_URL,
-                headers = mapOf("Referer" to "https://mis.bjtu.edu.cn/home/"),
-            ),
-        ) ?: return
-        smart.followSmartHandshakeRedirects(
-            first = module,
-            referer = SchoolEndpoints.SMART_MODULE_URL,
-        ) { request ->
-            executeHandshakeSoft(request) ?: module
+        try {
+            smart.openSmartPlatform(allowUnparsedModulePage = true) { request ->
+                executeHandshakeSoft(request) ?: throw IllegalStateException("Smart-platform handshake unavailable")
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            // 当前周仍保留教务 room_view 回退。
         }
     }
 

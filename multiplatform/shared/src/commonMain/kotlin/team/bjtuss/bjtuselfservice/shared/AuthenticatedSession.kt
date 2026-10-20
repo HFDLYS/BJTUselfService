@@ -24,6 +24,9 @@ import team.bjtuss.bjtuselfservice.shared.feature.mailbox.MailboxScreenModel
 import team.bjtuss.bjtuselfservice.shared.feature.otherfunction.OtherFunctionScreenModel
 import team.bjtuss.bjtuselfservice.shared.feature.phyvlab.PhyVlabScreenModel
 import team.bjtuss.bjtuselfservice.shared.feature.settings.SettingsScreenModel
+import team.bjtuss.bjtuselfservice.shared.feature.shell.PHYSICS_DEMO_ROUTE_ID
+import team.bjtuss.bjtuselfservice.shared.feature.shell.PHYSICS_DEMO_SETTINGS_ROUTE_ID
+import team.bjtuss.bjtuselfservice.shared.feature.shell.PHYVLAB_SETTINGS_ROUTE_ID
 import team.bjtuss.bjtuselfservice.shared.files.CoursewareDirectoryGateway
 import team.bjtuss.bjtuselfservice.shared.files.HomeworkFileGateway
 import team.bjtuss.bjtuselfservice.shared.calendar.SystemCalendarGateway
@@ -178,7 +181,10 @@ class AuthenticatedSession(
     var entryLoggingIn: Boolean by mutableStateOf(entryLoggingIn)
 }
 
-/** 可从应用目录压入原生导航的页面；是否实际压栈由当前底栏配置决定。 */
+/**
+ * 可压入原生导航的页面，包括独立账号设置；是否实际压栈由窗口宽度与底栏配置决定。
+ * Android 紧凑窗口会用此处校验 Activity 路由，遗漏会导致页面打开后立即关闭。
+ */
 fun isNativeDetailRoute(routeId: String): Boolean =
     team.bjtuss.bjtuselfservice.shared.feature.shell.AppSection.entries.any {
         it.name == routeId && it != team.bjtuss.bjtuselfservice.shared.feature.shell.AppSection.HOME &&
@@ -192,4 +198,7 @@ fun isNativeDetailRoute(routeId: String): Boolean =
         routeId == "CITEL_DETAIL" ||
         routeId == "CITEL_SETTINGS" ||
         routeId == "PHYVLAB_DETAIL" ||
+        routeId == PHYVLAB_SETTINGS_ROUTE_ID ||
+        routeId == PHYSICS_DEMO_SETTINGS_ROUTE_ID ||
+        routeId == PHYSICS_DEMO_ROUTE_ID ||
         routeId == "PHYSICS_LAB_SETTINGS"

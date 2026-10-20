@@ -1550,7 +1550,12 @@ fun AuthenticatedAppShell(
                         changes = homeChanges,
                         onClearAllChanges = { scope.launch { homeChangeFeed.clear() } },
                         onClearChangeDomain = { domain -> scope.launch { homeChangeFeed.clear(domain) } },
-                        onOpenChangeDomain = { domain -> navigateToSection(domain.toAppSection()) },
+                        onOpenChangeDomain = { domain ->
+                            if (domain == HomeChangeDomain.PHYSICS_DEMO) {
+                                if (useNativeSecondaryRoutes) onOpenNativeRoute(PHYSICS_DEMO_ROUTE_ID)
+                                else backStack.add(PhysicsDemoRoute)
+                            } else navigateToSection(domain.toAppSection())
+                        },
                         modifier = Modifier.fillMaxSize(),
                     )
                 }

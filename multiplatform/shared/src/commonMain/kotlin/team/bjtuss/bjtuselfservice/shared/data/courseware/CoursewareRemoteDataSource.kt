@@ -1,17 +1,15 @@
 package team.bjtuss.bjtuselfservice.shared.data.courseware
 
-import team.bjtuss.bjtuselfservice.shared.network.SchoolEndpoints
-
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import team.bjtuss.bjtuselfservice.shared.auth.ParseResult
-import team.bjtuss.bjtuselfservice.shared.auth.parseAcademicRedirectUrl
 import team.bjtuss.bjtuselfservice.shared.data.homework.HomeworkJsonParseResult
 import team.bjtuss.bjtuselfservice.shared.data.homework.SmartCourse
 import team.bjtuss.bjtuselfservice.shared.data.homework.SmartPlatformEndpoint
-import team.bjtuss.bjtuselfservice.shared.data.homework.followSmartHandshakeRedirects
+import team.bjtuss.bjtuselfservice.shared.data.homework.openSmartPlatform
+import team.bjtuss.bjtuselfservice.shared.data.homework.SmartHandshakeException
+import team.bjtuss.bjtuselfservice.shared.data.homework.SmartHandshakeFailure
 import team.bjtuss.bjtuselfservice.shared.data.homework.parseCurrentSemesterCode
 import team.bjtuss.bjtuselfservice.shared.data.homework.parseSmartCourses
 import team.bjtuss.bjtuselfservice.shared.data.homework.parseSmartSessionId
@@ -219,47 +217,11 @@ class SchoolCoursewareRemoteDataSource(
     }
 
     private suspend fun ensureInitializedLocked() {
-        val module = executeWithoutRedirects(
-            SchoolHttpRequest(
-                method = SchoolHttpMethod.GET,
-                url = SchoolEndpoints.SMART_MODULE_URL,
-                headers = mapOf("Referer" to "https://mis.bjtu.edu.cn/home/"),
-            ),
-        )
-        // 与作业握手一致：关掉自动跟随后再逐跳校验（明文跳限精确
-        // apiOrigin，HTTPS 跳限 cas/mis 学校主机），直到落地。
-        val settled = endpoint.followSmartHandshakeRedirects(
-            first = module,
-            referer = SchoolEndpoints.SMART_MODULE_URL,
-        ) { request -> executeWithoutRedirects(request) }
-        if (settled !== module || settled.statusCode in 300..399) {
-            if (settled.statusCode in 300..399) {
-                // 握手链停在未放行的跳转（HTTPS 策略下即明文降级目标），
-                // 属于安全拒绝而非网络故障，避免误报为"请检查网络"。
-                secureChannelUnavailable()
-            }
-            if (settled.statusCode !in 200..299) network()
-            if (!endpoint.acceptsHandshakeUrl(settled.finalUrl)) secureChannelUnavailable()
-        }
-
-        if (!endpoint.acceptsHandshakeUrl(settled.finalUrl) && settled === module) {
-            // 兼容旧行为：响应为 200 HTML 表单跳转时从 <form id="redirect"> 解析。
-            run {
-                val redirect = when (val parsed = parseAcademicRedirectUrl(module.bodyText())) {
-                    is ParseResult.Failure -> secureChannelUnavailable()
-                    is ParseResult.Success -> parsed.value
-                }
-                if (!endpoint.acceptsHandshakeUrl(redirect)) secureChannelUnavailable()
-                val linked = execute(
-                    SchoolHttpRequest(
-                        method = SchoolHttpMethod.GET,
-                        url = redirect,
-                        headers = mapOf("Referer" to SchoolEndpoints.SMART_MODULE_URL),
-                    ),
-                )
-                if (linked.statusCode !in 200..299) network()
-                if (!endpoint.acceptsHandshakeUrl(linked.finalUrl)) secureChannelUnavailable()
-            }
+        try {
+            endpoint.openSmartPlatform { request -> executeWithoutRedirects(request) }
+        } catch (error: SmartHandshakeException) {
+            if (error.reason == SmartHandshakeFailure.SESSION_EXPIRED) invalidateSession()
+            throw CoursewareRemoteException(CoursewareRemoteFailure.valueOf(error.reason.name))
         }
 
         // 与作业一致：会话经 Set-Cookie: JSESSIONID 下发，优先读 Cookie，

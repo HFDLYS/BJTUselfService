@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Keep in sync with CourseCategoryPalette.tones.accent; widget pixel tests verify this palette. -->
+    <color name="widget_accent_required">#FFD9574E</color>
+    <color name="widget_accent_limited">#FFC9558A</color>
+    <color name="widget_accent_elective">#FF4F6FD8</color>
+    <color name="widget_accent_pe">#FF16A4A4</color>
+    <color name="widget_accent_unknown">#FF7D828A</color>
+    <color name="widget_accent_lab">#FF9B6BCF</color>
+    <color name="widget_accent_exam">#FFE0952F</color>
+</resources>

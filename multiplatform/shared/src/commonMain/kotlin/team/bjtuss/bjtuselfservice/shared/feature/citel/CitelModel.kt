@@ -16,6 +16,8 @@ import team.bjtuss.bjtuselfservice.shared.cache.CacheStore
 import team.bjtuss.bjtuselfservice.shared.security.CredentialVault
 import team.bjtuss.bjtuselfservice.shared.data.moodle.*
 import team.bjtuss.bjtuselfservice.shared.domain.homework.HomeworkFileContent
+import team.bjtuss.bjtuselfservice.shared.domain.change.DataChangeRecorder
+import team.bjtuss.bjtuselfservice.shared.domain.change.recordSafely
 
 data class CitelState(
     val enabled: Boolean = false,
@@ -47,6 +49,7 @@ class CitelModel(
     private val cache: CacheStore,
     private val vault: CredentialVault?,
     private val remote: CitelDataSource,
+    private val changeRecorder: DataChangeRecorder<CitelTask>? = null,
 ) {
     private val filterStore = AssignmentFilterStore(cache, scope, "citel")
     private val mutableState = MutableStateFlow(CitelState(username = scope, filters = filterStore.load()))
@@ -54,6 +57,7 @@ class CitelModel(
     private val mutex = Mutex()
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private var initialized = false
+    private var resetChangeBaseline = false
     private var credentials: Credentials? = null
     private var appSyncStarted = false
     private var lastAppEntryGeneration = -1L
@@ -79,6 +83,7 @@ class CitelModel(
         val username = cache.metadata(scope, "citel.username")?.takeIf { it.isNotBlank() } ?: scope
         val tasks = runCatching { json.decodeFromString<List<CitelTask>>(cache.metadata(scope, "citel.tasks").orEmpty()) }.getOrDefault(emptyList())
         val lastSync = cache.metadata(scope, "citel.lastSync")?.toLongOrNull()
+        resetChangeBaseline = lastSync == null && tasks.isEmpty()
         mutableState.value = CitelState(cache.metadata(scope, "citel.enabled") == "true" && credentials?.isValid == true, username, remember,
             tasks, fromCache = lastSync != null || tasks.isNotEmpty(), lastSync = lastSync, filters = state.value.filters,
             configured = credentials?.isValid == true,
@@ -151,6 +156,7 @@ class CitelModel(
                 else vault?.clear()
                 val changed = account != mutableState.value.username
                 if (changed) {
+                    resetChangeBaseline = true
                     cache.putMetadata(scope, "citel.tasks", "[]")
                     cache.putMetadata(scope, "citel.lastSync", "")
                 }
@@ -192,6 +198,8 @@ class CitelModel(
                 val current = mutableState.value
                 mutableState.value = current.copy(tasks = if (tasks == current.tasks) current.tasks else tasks,
                     fromCache = false, lastSync = time, message = "已同步 ${tasks.size} 项作业。")
+                changeRecorder.recordSafely(if (resetChangeBaseline) tasks else current.tasks, tasks)
+                resetChangeBaseline = false
             } catch (e: TimeoutCancellationException) {
                 fail("CITEL 连接超时，保留上次同步结果。")
             } catch (e: CancellationException) {
@@ -229,7 +237,8 @@ class CitelModel(
             } finally { mutableState.value = state.value.copy(submissionBusy = false) }
         }
     }
-    private fun applyProgrammingResult(task: CitelTask, result: CitelProgrammingResult) {
+    private suspend fun applyProgrammingResult(task: CitelTask, result: CitelProgrammingResult) {
+        val before = state.value.tasks
         val updated = task.copy(status = if (result.testing && result.status.isBlank()) "WJ: Waiting" else result.status,
             submitted = result.accepted)
         val tasks = state.value.tasks.map { if (it.id == task.id) updated else it }
@@ -237,6 +246,7 @@ class CitelModel(
         val selected = state.value.selectedTask?.id == task.id
         mutableState.value = state.value.copy(selectedTask = if (selected) updated else state.value.selectedTask, tasks = tasks,
             programmingResult = if (selected) result else state.value.programmingResult)
+        changeRecorder.recordSafely(before, tasks)
     }
 
     /** Polls only the selected task; never sends a submission POST. False pauses automatic refresh after errors. */
@@ -272,11 +282,13 @@ class CitelModel(
             try {
                 val result = remote.saveFiles(loginCredentials(), task, added, removed)
                 val updated = task.copy(submitted = result.submitted, status = result.status)
+                val before = state.value.tasks
                 val tasks = state.value.tasks.map { if (it.id == task.id) updated else it }
                 cache.putMetadata(scope, "citel.tasks", json.encodeToString(tasks))
                 mutableState.value = state.value.copy(tasks = tasks, selectedTask = updated, submission = result,
                     submissionRevision = state.value.submissionRevision + 1,
                     submissionMessage = "文件已保存，无需额外提交；平台允许编辑期间可以继续修改。")
+                changeRecorder.recordSafely(before, tasks)
             } catch (e: CancellationException) { throw e
             } catch (e: Exception) { mutableState.value = state.value.copy(submissionMessage = message(e))
             } finally { mutableState.value = state.value.copy(submissionBusy = false) }

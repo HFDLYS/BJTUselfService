@@ -12,9 +12,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import team.bjtuss.bjtuselfservice.shared.auth.ParseResult
 import team.bjtuss.bjtuselfservice.shared.logging.AppLog
-import team.bjtuss.bjtuselfservice.shared.auth.parseAcademicRedirectUrl
 import team.bjtuss.bjtuselfservice.shared.domain.homework.Homework
 import team.bjtuss.bjtuselfservice.shared.domain.homework.HomeworkAttachment
 import team.bjtuss.bjtuselfservice.shared.domain.homework.HomeworkDetail
@@ -352,55 +350,14 @@ class SchoolHomeworkRemoteDataSource(
 
     private suspend fun ensureInitialized() {
         if (initialized) return
-        val module = executeWithoutRedirects(
-            SchoolHttpRequest(
-                method = SchoolHttpMethod.GET,
-                url = SchoolEndpoints.SMART_MODULE_URL,
-                headers = mapOf("Referer" to "https://mis.bjtu.edu.cn/home/"),
-            ),
-        )
-        if (module.looksLikeSessionExpired()) {
-            invalidateSmartSession()
-            sessionExpired()
-        }
-        // 登录态下 module 28 直接以裸 3xx 指向智慧平台明文入口。必须关掉
-        // Ktor 自动跟随，否则同协议跳转在白名单检查前就已经发出。
-        val settled = endpoint.followSmartHandshakeRedirects(
-            first = module,
-            referer = SchoolEndpoints.SMART_MODULE_URL,
-        ) { request -> executeWithoutRedirects(request) }
-        if (settled !== module || settled.statusCode in 300..399) {
-            // 走过了至少一跳；最终落地必须是白名单握手地址且 2xx。
-            if (settled.statusCode in 300..399) {
-                // 握手链停在了未放行的跳转（HTTPS 策略下即明文降级目标），
-                // 属于安全拒绝而非网络故障，避免误报为"请检查网络"。
-                secureChannelUnavailable()
-            }
-            if (settled.statusCode !in 200..299) network()
-            if (!endpoint.acceptsHandshakeUrl(settled.finalUrl)) secureChannelUnavailable()
+        try {
+            endpoint.openSmartPlatform { request -> executeWithoutRedirects(request) }
+        } catch (error: SmartHandshakeException) {
+            if (error.reason == SmartHandshakeFailure.SESSION_EXPIRED) invalidateSmartSession()
+            throw HomeworkRemoteException(HomeworkRemoteFailure.valueOf(error.reason.name))
         }
 
-        if (!endpoint.acceptsHandshakeUrl(settled.finalUrl) && settled === module) {
-            // 兼容旧行为：响应为 200 HTML 表单跳转时从 <form id="redirect"> 解析。
-            run {
-                val redirect = when (val parsed = parseAcademicRedirectUrl(module.bodyText())) {
-                    is ParseResult.Failure -> secureChannelUnavailable()
-                    is ParseResult.Success -> parsed.value
-                }
-                if (!endpoint.acceptsHandshakeUrl(redirect)) secureChannelUnavailable()
-                val linked = execute(
-                    SchoolHttpRequest(
-                        method = SchoolHttpMethod.GET,
-                        url = redirect,
-                        headers = mapOf("Referer" to SchoolEndpoints.SMART_MODULE_URL),
-                    ),
-                )
-                if (linked.statusCode !in 200..299) network()
-                if (!endpoint.acceptsHandshakeUrl(linked.finalUrl)) secureChannelUnavailable()
-            }
-        }
-
-        // 智慧平台会话经握手最后一跳的 Set-Cookie: JSESSIONID 下发（见 settled 响应）。
+        // 智慧平台会话经握手响应的 Set-Cookie: JSESSIONID 下发。
         // 但旧版 Android 还会从 getArticleList 取得一个不同的教学平台 sessionId，
         // 后续接口（尤其上传）依赖这个自定义头；不能因为已有 JSESSIONID 就跳过解析。
         val cookieSessionId = transport.sessionCookiesFor(endpoint.apiOrigin)

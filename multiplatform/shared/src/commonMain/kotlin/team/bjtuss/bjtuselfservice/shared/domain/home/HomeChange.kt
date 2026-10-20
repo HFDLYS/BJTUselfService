@@ -8,6 +8,9 @@ enum class HomeChangeDomain(val title: String) {
     EXAMS("考试安排"),
     HOMEWORK("作业"),
     PHYVLAB("物理在线"),
+    CITEL("CITEL"),
+    PHYSICS_LAB("物理实验"),
+    PHYSICS_DEMO("演示实验"),
 }
 
 data class HomeChangeField(
@@ -71,6 +74,7 @@ private fun legacyFieldLabels(domain: HomeChangeDomain): List<String> = when (do
     HomeChangeDomain.EXAMS -> listOf("类型", "时间地点", "状态")
     HomeChangeDomain.GRADES -> listOf("成绩", "学分", "学期")
     HomeChangeDomain.PHYVLAB -> listOf("课程", "截止时间", "状态")
+    HomeChangeDomain.CITEL, HomeChangeDomain.PHYSICS_LAB, HomeChangeDomain.PHYSICS_DEMO -> listOf("详情")
 }
 
 private fun splitLegacyDetail(domain: HomeChangeDomain, detail: String): List<String>? {

@@ -40,6 +40,9 @@ import team.bjtuss.bjtuselfservice.shared.data.home.examChangeRecorder
 import team.bjtuss.bjtuselfservice.shared.data.home.gradeChangeRecorder
 import team.bjtuss.bjtuselfservice.shared.data.home.homeworkChangeRecorder
 import team.bjtuss.bjtuselfservice.shared.data.home.phyvlabChangeRecorder
+import team.bjtuss.bjtuselfservice.shared.data.home.citelChangeRecorder
+import team.bjtuss.bjtuselfservice.shared.data.home.physicsLabChangeRecorder
+import team.bjtuss.bjtuselfservice.shared.data.home.physicsDemoChangeRecorder
 import team.bjtuss.bjtuselfservice.shared.domain.homework.HomeworkFilterPreferences
 import team.bjtuss.bjtuselfservice.shared.domain.homework.HomeworkFilterPreferencesStore
 import team.bjtuss.bjtuselfservice.shared.data.homework.CacheStoreHomeworkLocalDataSource
@@ -323,12 +326,14 @@ internal fun rememberAuthenticatedSession(
         team.bjtuss.bjtuselfservice.shared.feature.physicslab.PhysicsLabModel(
             profile.studentId, cacheStore, securityCoordinator.physicsLabVault(profile.studentId),
             team.bjtuss.bjtuselfservice.shared.feature.physicslab.PhysicsLabRemote(transport),
+            changeRecorder = physicsLabChangeRecorder(homeChangeFeed),
         )
     }
     val physicsDemoModel = remember(profile.studentId, cacheStore, securityCoordinator, transport) {
         team.bjtuss.bjtuselfservice.shared.feature.phydemo.PhysicsDemoModel(
             profile.studentId, cacheStore, securityCoordinator.physicsDemoVault(profile.studentId),
             team.bjtuss.bjtuselfservice.shared.feature.phydemo.PhysicsDemoRemote(transport),
+            changeRecorder = physicsDemoChangeRecorder(homeChangeFeed),
         )
     }
     val homeStatusRepository = remember(profile.studentId, cacheStore) {
@@ -341,7 +346,8 @@ internal fun rememberAuthenticatedSession(
     val homeModel = remember(homeStatusRepository) { HomeScreenModel(homeStatusRepository) }
     val citelModel = remember(profile.studentId, cacheStore, securityCoordinator, transport) {
         team.bjtuss.bjtuselfservice.shared.feature.citel.CitelModel(profile.studentId, cacheStore,
-            securityCoordinator.citelVault(profile.studentId), team.bjtuss.bjtuselfservice.shared.feature.citel.CitelRemote(transport))
+            securityCoordinator.citelVault(profile.studentId), team.bjtuss.bjtuselfservice.shared.feature.citel.CitelRemote(transport),
+            changeRecorder = citelChangeRecorder(homeChangeFeed))
     }
     val session = remember(
         profile,

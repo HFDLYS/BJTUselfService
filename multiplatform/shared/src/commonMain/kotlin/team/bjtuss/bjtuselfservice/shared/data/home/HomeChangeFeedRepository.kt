@@ -254,7 +254,7 @@ fun phyvlabChangeRecorder(feed: HomeChangeFeedRepository): DataChangeRecorder<Ph
 private fun homeworkScoreLabel(score: String?): String =
     score?.trim()?.takeIf { it.isNotEmpty() } ?: "未公布成绩"
 
-private fun <T, K> changeRecorder(
+internal fun <T, K> changeRecorder(
     feed: HomeChangeFeedRepository,
     domain: HomeChangeDomain,
     identity: (T) -> K,

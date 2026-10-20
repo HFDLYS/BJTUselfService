@@ -40,6 +40,7 @@ enum class CourseWidgetSize { SMALL, MEDIUM, LARGE }
  */
 internal class CourseWidgetRenderer(private val context: Context) {
     private val packageName = context.packageName
+    private val courseImages = WidgetCourseImages(context)
 
     /**
      * 版式缩放：iOS 小组件尺寸固定（小号 158pt、中号 338×158pt、大号 338×354pt），Android 格子大小因桌面而异。
@@ -198,9 +199,8 @@ internal class CourseWidgetRenderer(private val context: Context) {
         size(R.id.empty_text, 13.5f)
     }
 
-    private fun RemoteViews.tintBar(id: Int, color: Int, alpha: Int = 255) {
-        setInt(id, "setColorFilter", color)
-        if (alpha != 255) setInt(id, "setImageAlpha", alpha)
+    private fun RemoteViews.tintBar(id: Int, color: Int, alpha: Int = 255, compact: Boolean = false) {
+        courseImages.apply(this, id, color, alpha, compact)
     }
 
     private fun accent(occurrence: WidgetOccurrence): Int = (0xFF000000 or occurrence.session.color).toInt()
@@ -574,7 +574,7 @@ internal class CourseWidgetRenderer(private val context: Context) {
         views(R.layout.widget_compact_row).apply {
             val color = accent(occurrence)
             val ongoing = occurrence.isOngoing(model.now)
-            tintBar(R.id.row_background, color, alpha = if (ongoing) 56 else 26)
+            tintBar(R.id.row_background, color, alpha = if (ongoing) 56 else 26, compact = true)
             tintBar(R.id.bar, color)
             setTextViewText(R.id.row_name, occurrence.session.name)
             size(R.id.row_name, 14f)

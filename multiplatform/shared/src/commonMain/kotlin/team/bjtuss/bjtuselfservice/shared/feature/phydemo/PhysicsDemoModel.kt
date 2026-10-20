@@ -14,13 +14,16 @@ import kotlin.time.Clock
 import team.bjtuss.bjtuselfservice.shared.auth.Credentials
 import team.bjtuss.bjtuselfservice.shared.cache.CacheStore
 import team.bjtuss.bjtuselfservice.shared.security.CredentialVault
+import team.bjtuss.bjtuselfservice.shared.domain.change.DataChangeRecorder
+import team.bjtuss.bjtuselfservice.shared.domain.change.recordSafely
 
 data class PhysicsDemoState(val username: String = "", val configured: Boolean = false, val enabled: Boolean = false,
     val bookings: List<PhysicsDemoBooking> = emptyList(), val refreshing: Boolean = false, val fromCache: Boolean = false,
     val failed: Boolean = false, val message: String? = null, val synced: Boolean = false, val lastSync: String? = null)
 
 class PhysicsDemoModel(private val scope: String, private val cache: CacheStore,
-    private val vault: CredentialVault?, private val remote: PhysicsDemoRemote) {
+    private val vault: CredentialVault?, private val remote: PhysicsDemoRemote,
+    private val changeRecorder: DataChangeRecorder<PhysicsDemoBooking>? = null) {
     private val mutableState = MutableStateFlow(PhysicsDemoState(username = scope))
     val state = mutableState.asStateFlow()
     private val mutex = Mutex()
@@ -52,6 +55,7 @@ class PhysicsDemoModel(private val scope: String, private val cache: CacheStore,
                 if (creds?.isValid != true) throw PhysicsDemoFailure("请填写演示实验系统的独立账号和密码。")
                 // Validate first; a mistyped account never replaces existing credentials/results.
                 val bookings = withTimeout(40_000) { remote.fetch(creds) }
+                val before = if (creds.username != state.value.username || !state.value.configured) bookings else state.value.bookings
                 storage.save(creds)
                 cache.putMetadata(scope,"phydemo.username",creds.username)
                 cache.putMetadata(scope,"phydemo.configured","true")
@@ -60,6 +64,7 @@ class PhysicsDemoModel(private val scope: String, private val cache: CacheStore,
                 val updated = Clock.System.now().toLocalDateTime(TimeZone.of("Asia/Shanghai")).toString()
                 cache.putMetadata(scope,"phydemo.lastSync",updated)
                 mutableState.value = PhysicsDemoState(creds.username,true,true,bookings,message = "已查询 ${bookings.size} 个预约。", synced = true, lastSync = updated)
+                changeRecorder.recordSafely(before, bookings)
                 true
             } catch (e: TimeoutCancellationException) {
                 mutableState.value = state.value.copy(failed = true, message = "连接超时，请连接校园网后重试。")
@@ -82,10 +87,12 @@ class PhysicsDemoModel(private val scope: String, private val cache: CacheStore,
             try {
                 val creds = vault?.load() ?: throw PhysicsDemoFailure("请配置演示实验账号。")
                 val bookings = withTimeout(40_000) { remote.fetch(creds) }
+                val before = state.value.bookings
                 cache.putMetadata(scope,"phydemo.results",json.encodeToString(bookings))
                 val updated = Clock.System.now().toLocalDateTime(TimeZone.of("Asia/Shanghai")).toString()
                 cache.putMetadata(scope,"phydemo.lastSync",updated)
                 mutableState.value = state.value.copy(bookings = bookings,fromCache = false,synced = true,lastSync = updated,message = "已查询 ${bookings.size} 个预约。")
+                changeRecorder.recordSafely(before, bookings)
             } catch (e: TimeoutCancellationException) {
                 mutableState.value = state.value.copy(fromCache = true, failed = true,message = "连接超时，显示上次查询结果。")
             } catch (e: CancellationException) { throw e }

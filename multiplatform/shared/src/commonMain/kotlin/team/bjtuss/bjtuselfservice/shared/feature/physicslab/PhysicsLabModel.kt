@@ -11,6 +11,8 @@ import kotlinx.serialization.json.Json
 import team.bjtuss.bjtuselfservice.shared.auth.Credentials
 import team.bjtuss.bjtuselfservice.shared.cache.CacheStore
 import team.bjtuss.bjtuselfservice.shared.security.CredentialVault
+import team.bjtuss.bjtuselfservice.shared.domain.change.DataChangeRecorder
+import team.bjtuss.bjtuselfservice.shared.domain.change.recordSafely
 
 data class PhysicsLabState(
     val enabled: Boolean = false,
@@ -29,16 +31,19 @@ class PhysicsLabModel(
     private val cache: CacheStore,
     private val vault: CredentialVault?,
     private val remote: PhysicsLabRemote,
+    private val changeRecorder: DataChangeRecorder<PhysicsLab>? = null,
 ) {
     private val mutableState = MutableStateFlow(PhysicsLabState(username = scope))
     val state = mutableState.asStateFlow()
     private val mutex = Mutex()
     private var initialized = false
+    private var resetChangeBaseline = false
     private var twoWeekOverrides: Map<String, Boolean> = emptyMap()
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     suspend fun initialize() = mutex.withLock {
         if (initialized) return@withLock
         val enabled = cache.metadata(scope, "physicslab.enabled") == "true"
+        resetChangeBaseline = cache.metadata(scope, "physicslab.changeBaselinePending") == "true"
         val credentials = try {
             if (cache.metadata(scope, "physicslab.configured") == "true") vault?.load()
             else { vault?.clear(); null }
@@ -76,6 +81,8 @@ class PhysicsLabModel(
                 }
                 val changedAccount = username.trim() != mutableState.value.username && username.isNotBlank()
                 if (changedAccount) {
+                    resetChangeBaseline = true
+                    cache.putMetadata(scope, "physicslab.changeBaselinePending", "true")
                     cache.putMetadata(scope, "physicslab.results", "[]")
                     cache.putMetadata(scope, "physicslab.twoWeekOverrides", "{}")
                     twoWeekOverrides = emptyMap()
@@ -136,8 +143,12 @@ class PhysicsLabModel(
             try {
                 val credentials = vault?.load() ?: throw PhysicsLabFailure("请在应用设置中配置物理实验账号和密码。")
                 val labs = applyWeekOverrides(withTimeout(25_000) { remote.fetch(credentials) })
+                val before = mutableState.value.labs
                 cache.putMetadata(scope, "physicslab.results", json.encodeToString(labs))
+                if (resetChangeBaseline) cache.putMetadata(scope, "physicslab.changeBaselinePending", "false")
                 mutableState.value = mutableState.value.copy(labs = labs, username = credentials.username, fromCache = false, failed = false, synced = true, message = "已同步 ${labs.size} 个实验。")
+                changeRecorder.recordSafely(if (resetChangeBaseline) labs else before, labs)
+                resetChangeBaseline = false
             } catch (e: TimeoutCancellationException) {
                 mutableState.value = mutableState.value.copy(fromCache = true, failed = true, message = "连接超时，请连接校园网；继续使用缓存。")
             } catch (e: CancellationException) { throw e
@@ -160,8 +171,10 @@ class PhysicsLabModel(
             cache.putMetadata(scope, "physicslab.twoWeekOverrides", json.encodeToString(overrides))
             twoWeekOverrides = overrides
             val labs = applyWeekOverrides(mutableState.value.labs)
+            val before = mutableState.value.labs
             cache.putMetadata(scope, "physicslab.results", json.encodeToString(labs))
             mutableState.value = mutableState.value.copy(labs = labs)
+            changeRecorder.recordSafely(before, labs)
         }
     }
 
