@@ -3,8 +3,6 @@ package team.bjtuss.bjtuselfservice.screen
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -34,9 +32,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
@@ -98,7 +99,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -1053,28 +1053,21 @@ fun HomeworkDetailDialog(
                             fontWeight = FontWeight.SemiBold,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        AndroidView(
-                            modifier = Modifier.weight(1f).fillMaxWidth(),
-                            factory = { webViewContext ->
-                                WebView(webViewContext).apply {
-                                    settings.loadWithOverviewMode = true
-                                    settings.useWideViewPort = true
-                                    settings.textZoom = (
-                                        120 * webViewContext.resources.configuration.fontScale
-                                    ).roundToInt()
-                                    webViewClient = WebViewClient()
-                                }
-                            },
-                            update = { webView ->
-                                webView.loadDataWithBaseURL(
-                                    null,
-                                    buildHomeworkHtml(detail?.content ?: homework.content),
-                                    "text/html",
-                                    "utf-8",
-                                    null,
-                                )
-                            },
-                        )
+                        val homeworkText = remember(detail?.content, homework.content) {
+                            org.jsoup.Jsoup.parse(detail?.content ?: homework.content).text()
+                        }
+                        SelectionContainer(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState()),
+                        ) {
+                            Text(
+                                text = homeworkText.ifBlank { "暂无作业内容" },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
 
                         HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                         Text(

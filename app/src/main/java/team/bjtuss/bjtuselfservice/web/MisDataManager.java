@@ -21,6 +21,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -30,164 +32,200 @@ import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import team.bjtuss.bjtuselfservice.CaptchaModel;
 import team.bjtuss.bjtuselfservice.StudentAccountManager;
 import team.bjtuss.bjtuselfservice.entity.CourseEntity;
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity;
 import team.bjtuss.bjtuselfservice.entity.GradeEntity;
-import team.bjtuss.bjtuselfservice.utils.ImageToTensorConverter;
 import team.bjtuss.bjtuselfservice.utils.Network.WebCallback;
 import team.bjtuss.bjtuselfservice.utils.Utils;
 
 public class MisDataManager {
     private static final long DATA_REQUEST_DELAY_MS = 500L;
+    private static final String SSO_LOGIN_PAGE =
+            "https://sso.bjtu.edu.cn/sso/login" +
+                    "?service=https%3A%2F%2Fmis.bjtu.edu.cn%2Fhome%2F" +
+                    "&pageName=login&serverContextPath=" +
+                    "&serviceName=%E7%BB%9F%E4%B8%80%E8%BA%AB%E4%BB%BD%E8%AE%A4%E8%AF%81%E7%B3%BB%E7%BB%9F";
+    private static final Pattern SM2_PUBLIC_KEY_PATTERN =
+            Pattern.compile("\"publicKey\"\\s*:\\s*\"([^\"]+)\"");
+    private static final Pattern SSO_ERROR_PATTERN =
+            Pattern.compile("var error = (\\{.*?\\});", Pattern.DOTALL);
 
-    public static void login(OkHttpClient client, String stuId, String stuPasswd, WebCallback loginCallback) {
-
-        Request request = new Request.Builder()
-                .url("https://mis.bjtu.edu.cn/auth/sso/?next=/")
-                .header("Host", "mis.bjtu.edu.cn")
+    /**
+     * Native login against the new sso.bjtu.edu.cn page.
+     *
+     * The page itself posts the same hidden fields and an SM2-encrypted
+     * password. Reproducing that request here keeps the original app UX:
+     * the user only sees the app's own student-id/password dialog.
+     */
+    public static void loginSso(OkHttpClient client, String stuId, String stuPasswd,
+                                WebCallback<String> loginCallback) {
+        Request pageRequest = new Request.Builder()
+                .url(SSO_LOGIN_PAGE)
+                .header("Host", "sso.bjtu.edu.cn")
                 .build();
-        client.newCall(request).enqueue(new Callback() {
+        client.newCall(pageRequest).enqueue(new Callback() {
             @Override
-            public void onFailure(Call call, IOException e) {
+            public void onFailure(@NonNull Call call, @NonNull IOException e) {
                 loginCallback.onFailure(0);
             }
 
             @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                String url = response.request().url().toString();
-                if ("https://mis.bjtu.edu.cn/home/".equals(url)) {
-                    String body = response.body().string();
-                    Document doc = Jsoup.parse(body);
-                    Element name = doc.selectFirst(".name_right > h3 > a");
-                    if (name == null) {
+            public void onResponse(@NonNull Call call, @NonNull Response response) {
+                try {
+                    if (!response.isSuccessful() || response.body() == null) {
                         loginCallback.onFailure(1);
                         return;
                     }
-                    String nameStr = name.text().split("，")[0];
-                    Element id = doc.selectFirst(".name_right .nr_con span:contains(身份)");
-                    String idStr = id.text().replace("身份：", "");
-                    Element department = doc.selectFirst(".name_right .nr_con span:contains(部门)");
-                    String departmentStr = department.text().replace("部门：", "");
-                    loginCallback.onResponse(nameStr + ";" + idStr + ";" + departmentStr);
-                    return;
-                }
-                Request ttRequest = new Request.Builder()
-                        .url(url)
-                        .header("Host", "cas.bjtu.edu.cn")
-                        .header("Referer", "https://mis.bjtu.edu.cn/auth/sso/?next=/")
-                        .build();
-                client.newCall(ttRequest).enqueue(new Callback() {
-                    @Override
-                    public void onFailure(Call call, IOException e) {
-                        loginCallback.onFailure(0);
+                    String pageHtml = response.body().string();
+                    Document doc = Jsoup.parse(pageHtml);
+                    Element form = doc.selectFirst("form#loginForm");
+                    Matcher matcher = SM2_PUBLIC_KEY_PATTERN.matcher(pageHtml);
+                    if (form == null || !matcher.find()) {
+                        Log.e("LoginError", "SSO page has no login form or SM2 key");
+                        loginCallback.onFailure(1);
+                        return;
+                    }
+                    // The page embeds the key inside a JSON string, where "/" may
+                    // be escaped as "\/". Base64 must never see that backslash.
+                    String publicKey = matcher.group(1).replace("\\/", "/");
+                    FormBody.Builder formBody = new FormBody.Builder();
+                    boolean hasUsername = false;
+                    boolean hasPassword = false;
+                    for (Element input : form.select("input")) {
+                        String name = input.attr("name");
+                        if (name.isEmpty()) {
+                            continue;
+                        }
+                        String value = input.attr("value");
+                        if ("username".equals(name)) {
+                            value = stuId;
+                            hasUsername = true;
+                        } else if ("password".equals(name)) {
+                            try {
+                                value = Sm2Crypto.encrypt(stuPasswd, publicKey);
+                            } catch (Exception e) {
+                                Log.e("LoginError", "SM2 encryption failed", e);
+                                loginCallback.onFailure(1);
+                                return;
+                            }
+                            hasPassword = true;
+                        }
+                        formBody.add(name, value);
+                    }
+                    if (!hasUsername) {
+                        formBody.add("username", stuId);
+                    }
+                    if (!hasPassword) {
+                        try {
+                            formBody.add("password", Sm2Crypto.encrypt(stuPasswd, publicKey));
+                        } catch (Exception e) {
+                            Log.e("LoginError", "SM2 encryption failed", e);
+                            loginCallback.onFailure(1);
+                            return;
+                        }
                     }
 
-                    @Override
-                    public void onResponse(Call call, Response response) throws IOException {
-                        Document doc = Jsoup.parse(response.body().string());
-                        String value = doc.select("input#id_captcha_0").attr("value");
-                        String csrfmiddlewaretoken = doc.select("input[name=csrfmiddlewaretoken]").attr("value");
-                        Request captchaRequest = new Request.Builder()
-                                .url("https://cas.bjtu.edu.cn/image/" + value + "/")
-                                .build();
+                    String action = form.attr("action");
+                    String postUrl = action.startsWith("http")
+                            ? action
+                            : "https://sso.bjtu.edu.cn" + (action.startsWith("/") ? action : "/" + action);
+                    Request loginRequest = new Request.Builder()
+                            .url(postUrl)
+                            .header("Referer", SSO_LOGIN_PAGE)
+                            .header("Origin", "https://sso.bjtu.edu.cn")
+                            .header("User-Agent",
+                                    "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 " +
+                                            "(KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36")
+                            .post(formBody.build())
+                            .build();
 
-                        client.newCall(captchaRequest).enqueue(new Callback() {
-                            @Override
-                            public void onFailure(Call call, IOException e) {
-                                loginCallback.onFailure(0);
-                            }
+                    client.newCall(loginRequest).enqueue(new Callback() {
+                        @Override
+                        public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                            loginCallback.onFailure(0);
+                        }
 
-                            @Override
-                            public void onResponse(Call call, Response response) throws IOException {
-                                if (!response.isSuccessful()) {
+                        @Override
+                        public void onResponse(@NonNull Call call, @NonNull Response loginResponse) {
+                            try {
+                                if (loginResponse.body() == null) {
                                     loginCallback.onFailure(1);
                                     return;
                                 }
-                                byte[] img = response.body().bytes();
-                                //神经网络推理
-                                CaptchaModel captchaModel = CaptchaModel.getInstance();
-                                float[] tensor = ImageToTensorConverter.convertToTensor(img, 130, 42);
-                                String captcha = captchaModel.predict(tensor);
-                                String ans = Utils.calculate(captcha);
-                                if (ans == null) {
-                                    loginCallback.onFailure(0);
-                                    return;
-                                }
-                                String nextUrl = url.substring("https://cas.bjtu.edu.cn/auth/login/?next=".length());
-                                FormBody formBody = new FormBody.Builder()
-                                        .add("csrfmiddlewaretoken", csrfmiddlewaretoken)
-                                        .add("captcha_0", value)
-                                        .add("captcha_1", ans)
-                                        .add("loginname", stuId)
-                                        .add("password", stuPasswd)
-                                        .build();
-                                Request loginRequest = new Request.Builder()
-                                        .url("https://cas.bjtu.edu.cn/auth/login/?next=" + nextUrl)
-                                        .header("Referer", url)
-                                        .header("Origin", "https://cas.bjtu.edu.cn")
-                                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0")
-                                        .post(formBody)
-                                        .build();
+                                String finalUrl = loginResponse.request().url().toString();
+                                String body = loginResponse.body().string();
+                                Log.d("Login", "SSO final URL: " + finalUrl);
 
-
-                                client.newCall(loginRequest).enqueue(new Callback() {
-                                    @Override
-                                    public void onFailure(Call call, IOException e) {
-                                        Log.e("LoginError", "Request failed", e);
-                                        Log.e("LoginError", "URL: " + call.request().url());
-                                        Log.e("LoginError", "Error type: " + e.getClass().getName());
-                                        Log.e("LoginError", "Error message: " + e.getMessage());
-
-                                        // 如果是 StreamResetException，打印更多信息
-                                        if (e instanceof okhttp3.internal.http2.StreamResetException) {
-                                            Log.e("LoginError", "HTTP/2 Stream Reset Error");
-                                        }
-
-                                        loginCallback.onFailure(0);
+                                if (finalUrl.contains("mis.bjtu.edu.cn/home")
+                                        || body.contains("class=\"name_right\"")) {
+                                    Document home = Jsoup.parse(body);
+                                    Element name = home.selectFirst(".name_right > h3 > a");
+                                    Element id = home.selectFirst(".name_right .nr_con span:contains(身份)");
+                                    Element department = home.selectFirst(".name_right .nr_con span:contains(部门)");
+                                    if (name == null || id == null || department == null) {
+                                        Log.e("LoginError", "MIS home has no identity fields");
+                                        loginCallback.onFailure(1);
+                                        return;
                                     }
-
-                                    @Override
-                                    public void onResponse(Call call, Response response) throws IOException {
+                                    String nameStr = name.text().split("，")[0];
+                                    String idStr = id.text().replace("身份：", "");
+                                    String departmentStr = department.text().replace("部门：", "");
+                                    loginCallback.onResponse(nameStr + ";" + idStr + ";" + departmentStr);
+                                } else {
+                                    boolean badCredentials = false;
+                                    boolean captcha = false;
+                                    Matcher errorMatcher = SSO_ERROR_PATTERN.matcher(body);
+                                    if (errorMatcher.find()) {
                                         try {
-                                            // OkHttp 会自动跟随重定向到 mis.bjtu.edu.cn/home/
-                                            String finalUrl = response.request().url().toString();
-                                            String body = response.body().string();
-
-                                            Log.d("Login", "Final URL: " + finalUrl);
-                                            Log.d("Login", "Response code: " + response.code());
-
-                                            if (finalUrl.contains("mis.bjtu.edu.cn/home/")) {
-                                                Document doc = Jsoup.parse(body);
-                                                Element name = doc.selectFirst(".name_right > h3 > a");
-                                                if (name == null) {
-                                                    loginCallback.onFailure(1);
-                                                    return;
-                                                }
-                                                String nameStr = name.text().split("，")[0];
-                                                Element id = doc.selectFirst(".name_right .nr_con span:contains(身份)");
-                                                String idStr = id.text().replace("身份：", "");
-                                                Element department = doc.selectFirst(".name_right .nr_con span:contains(部门)");
-                                                String departmentStr = department.text().replace("部门：", "");
-                                                loginCallback.onResponse(nameStr + ";" + idStr + ";" + departmentStr);
-                                            } else {
-                                                loginCallback.onFailure(0);
+                                            JSONObject error = new JSONObject(errorMatcher.group(1));
+                                            int code = error.optInt("code");
+                                            String message = error.optString("msg", "");
+                                            Log.e("LoginError", "SSO error " + code + ": " + message);
+                                            if (code == 40400
+                                                    || message.contains("账号或密码错误")
+                                                    || message.contains("用户名或密码错误")
+                                                    || message.contains("密码错误")) {
+                                                badCredentials = true;
                                             }
-                                        } finally {
-                                            response.close();
+                                            if (message.contains("验证码")
+                                                    || message.contains("滑块")
+                                                    || message.contains("验证")) {
+                                                captcha = true;
+                                            }
+                                        } catch (Exception ignored) {
                                         }
                                     }
-                                });
-                                response.close();
+                                    if (badCredentials) {
+                                        loginCallback.onFailure(1);
+                                    } else if (captcha) {
+                                        Log.e("LoginError", "SSO requires verification");
+                                        loginCallback.onFailure(2);
+                                    } else {
+                                        Log.e("LoginError", "SSO login failed at " + finalUrl);
+                                        loginCallback.onFailure(1);
+                                    }
+                                }
+                            } catch (Exception e) {
+                                Log.e("LoginError", "SSO response parse failed", e);
+                                loginCallback.onFailure(1);
+                            } finally {
+                                loginResponse.close();
                             }
-                        });
-                        response.close();
-                    }
-                });
-                response.close();
+                        }
+                    });
+                } catch (Exception e) {
+                    Log.e("LoginError", "SSO page parse failed", e);
+                    loginCallback.onFailure(1);
+                } finally {
+                    response.close();
+                }
             }
         });
+    }
+
+    public static void login(OkHttpClient client, String stuId, String stuPasswd, WebCallback loginCallback) {
+        loginSso(client, stuId, stuPasswd, loginCallback);
     }
 
     public static void checkCookie(OkHttpClient client, WebCallback loginCallback) {
@@ -586,6 +624,10 @@ public class MisDataManager {
                                     "数据页响应: code=" + response.code() + ", url=" + response.request().url()
                             );
                             try {
+                                if (response.body() == null) {
+                                    ResCallback.onFailure(1);
+                                    return;
+                                }
                                 Document doc = Jsoup.parse(response.body().string());
                                 Element table = doc.selectFirst("table");
                                 if (table == null) {
@@ -601,17 +643,25 @@ public class MisDataManager {
                                 for (int i = 2; i < rows.size(); i++) {
                                     Element row = rows.get(i);
                                     Elements cols = row.select("td");
+                                    if (cols.isEmpty()) {
+                                        continue;
+                                    }
                                     Element colName = cols.get(0);
                                     String classroomName = colName.text();
                                     classroomName = classroomName.split(" ")[0];
                                     List<Integer> classroomList = new ArrayList<>();
+                                    int dayColumnStart = 1 + 7 * index;
                                     for (int j = 0; j < 7; j++) {
-                                        Element col = cols.get(1 + 7 * index + j);
+                                        int colIndex = dayColumnStart + j;
+                                        if (colIndex >= cols.size()) {
+                                            // Keep exactly seven slots even when the
+                                            // school page has fewer columns than expected.
+                                            classroomList.add(0);
+                                            continue;
+                                        }
+                                        Element col = cols.get(colIndex);
                                         String style = col.attr("style");
                                         switch (style) {
-                                            case "background-color: #fff":
-                                                classroomList.add(0);
-                                                break;
                                             case "background-color: #e46868":
                                                 classroomList.add(1);
                                                 break;
@@ -627,12 +677,17 @@ public class MisDataManager {
                                             case "background-color: #d8cc56":
                                                 classroomList.add(5);
                                                 break;
+                                            case "background-color: #fff":
+                                            default:
+                                                classroomList.add(0);
+                                                break;
                                         }
                                     }
                                     classroomMap.put(classroomName, classroomList);
                                 }
                                 ResCallback.onResponse(classroomMap);
-                            } catch (IOException e) {
+                            } catch (Exception e) {
+                                Log.e("ClassroomMap", "Failed to parse classroom table", e);
                                 ResCallback.onFailure(1);
                             }
                         }

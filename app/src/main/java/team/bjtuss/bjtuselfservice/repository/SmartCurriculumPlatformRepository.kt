@@ -4,6 +4,7 @@ package team.bjtuss.bjtuselfservice.repository
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.FormBody
 import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
@@ -23,7 +24,9 @@ import team.bjtuss.bjtuselfservice.jsonclass.HomeworkJsonType
 import team.bjtuss.bjtuselfservice.jsonclass.SemesterJsonType
 import team.bjtuss.bjtuselfservice.jsonclass.getArticleListJsonType
 import team.bjtuss.bjtuselfservice.statemanager.AppStateManager
+import team.bjtuss.bjtuselfservice.statemanager.AuthenticatorManager
 import team.bjtuss.bjtuselfservice.utils.KotlinUtils
+import team.bjtuss.bjtuselfservice.web.Sm2Crypto
 import java.io.IOException
 
 data class HomeworkAttachment(
@@ -57,25 +60,98 @@ object SmartCurriculumPlatformRepository {
 
 
     suspend fun initClient() {
-
-        val url1 = "https://mis.bjtu.edu.cn/module/module/28/"
-
-
-        val request2 = Request.Builder()
-            .url("https://bksycenter.bjtu.edu.cn/NoMasterJumpPage.aspx?URL=jwcZhjx&FPC=page:jwcZhjx")
-            .headers(headersBuilder.build())
-            .build()
-
-
-
-        println("9302190321")
-        RequestKotlin.get(url1, headersBuilder.build())
-
-        // client.newCall(request2).execute()
+        loginLegacyCoursePlatform()
         getAndSetSessionIdInHeaders()
         val semesterFromJson = getSemesterTypeList()
         courseFromJson =
             semesterFromJson.result?.get(0)?.xqCode?.let { getCourseTypeList(xqCode = it) }
+    }
+
+    /**
+     * The legacy course platform uses CAS, not the new MIS SSO. Follow the
+     * course-platform entry to CAS, submit the same school credentials and
+     * let OkHttp's cookie jar carry the resulting SCP session.
+     */
+    private suspend fun loginLegacyCoursePlatform() {
+        val credentials = AuthenticatorManager.credentials.value
+        if (!credentials.isValid()) {
+            Log.e("SCP", "CAS login skipped: empty credentials")
+            return
+        }
+        withContext(Dispatchers.IO) {
+            try {
+                client.newCall(
+                    Request.Builder()
+                        .url("https://mis.bjtu.edu.cn/module/module/28/")
+                        .headers(headersBuilder.build())
+                        .build()
+                ).execute().use { response ->
+                    val html = response.body?.string().orEmpty()
+                    val document = Jsoup.parse(html, response.request.url.toString())
+                    val form = document.selectFirst("form#loginForm")
+                    if (form == null) {
+                        Log.e("SCP", "CAS form not found, final=" + response.request.url)
+                        return@use
+                    }
+                    val action = form.absUrl("action").ifBlank {
+                        "https://cas.bjtu.edu.cn/login"
+                    }
+                    val sm2Index = html.indexOf("sm2")
+                    if (sm2Index >= 0) {
+                        Log.d(
+                            "SCP",
+                            "CAS sm2 context=" + html.substring(
+                                (sm2Index - 300).coerceAtLeast(0),
+                                (sm2Index + 900).coerceAtMost(html.length)
+                            ).replace("\n", " ")
+                        )
+                    }
+                    val publicKey = Regex("publicKey\\s*[:=]\\s*[\"']([^\"']+)")
+                        .find(html)
+                        ?.groupValues
+                        ?.get(1)
+                        ?.replace("\\/", "/")
+                    Log.d(
+                        "SCP",
+                        "CAS sm2 key len=" + (publicKey?.length ?: 0)
+                    )
+                    val passwordValue = if (!publicKey.isNullOrBlank()) {
+                        runCatching { Sm2Crypto.encrypt(credentials.password, publicKey) }
+                            .onFailure { Log.e("SCP", "CAS password encryption failed", it) }
+                            .getOrDefault(credentials.password)
+                    } else {
+                        credentials.password
+                    }
+                    val formBody = FormBody.Builder()
+                    form.select("input").forEach { input ->
+                        val name = input.attr("name")
+                        if (name.isBlank() || name == "submit") return@forEach
+                        val value = when (name) {
+                            "username" -> credentials.username
+                            "password" -> passwordValue
+                            else -> input.attr("value")
+                        }
+                        formBody.add(name, value)
+                    }
+                    val loginRequest = Request.Builder()
+                        .url(action)
+                        .headers(headersBuilder.build())
+                        .post(formBody.build())
+                        .build()
+                    client.newCall(loginRequest).execute().use { loginResponse ->
+                        val loginHtml = loginResponse.body?.string().orEmpty()
+                        Log.d(
+                            "SCP",
+                            "CAS login -> " + loginResponse.code + " " +
+                                loginResponse.request.url + " title=" +
+                                Jsoup.parse(loginHtml).title()
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("SCP", "CAS login failed", e)
+            }
+        }
     }
 
     private suspend fun getSemesterTypeList(): SemesterJsonType {
@@ -271,13 +347,17 @@ object SmartCurriculumPlatformRepository {
                     throw IOException("获取sessionId失败，状态码: ${response.code}")
                 }
 
-                response.body?.source()?.let { source ->
-                    moshi.adapter(getArticleListJsonType::class.java)
-                        .fromJson(source)
-                        ?.sessionId
-                        ?.also { headersBuilder.add("sessionid", it) }
-                        ?: throw IllegalStateException("SessionId not found in response")
-                } ?: throw IOException("Response body is null")
+                val body = response.body?.string() ?: throw IOException("Response body is null")
+                Log.d(
+                    "SCP",
+                    "getArticleList -> " + response.code + " " + response.request.url +
+                        " body=" + body.take(180)
+                )
+                moshi.adapter(getArticleListJsonType::class.java)
+                    .fromJson(body)
+                    ?.sessionId
+                    ?.also { headersBuilder.add("sessionid", it) }
+                    ?: throw IllegalStateException("SessionId not found in response")
             }
         }
     }

@@ -108,6 +108,7 @@ object AppEventManager {
                     sendEvent(AppEvent.LoginSuccess)
                 })
             }
+
             // 执行登录逻辑...
             is AppEvent.LoginSuccess -> {
                 AppStateManager.updateState(AppState.Idle)
@@ -148,9 +149,11 @@ object AuthenticatorManager {
 
     private fun tryAutoLogin() {
         CoroutineScope(Dispatchers.IO).launch {
-            // 从存储中恢复凭据并尝试登录
+            // Restore the original behaviour: saved credentials are submitted
+            // automatically through the native new-SSO login implementation.
             val storedCredentials = DataStoreRepository.getStoredCredentialsBlocking()
             if (storedCredentials.isValid()) {
+                updateCredentials(storedCredentials)
                 AppEventManager.sendEvent(AppEvent.LoginRequest(storedCredentials))
             }
         }
@@ -314,8 +317,8 @@ object AppStateManager {
 
 @Composable
 fun LoginDialog(credentials: Credentials) {
-    var username by remember { mutableStateOf(credentials.username) }
-    var password by remember { mutableStateOf(credentials.password) }
+    var username by remember(credentials) { mutableStateOf(credentials.username) }
+    var password by remember(credentials) { mutableStateOf(credentials.password) }
     val loginState by AppStateManager.appState.collectAsState()
 
     AlertDialog(
@@ -368,12 +371,9 @@ fun LoginDialog(credentials: Credentials) {
             LoginButton(enabled = username.isNotBlank() && password.isNotBlank(), onClick = {
                 AppEventManager.sendEvent(
                     AppEvent.LoginRequest(
-                        Credentials(
-                            username, password
-                        )
+                        Credentials(username, password)
                     )
                 )
-
             })
         },
         shape = RoundedCornerShape(16.dp),

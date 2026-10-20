@@ -9,7 +9,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import team.bjtuss.bjtuselfservice.constant.ApiConstant
-import java.io.IOException
 
 
 data class GitHubRelease(
@@ -49,7 +48,9 @@ suspend fun fetchLatestRelease(): GitHubRelease? = withContext(Dispatchers.IO) {
 
         val jsonAdapter = moshi.adapter(GitHubRelease::class.java)
         return@withContext jsonAdapter.fromJson(responseBody)
-    } catch (e: IOException) {
+    } catch (e: Exception) {
+        // Update checks run during startup. A malformed GitHub response must not
+        // be allowed to take down the main screen.
         println("Network error: ${e.message}")
         null
     }

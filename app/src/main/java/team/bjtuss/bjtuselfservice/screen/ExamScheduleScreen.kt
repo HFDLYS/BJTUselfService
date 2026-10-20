@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Api
 import androidx.compose.material.icons.filled.Book
@@ -24,6 +25,7 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,6 +43,26 @@ import androidx.compose.ui.unit.dp
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity
 import team.bjtuss.bjtuselfservice.viewmodel.DataChange
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
+import java.time.LocalDate
+
+internal fun parseExamDate(examTimeAndPlace: String): LocalDate? {
+    val match = Regex("(\\d{4})/(\\d{1,2})/(\\d{1,2})").find(examTimeAndPlace) ?: return null
+    return runCatching {
+        LocalDate.of(
+            match.groupValues[1].toInt(),
+            match.groupValues[2].toInt(),
+            match.groupValues[3].toInt(),
+        )
+    }.getOrNull()
+}
+
+internal fun isExamExpired(
+    examTimeAndPlace: String,
+    today: LocalDate = LocalDate.now(),
+): Boolean {
+    val date = parseExamDate(examTimeAndPlace) ?: return false
+    return date.isBefore(today)
+}
 
 @Composable
 fun ExamScheduleScreen(
@@ -167,29 +189,67 @@ fun ExamSummaryCard(examList: List<ExamScheduleEntity>, selectedFilter: String) 
 
 @Composable
 fun ExamItemCard(exam: ExamScheduleEntity) {
+    val expired = isExamExpired(exam.examTimeAndPlace)
+    val titleColor = if (expired) {
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+    val bodyColor = if (expired) {
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val accentColor = if (expired) {
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+    } else {
+        MaterialTheme.colorScheme.primary
+    }
+
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .clickable { },
         colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = if (expired) {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
         ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.elevatedCardElevation(
+            defaultElevation = if (expired) 0.dp else 2.dp
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-
-            Text(
-                text = exam.courseName,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                ),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = exam.courseName,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = titleColor
+                    ),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (expired) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                    ) {
+                        Text(
+                            text = "已结束",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = bodyColor,
+                        )
+                    }
+                }
+            }
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -197,12 +257,13 @@ fun ExamItemCard(exam: ExamScheduleEntity) {
                 Icon(
                     imageVector = Icons.Default.Api,
                     contentDescription = "Exam Type",
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = accentColor,
                     modifier = Modifier.size(16.dp),
                 )
                 Text(
                     text = exam.examType,
                     style = MaterialTheme.typography.bodyMedium,
+                    color = bodyColor,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -214,13 +275,13 @@ fun ExamItemCard(exam: ExamScheduleEntity) {
                 Icon(
                     imageVector = Icons.Default.Schedule,
                     contentDescription = "Exam Time and Place",
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = accentColor,
                     modifier = Modifier.size(16.dp),
                 )
                 Text(
                     text = exam.examTimeAndPlace,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = bodyColor
                 )
             }
             Row(
@@ -230,13 +291,13 @@ fun ExamItemCard(exam: ExamScheduleEntity) {
                 Icon(
                     imageVector = Icons.Default.Book,
                     contentDescription = "Exam Status",
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = accentColor,
                     modifier = Modifier.size(16.dp),
                 )
                 Text(
                     text = exam.examStatus,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = bodyColor
                 )
             }
             Row(
@@ -246,13 +307,13 @@ fun ExamItemCard(exam: ExamScheduleEntity) {
                 Icon(
                     imageVector = Icons.Default.Info,
                     contentDescription = "Detail",
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = accentColor,
                     modifier = Modifier.size(16.dp),
                 )
                 Text(
                     text = exam.detail,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = bodyColor
                 )
             }
         }

@@ -76,7 +76,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("org.pytorch:pytorch_android:2.1.0")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
     implementation("org.jsoup:jsoup:1.14.3")
     implementation("com.github.jeziellago:compose-markdown:0.5.6")
     implementation("androidx.compose.material:material-icons-extended")
@@ -85,7 +85,6 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.51.1")
     kapt("com.google.dagger:hilt-android-compiler:2.51.1")
     implementation("io.github.oleksandrbalan:lazytable:1.8.0")
-    implementation("androidx.webkit:webkit:1.5.0")
 
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")

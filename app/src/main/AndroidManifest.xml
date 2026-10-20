@@ -27,6 +27,11 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="34">
         <activity
+            android:name=".screen.EmailDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
