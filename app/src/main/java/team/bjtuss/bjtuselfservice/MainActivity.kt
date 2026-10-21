@@ -57,6 +57,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -83,6 +84,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dev.jeziellago.compose.markdowntext.MarkdownText
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import team.bjtuss.bjtuselfservice.reminder.ReminderScheduler
 import team.bjtuss.bjtuselfservice.reminder.ClassroomSubscriptionWorker
@@ -149,6 +151,7 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        NotificationNavigation.route.value = intent.getStringExtra(NotificationNavigation.EXTRA_ROUTE)
         enableEdgeToEdge()
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
@@ -251,6 +254,12 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        NotificationNavigation.route.value = intent.getStringExtra(NotificationNavigation.EXTRA_ROUTE)
+    }
 }
 
 @SuppressLint("CoroutineCreationDuringComposition")
@@ -332,6 +341,12 @@ fun CheckUpdate() {
 fun App(mainViewModel: MainViewModel, hasBackground: Boolean = false) {
 
     val navController = rememberNavController()
+    val pendingRoute by NotificationNavigation.route.collectAsState()
+    LaunchedEffect(pendingRoute) {
+        val route = pendingRoute ?: return@LaunchedEffect
+        NotificationNavigation.route.value = null
+        navController.navigate(route)
+    }
     NavHost(navController = navController,
         startDestination = RouteManager.Navigation,
         enterTransition = { activityEnterTransition() },
@@ -460,6 +475,11 @@ fun FloatingLoggingIndicator(appState: AppState) {
 data class PageItem(
     val route: String, val title: String, val icon: ImageVector
 )
+
+object NotificationNavigation {
+    const val EXTRA_ROUTE = "team.bjtuss.bjtuselfservice.notification_route"
+    val route = MutableStateFlow<String?>(null)
+}
 
 object RouteManager {
     const val Home: String = "Home"

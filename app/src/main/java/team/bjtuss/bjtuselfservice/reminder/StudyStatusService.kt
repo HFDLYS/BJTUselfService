@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import team.bjtuss.bjtuselfservice.MainActivity
+import team.bjtuss.bjtuselfservice.NotificationNavigation
 import team.bjtuss.bjtuselfservice.database.AppDatabase
 import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 import java.time.Duration
@@ -95,6 +96,8 @@ class StudyStatusService : Service() {
                     title = "学习状态",
                     content = "暂时没有即将到来的课程、考试或作业截止",
                     subText = null,
+                    primaryLabel = "打开应用",
+                    primaryRoute = ROUTE_HOME,
                 )
             )
             return
@@ -106,6 +109,10 @@ class StudyStatusService : Service() {
                 title = first.title,
                 content = countdown + " · " + first.detail,
                 subText = second?.let { "接下来：" + it.title + " · " + formatCountdown(it.at) },
+                primaryLabel = first.primaryLabel,
+                primaryRoute = first.primaryRoute,
+                secondaryLabel = first.secondaryLabel ?: "打开应用",
+                secondaryRoute = first.secondaryRoute ?: ROUTE_HOME,
             )
         )
     }
@@ -129,6 +136,10 @@ class StudyStatusService : Service() {
                 detail = at.toLocalTime().format(TIME_FORMAT) + " · " +
                     course.coursePlace + " · " + course.courseTeacher,
                 at = at,
+                primaryLabel = "看课表",
+                primaryRoute = ROUTE_COURSE,
+                secondaryLabel = if (classroomRoute(course.coursePlace) != null) "去教室" else "打开应用",
+                secondaryRoute = classroomRoute(course.coursePlace) ?: ROUTE_HOME,
             )
             if (best == null || event.at.isBefore(best!!.at)) best = event
         }
@@ -149,7 +160,13 @@ class StudyStatusService : Service() {
         } ?: LocalTime.of(8, 0)
         val at = LocalDateTime.of(date, time)
         if (!at.isAfter(LocalDateTime.now())) return null
-        return StudyEvent("下一场考试 · " + exam.courseName, exam.examTimeAndPlace, at)
+        return StudyEvent(
+            title = "下一场考试 · " + exam.courseName,
+            detail = exam.examTimeAndPlace,
+            at = at,
+            primaryLabel = "看考试",
+            primaryRoute = ROUTE_EXAM,
+        )
     }
 
     private fun eventForHomework(homework: team.bjtuss.bjtuselfservice.entity.HomeworkEntity): StudyEvent? {
@@ -159,6 +176,8 @@ class StudyStatusService : Service() {
             title = "作业截止 · " + homework.courseName,
             detail = homework.title + " · " + at.format(DATETIME_FORMAT),
             at = at,
+            primaryLabel = "看作业",
+            primaryRoute = ROUTE_HOMEWORK,
         )
     }
 
@@ -193,8 +212,16 @@ class StudyStatusService : Service() {
         }
     }
 
-    private fun buildNotification(title: String, content: String, subText: String?) =
-        NotificationCompat.Builder(this, CHANNEL_ID)
+    private fun buildNotification(
+        title: String,
+        content: String,
+        subText: String?,
+        primaryLabel: String? = null,
+        primaryRoute: String? = null,
+        secondaryLabel: String? = null,
+        secondaryRoute: String? = null,
+    ): android.app.Notification {
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(content)
@@ -204,17 +231,48 @@ class StudyStatusService : Service() {
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOnlyAlertOnce(true)
             .setOngoing(true)
-            .setContentIntent(
-                PendingIntent.getActivity(
-                    this,
-                    2001,
-                    Intent(this, MainActivity::class.java).addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    ),
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-                )
+            .setContentIntent(routeIntent(ROUTE_HOME, 2001))
+            .addAction(
+                android.R.drawable.ic_menu_agenda,
+                primaryLabel ?: "打开应用",
+                routeIntent(primaryRoute ?: ROUTE_HOME, 2101),
             )
-            .build()
+        if (secondaryLabel != null) {
+            builder.addAction(
+                android.R.drawable.ic_menu_mylocation,
+                secondaryLabel,
+                routeIntent(secondaryRoute ?: ROUTE_HOME, 2102),
+            )
+        }
+        return builder.build()
+    }
+
+    private fun routeIntent(route: String, requestCode: Int): PendingIntent {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+            )
+            putExtra(NotificationNavigation.EXTRA_ROUTE, route)
+        }
+        return PendingIntent.getActivity(
+            this,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+    private fun classroomRoute(place: String): String? {
+        val parts = place.split(',', '，').map { it.trim() }.filter { it.isNotBlank() }
+        val building = CAMPUS_BUILDINGS.firstOrNull { candidate ->
+            parts.any { it.contains(candidate) }
+        } ?: return null
+        val room = parts.lastOrNull { it.matches(Regex("[A-Za-z]+\\d+.*")) }.orEmpty()
+        return "ClassroomDetection/" + android.net.Uri.encode(building) +
+            "?room=" + android.net.Uri.encode(room)
+    }
 
     private fun notify(notification: android.app.Notification) {
         runCatching { NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, notification) }
@@ -237,11 +295,36 @@ class StudyStatusService : Service() {
         super.onDestroy()
     }
 
-    private data class StudyEvent(val title: String, val detail: String, val at: LocalDateTime)
+    private data class StudyEvent(
+        val title: String,
+        val detail: String,
+        val at: LocalDateTime,
+        val primaryLabel: String = "打开应用",
+        val primaryRoute: String = ROUTE_HOME,
+        val secondaryLabel: String? = null,
+        val secondaryRoute: String? = null,
+    )
 
     companion object {
         private const val CHANNEL_ID = "study_live_status"
         private const val NOTIFICATION_ID = 0x53545544
+        private const val ROUTE_HOME = "Navigation"
+        private const val ROUTE_COURSE = "CourseSchedule"
+        private const val ROUTE_EXAM = "Exam"
+        private const val ROUTE_HOMEWORK = "HomeWork"
+        private val CAMPUS_BUILDINGS = listOf(
+            "第十七号教学楼",
+            "思源楼",
+            "思源西楼",
+            "思源东楼",
+            "第九教学楼",
+            "第八教学楼",
+            "第五教学楼",
+            "逸夫教学楼",
+            "机械楼",
+            "东区二教",
+            "东区一教",
+        )
         private val START_TIMES = listOf(
             LocalTime.of(8, 0), LocalTime.of(10, 10), LocalTime.of(12, 10),
             LocalTime.of(14, 10), LocalTime.of(16, 20), LocalTime.of(19, 0),

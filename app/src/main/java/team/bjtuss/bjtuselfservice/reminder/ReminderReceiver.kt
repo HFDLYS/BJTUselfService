@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import team.bjtuss.bjtuselfservice.MainActivity
+import team.bjtuss.bjtuselfservice.NotificationNavigation
 
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -30,11 +31,17 @@ class ReminderReceiver : BroadcastReceiver() {
         val channelId = if (type == "exam") "exam_reminder" else "course_reminder"
         ensureChannel(context, channelId, type)
 
+        val route = if (type == "exam") "Exam" else "CourseSchedule"
         val openApp = PendingIntent.getActivity(
             context,
-            1001,
+            notifId,
             Intent(context, MainActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+                )
+                putExtra(NotificationNavigation.EXTRA_ROUTE, route)
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
@@ -58,8 +65,12 @@ class ReminderReceiver : BroadcastReceiver() {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setAutoCancel(true)
             .setContentIntent(openApp)
-            .addAction(0, "查看", openApp)
-            .addAction(0, "知道了", dismiss)
+            .addAction(
+                android.R.drawable.ic_menu_agenda,
+                if (type == "exam") "看考试" else "看课表",
+                openApp,
+            )
+            .addAction(android.R.drawable.ic_menu_close_clear_cancel, "知道了", dismiss)
             .build()
 
         runCatching { manager.notify(notifId, notification) }

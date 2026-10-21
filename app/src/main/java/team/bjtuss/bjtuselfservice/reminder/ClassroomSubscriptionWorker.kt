@@ -12,6 +12,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.flow.first
 import team.bjtuss.bjtuselfservice.MainActivity
+import team.bjtuss.bjtuselfservice.NotificationNavigation
 import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 import team.bjtuss.bjtuselfservice.repository.NetworkRepository
 import java.time.LocalDate
@@ -44,12 +45,19 @@ class ClassroomSubscriptionWorker(
 
     private fun notify(subscription: ClassroomSubscription) {
         ensureChannel()
+        val route = "ClassroomDetection/" + android.net.Uri.encode(subscription.building) +
+            "?room=" + android.net.Uri.encode(subscription.room)
         val openApp = PendingIntent.getActivity(
             applicationContext,
-            3001,
-            Intent(applicationContext, MainActivity::class.java).addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            ),
+            subscription.room.hashCode() and 0x7fffffff,
+            Intent(applicationContext, MainActivity::class.java).apply {
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+                )
+                putExtra(NotificationNavigation.EXTRA_ROUTE, route)
+            },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
@@ -68,6 +76,7 @@ class ClassroomSubscriptionWorker(
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(openApp)
+            .addAction(android.R.drawable.ic_menu_mylocation, "看教室", openApp)
             .build()
         runCatching {
             NotificationManagerCompat.from(applicationContext)
