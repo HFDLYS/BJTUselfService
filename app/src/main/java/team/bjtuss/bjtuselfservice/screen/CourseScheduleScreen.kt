@@ -1,5 +1,8 @@
 package team.bjtuss.bjtuselfservice.screen
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -47,6 +50,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -54,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,12 +66,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
+import team.bjtuss.bjtuselfservice.database.AppDatabase
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
 import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
+import team.bjtuss.bjtuselfservice.utils.IcsExporter
 import team.bjtuss.bjtuselfservice.utils.Utils
 import team.bjtuss.bjtuselfservice.viewmodel.DataChange
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.Calendar
 
 data class MenuItem(
@@ -203,6 +211,25 @@ fun CourseScheduleScreen(
         }
     }
     val currentSlot = remember(nowTick) { getCurrentCourseSlot() }
+    val context = LocalContext.current
+    val exportScope = rememberCoroutineScope()
+    var icsContent by remember { mutableStateOf<String?>(null) }
+    val createIcs = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/calendar")
+    ) { uri ->
+        val content = icsContent
+        if (uri != null && content != null) {
+            runCatching {
+                context.contentResolver.openOutputStream(uri)?.use { output ->
+                    output.write(content.toByteArray(Charsets.UTF_8))
+                }
+            }.onSuccess {
+                Toast.makeText(context, "课表已导出", Toast.LENGTH_SHORT).show()
+            }.onFailure {
+                Toast.makeText(context, "导出失败：" + (it.message ?: "未知错误"), Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
     val courseList by
         if (currentTerm) {
             courseScheduleViewModel.currentTermCourseList.collectAsState()
@@ -264,6 +291,23 @@ fun CourseScheduleScreen(
                                 MenuItem(
                                     content = { Text("选择周数") },
                                     onClick = { showWeekSelector = true }
+                                ),
+                                MenuItem(
+                                    content = { Text("导出课表 (.ics)") },
+                                    onClick = {
+                                        exportScope.launch {
+                                            val courses = runCatching {
+                                                AppDatabase.getInstance().courseEntityDao()
+                                                    .getCurrentSemesterCourseListBySemester(true)
+                                            }.getOrDefault(emptyList())
+                                            if (courses.isEmpty()) {
+                                                Toast.makeText(context, "暂无可导出的课程", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                icsContent = IcsExporter.export(courses, currentWeek)
+                                                createIcs.launch("BJTU课表.ics")
+                                            }
+                                        }
+                                    }
                                 )
                             )
                         )
