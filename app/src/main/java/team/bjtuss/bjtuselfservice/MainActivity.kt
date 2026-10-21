@@ -85,6 +85,12 @@ import dev.jeziellago.compose.markdowntext.MarkdownText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import team.bjtuss.bjtuselfservice.reminder.ReminderScheduler
+import team.bjtuss.bjtuselfservice.reminder.ClassroomSubscriptionWorker
+import team.bjtuss.bjtuselfservice.reminder.StudyStatusService
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.launch
 import team.bjtuss.bjtuselfservice.MainApplication.Companion.appContext
 import team.bjtuss.bjtuselfservice.RouteManager.ClassroomDetection
@@ -153,6 +159,23 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             delay(4000)
             ReminderScheduler.reschedule(applicationContext)
+            runCatching {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(Intent(this@MainActivity, StudyStatusService::class.java))
+                } else {
+                    startService(Intent(this@MainActivity, StudyStatusService::class.java))
+                }
+            }
+            runCatching {
+                WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+                    "classroom-subscriptions",
+                    ExistingPeriodicWorkPolicy.KEEP,
+                    PeriodicWorkRequestBuilder<ClassroomSubscriptionWorker>(
+                        15,
+                        TimeUnit.MINUTES,
+                    ).build(),
+                )
+            }
         }
 
 
