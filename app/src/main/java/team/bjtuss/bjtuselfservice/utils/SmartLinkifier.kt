@@ -26,7 +26,7 @@ data class SmartLinkAction(
 /** Adds clickable highlights to email/phone/URL/ID tokens in a Spanned body. */
 object SmartLinkifier {
     private val EMAIL = Regex("""[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}""")
-    private val URL = Regex("""https?://[^\s<>"']+""", RegexOption.IGNORE_CASE)
+    private val URL = Regex("""https?://[A-Za-z0-9._~:/?#@!&'()*+,;=%-]+""", RegexOption.IGNORE_CASE)
     private val PHONE = Regex("""(?<!\d)(?:1[3-9]\d{9}|0\d{2,3}-?\d{7,8})(?!\d)""")
     private val KEYWORD = Regex(
         """(?i)(?:学号|工号|订单号|单号|编号|手机号|手机|电话|邮箱|email|e-mail|QQ|快递|取件码|验证码)\s*[:：]?\s*([A-Za-z0-9@._%+\-]{4,})"""
@@ -65,7 +65,7 @@ object SmartLinkifier {
             add(it.range.first, it.range.last + 1, SmartLinkType.EMAIL, it.value)
         }
         URL.findAll(source).forEach {
-            val value = it.value.trimEnd('.', ',', '。', '，', ')', '）', ';', '；', ']', '}')
+            val value = trimUrlEnd(it.value)
             add(it.range.first, it.range.first + value.length, SmartLinkType.URL, value)
         }
         PHONE.findAll(source).forEach {
@@ -100,6 +100,17 @@ object SmartLinkifier {
             )
         }
         return spannable
+    }
+
+    internal fun extractUrls(text: String): List<String> =
+        URL.findAll(text).map { trimUrlEnd(it.value) }.toList()
+
+    private fun trimUrlEnd(value: String): String {
+        var end = value.length
+        while (end > 0 && value[end - 1] in ".,;:!?，。；：！？)]}'\"") {
+            end--
+        }
+        return value.substring(0, end)
     }
 
     private data class Range(
