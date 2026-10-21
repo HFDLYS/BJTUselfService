@@ -1059,7 +1059,9 @@ private fun ClassroomReservationDialog(
     var selectedSlots by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var error by remember { mutableStateOf<String?>(null) }
     val dates = (0..6).map { LocalDate.now().plusDays(it.toLong()) }
-    val slots = classroomMap[classroomName].orEmpty()
+    val dayIndex = selectedDate.dayOfWeek.value - 1
+    val slots = classroomMap[classroomName + "|" + dayIndex]
+        ?: classroomMap[classroomName].orEmpty()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1082,7 +1084,11 @@ private fun ClassroomReservationDialog(
                     dates.forEach { date ->
                         FilterChip(
                             selected = selectedDate == date,
-                            onClick = { selectedDate = date; error = null },
+                            onClick = {
+                                selectedDate = date
+                                selectedSlots = emptySet()
+                                error = null
+                            },
                             label = {
                                 Text(
                                     when (date) {

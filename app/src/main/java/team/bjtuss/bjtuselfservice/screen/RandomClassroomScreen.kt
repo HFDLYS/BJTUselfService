@@ -76,8 +76,9 @@ fun RandomClassroomScreen(
                 }
                 val slot = getCurrentClassIndex()
                 val map = classroomViewModel.classroomMap.value
-                val candidates = map.filter { (_, slots) ->
-                    if (slot >= 0) slots.getOrNull(slot) == 0 else true
+                val candidates = map.filter { (room, slots) ->
+                    room != "nowWeek" && !room.contains("|") &&
+                        if (slot >= 0) slots.getOrNull(slot) == 0 else true
                 }.keys.toList()
                 if (candidates.isEmpty()) {
                     error = "当前没有可用的空闲教室"

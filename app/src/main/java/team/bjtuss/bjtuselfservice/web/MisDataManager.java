@@ -649,41 +649,48 @@ public class MisDataManager {
                                     Element colName = cols.get(0);
                                     String classroomName = colName.text();
                                     classroomName = classroomName.split(" ")[0];
-                                    List<Integer> classroomList = new ArrayList<>();
-                                    int dayColumnStart = 1 + 7 * index;
-                                    for (int j = 0; j < 7; j++) {
-                                        int colIndex = dayColumnStart + j;
-                                        if (colIndex >= cols.size()) {
-                                            // Keep exactly seven slots even when the
-                                            // school page has fewer columns than expected.
-                                            classroomList.add(0);
-                                            continue;
-                                        }
-                                        Element col = cols.get(colIndex);
-                                        String style = col.attr("style");
-                                        switch (style) {
-                                            case "background-color: #e46868":
-                                                classroomList.add(1);
-                                                break;
-                                            case "background-color: #9e6868":
-                                                classroomList.add(2);
-                                                break;
-                                            case "background-color: #394ed6":
-                                                classroomList.add(3);
-                                                break;
-                                            case "background-color: #77bf6d":
-                                                classroomList.add(4);
-                                                break;
-                                            case "background-color: #d8cc56":
-                                                classroomList.add(5);
-                                                break;
-                                            case "background-color: #fff":
-                                            default:
+                                    List<List<Integer>> weekLists = new ArrayList<>();
+                                    for (int dayIndex = 0; dayIndex < 7; dayIndex++) {
+                                        List<Integer> classroomList = new ArrayList<>();
+                                        int dayColumnStart = 1 + 7 * dayIndex;
+                                        for (int j = 0; j < 7; j++) {
+                                            int colIndex = dayColumnStart + j;
+                                            if (colIndex >= cols.size()) {
+                                                // Keep exactly seven slots even when the
+                                                // school page has fewer columns than expected.
                                                 classroomList.add(0);
-                                                break;
+                                                continue;
+                                            }
+                                            Element col = cols.get(colIndex);
+                                            String style = col.attr("style");
+                                            switch (style) {
+                                                case "background-color: #e46868":
+                                                    classroomList.add(1);
+                                                    break;
+                                                case "background-color: #9e6868":
+                                                    classroomList.add(2);
+                                                    break;
+                                                case "background-color: #394ed6":
+                                                    classroomList.add(3);
+                                                    break;
+                                                case "background-color: #77bf6d":
+                                                    classroomList.add(4);
+                                                    break;
+                                                case "background-color: #d8cc56":
+                                                    classroomList.add(5);
+                                                    break;
+                                                case "background-color: #fff":
+                                                default:
+                                                    classroomList.add(0);
+                                                    break;
+                                            }
                                         }
+                                        weekLists.add(classroomList);
+                                        classroomMap.put(classroomName + "|" + dayIndex, classroomList);
                                     }
-                                    classroomMap.put(classroomName, classroomList);
+                                    if (index >= 0 && index < 7) {
+                                        classroomMap.put(classroomName, weekLists.get(index));
+                                    }
                                 }
                                 ResCallback.onResponse(classroomMap);
                             } catch (Exception e) {
