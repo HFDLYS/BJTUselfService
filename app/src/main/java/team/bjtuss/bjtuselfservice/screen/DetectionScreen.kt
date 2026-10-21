@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,6 +28,8 @@ import androidx.compose.material.icons.filled.Apartment
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -133,7 +136,7 @@ fun BuildingScreen(navController: NavController) {
                                 fontWeight = FontWeight.Bold,
                             )
                             Text(
-                                text = "查看实时人数、当前空闲与智能规划",
+                                text = "按楼层查看空闲教室",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -181,11 +184,6 @@ fun BuildingScreen(navController: NavController) {
                                     text = buildingList[index],
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold,
-                                )
-                                Text(
-                                    text = "实时人数 / 空闲节次 / 智能规划",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                             Icon(
@@ -263,7 +261,8 @@ fun getCurrentClassIndex(): Int {
 @Composable
 fun ClassroomScreen(
     buildingName: String,
-    mainViewModel: MainViewModel
+    mainViewModel: MainViewModel,
+    initialRoom: String = "",
 ) {
     val classroomViewModel = mainViewModel.classroomViewModel
     val classroomMap by classroomViewModel.classroomMap.collectAsState()
@@ -277,6 +276,7 @@ fun ClassroomScreen(
     var showFilterDialog by remember { mutableStateOf(false) }
     var showPlannerDialog by remember { mutableStateOf(false) }
     var plannerResult by remember { mutableStateOf<PlannerResult?>(null) }
+    var expandedFloors by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var nowTick by remember { mutableStateOf(0L) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -293,6 +293,16 @@ fun ClassroomScreen(
         getClassroomCapacity(buildingName).thenAccept {
             buildingInfo.value = it
         }
+    }
+    LaunchedEffect(buildingInfo.value, initialRoom) {
+        val info = buildingInfo.value ?: return@LaunchedEffect
+        if (initialRoom.isBlank() || selectedClassroom.value.isNotBlank()) return@LaunchedEffect
+        val room = info.ClassroomList.firstOrNull {
+            it.RoomName.equals(initialRoom, ignoreCase = true)
+        } ?: return@LaunchedEffect
+        expandedFloors = expandedFloors + ClassroomPlanner.floorOf(room.RoomName)
+        selectedClassroom.value = room.RoomName
+        showDialog.value = true
     }
     Scaffold(
         modifier = Modifier.fillMaxSize()
@@ -515,11 +525,33 @@ fun ClassroomScreen(
                             )
                         }
                     }
-                    items(filteredClassroomList.size) { index ->
-                        val classroom = filteredClassroomList[index]
-                        ClassroomCard(classroom, classroomMap, currentSlot) {
-                            selectedClassroom.value = classroom.RoomName
-                            showDialog.value = true
+                    val groupedByFloor = filteredClassroomList
+                        .groupBy { ClassroomPlanner.floorOf(it.RoomName) }
+                        .toSortedMap()
+                    groupedByFloor.forEach { (floor, rooms) ->
+                        item(key = "floor-" + floor) {
+                            FloorHeader(
+                                floor = floor,
+                                rooms = rooms,
+                                classroomMap = classroomMap,
+                                currentSlot = currentSlot,
+                                expanded = floor in expandedFloors,
+                                onToggle = {
+                                    expandedFloors = if (floor in expandedFloors) {
+                                        expandedFloors - floor
+                                    } else {
+                                        expandedFloors + floor
+                                    }
+                                },
+                            )
+                        }
+                        if (floor in expandedFloors) {
+                            items(rooms, key = { it.RoomName }) { classroom ->
+                                ClassroomCard(classroom, classroomMap, currentSlot) {
+                                    selectedClassroom.value = classroom.RoomName
+                                    showDialog.value = true
+                                }
+                            }
                         }
                     }
                 }
@@ -628,6 +660,55 @@ fun ClassroomScreen(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FloorHeader(
+    floor: Int,
+    rooms: List<ClassroomCapacity>,
+    classroomMap: Map<String, List<Int>>,
+    currentSlot: Int,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+) {
+    val freeCount = rooms.count { classroom ->
+        if (currentSlot >= 0) {
+            classroomMap[classroom.RoomName]?.getOrNull(currentSlot) == 0
+        } else {
+            classroom.Capacity > 0 && classroom.Used < classroom.Capacity
+        }
+    }
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onToggle)
+                .padding(horizontal = 16.dp, vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (floor > 0) floor.toString() + " 层" else "其他教室",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = rooms.size.toString() + " 间 · 当前空闲 " + freeCount + " 间",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = if (expanded) "收起" else "展开",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
