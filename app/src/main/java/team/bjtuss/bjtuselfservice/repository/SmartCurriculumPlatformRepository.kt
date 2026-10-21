@@ -57,56 +57,26 @@ object SmartCurriculumPlatformRepository {
 
 
     suspend fun initClient() {
-        openPortalChain()
+        // Baseline behaviour from the last known-good build. The MIS module
+        // entry follows its own redirect chain and shares the MIS cookies.
+        withContext(Dispatchers.IO) {
+            try {
+                client.newCall(
+                    Request.Builder()
+                        .url("https://mis.bjtu.edu.cn/module/module/28/")
+                        .headers(headersBuilder.build())
+                        .build()
+                ).execute().use { response ->
+                    Log.d("SCP", "module28 -> " + response.code + " " + response.request.url)
+                }
+            } catch (e: Exception) {
+                Log.e("SCP", "course platform entry failed", e)
+            }
+        }
         getAndSetSessionIdInHeaders()
         val semesterFromJson = getSemesterTypeList()
         courseFromJson =
             semesterFromJson.result?.get(0)?.xqCode?.let { getCourseTypeList(xqCode = it) }
-    }
-
-    /**
-     * Mirrors the browser sequence:
-     * MIS (already logged in) -> bksy portal -> 智慧课程平台 jump.
-     *
-     * The shared OkHttp cookie jar carries the MIS cookies into the portal and
-     * the portal cookies into the jump endpoint.
-     */
-    private suspend fun openPortalChain() = withContext(Dispatchers.IO) {
-        visitPortal(
-            url = "https://mis.bjtu.edu.cn/home/",
-            referer = "https://mis.bjtu.edu.cn/",
-            tag = "MIS home",
-        )
-        visitPortal(
-            url = "https://bksy.bjtu.edu.cn/",
-            referer = "https://mis.bjtu.edu.cn/home/",
-            tag = "bksy",
-        )
-        visitPortal(
-            url = "http://bksycenter.bjtu.edu.cn/NoMasterJumpPage.aspx?URL=jwcZhjx&FPC=page:jwcZhjx",
-            referer = "https://bksy.bjtu.edu.cn/",
-            tag = "smart-course jump",
-        )
-    }
-
-    private fun visitPortal(url: String, referer: String, tag: String): String {
-        val headers = Headers.Builder()
-            .add("User-Agent", userAgent)
-            .add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-            .add("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
-            .add("Referer", referer)
-            .build()
-        return client.newCall(
-            Request.Builder().url(url).headers(headers).build()
-        ).execute().use { response ->
-            val body = response.body?.string().orEmpty()
-            Log.d(
-                "SCP",
-                tag + " -> " + response.code + " " + response.request.url +
-                    " title=" + Jsoup.parse(body).title()
-            )
-            response.request.url.toString()
-        }
     }
 
     private suspend fun getSemesterTypeList(): SemesterJsonType {

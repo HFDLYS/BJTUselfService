@@ -23,7 +23,6 @@ import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity;
 import team.bjtuss.bjtuselfservice.entity.GradeEntity;
 import team.bjtuss.bjtuselfservice.utils.Network;
 import team.bjtuss.bjtuselfservice.utils.Network.WebCallback;
-import team.bjtuss.bjtuselfservice.utils.PersistentCookieJar;
 import team.bjtuss.bjtuselfservice.web.MisDataManager;
 
 public class StudentAccountManager {
@@ -50,8 +49,7 @@ public class StudentAccountManager {
 
     //    private final javax.net.ssl.SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
     public OkHttpClient client;
-    private final PersistentCookieJar cookieJar =
-            new PersistentCookieJar(MainApplication.Companion.getAppContext());
+    private final Network.InMemoryCookieJar cookieJar = new Network.InMemoryCookieJar();
     //    private OkHttpClient.Builder builder;
     private StudentInfo stuInfo;
     private String stuId = null;
