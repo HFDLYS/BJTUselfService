@@ -3,15 +3,18 @@ package team.bjtuss.bjtuselfservice.widget
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.appWidgetBackground
@@ -87,6 +90,13 @@ class CoursePrevWeekAction : ActionCallback {
 
 class CourseScheduleWidget : GlanceAppWidget() {
     override val stateDefinition = PreferencesGlanceStateDefinition
+    override val sizeMode = SizeMode.Responsive(
+        setOf(
+            DpSize(110.dp, 110.dp),
+            DpSize(250.dp, 110.dp),
+            DpSize(250.dp, 180.dp),
+        )
+    )
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val currentWeek = try {
@@ -109,13 +119,24 @@ class CourseScheduleWidget : GlanceAppWidget() {
         provideContent {
             val prefs = currentState<Preferences>()
             val weekOffset = prefs[intPreferencesKey("course_week_offset")] ?: 0
-            CourseScheduleWidgetContent(currentWeek, allCourses, weekOffset)
+            val size = LocalSize.current
+            CourseScheduleWidgetContent(
+                currentWeek = currentWeek,
+                allCourses = allCourses,
+                weekOffset = weekOffset,
+                compact = size.width < 220.dp || size.height < 150.dp,
+            )
         }
     }
 }
 
 @Composable
-fun CourseScheduleWidgetContent(currentWeek: Int, allCourses: List<CourseEntity>, weekOffset: Int) {
+fun CourseScheduleWidgetContent(
+    currentWeek: Int,
+    allCourses: List<CourseEntity>,
+    weekOffset: Int,
+    compact: Boolean = false,
+) {
     val displayWeek = currentWeek + weekOffset
     val thisWeekCourses = allCourses.filter { course ->
         var isThisWeek = false
@@ -153,6 +174,72 @@ fun CourseScheduleWidgetContent(currentWeek: Int, allCourses: List<CourseEntity>
         "19:00\n20:50",
         "21:00\n21:50"
     )
+
+    if (compact) {
+        val now = java.time.LocalDateTime.now()
+        val today = now.dayOfWeek.value
+        val todayCourses = thisWeekCourses.filter {
+            it.courseLocationIndex % 8 == today &&
+                it.courseLocationIndex / 8 in courseTimes.indices
+        }
+        val next = todayCourses
+            .filter {
+                val start = courseTimes[it.courseLocationIndex / 8]
+                    .substringBefore("\n")
+                    .split(":")
+                val at = java.time.LocalTime.of(start[0].toInt(), start[1].toInt())
+                at.isAfter(now.toLocalTime())
+            }
+            .minByOrNull { it.courseLocationIndex / 8 }
+            ?: todayCourses.minByOrNull { it.courseLocationIndex / 8 }
+
+        Column(
+            modifier = GlanceModifier
+                .fillMaxSize()
+                .appWidgetBackground()
+                .cornerRadius(16.dp)
+                .background(ColorProvider(Color(0xEEF3F4F6)))
+                .padding(10.dp)
+        ) {
+            Text(
+                text = "第 " + displayWeek + " 周",
+                style = TextStyle(fontSize = 11.sp, color = ColorProvider(Color(0xFF005BAC))),
+            )
+            Spacer(modifier = GlanceModifier.height(4.dp))
+            if (next != null) {
+                Text(
+                    text = "下一节课",
+                    style = TextStyle(fontSize = 10.sp, color = ColorProvider(Color.Gray)),
+                )
+                Text(
+                    text = next.courseName,
+                    style = TextStyle(
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ColorProvider(Color(0xFF1F2937)),
+                    ),
+                    maxLines = 2,
+                )
+                Spacer(modifier = GlanceModifier.height(2.dp))
+                Text(
+                    text = courseTimes[next.courseLocationIndex / 8].replace("\n", " - ") +
+                        " · " + next.coursePlace,
+                    style = TextStyle(fontSize = 10.sp, color = ColorProvider(Color(0xFF4B5563))),
+                    maxLines = 2,
+                )
+            } else {
+                Text(
+                    text = "今天没有课",
+                    style = TextStyle(
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ColorProvider(Color(0xFF1F2937)),
+                    ),
+                )
+            }
+        }
+        return
+    }
 
     Column(
         modifier = GlanceModifier
