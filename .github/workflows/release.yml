@@ -2,6 +2,8 @@ name: Build and Publish Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
   workflow_dispatch:
@@ -18,19 +20,16 @@ concurrency:
 permissions:
   contents: write
 
-env:
-  RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
-
 jobs:
   build-and-publish:
     name: Build release and debug APKs
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout release tag
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.RELEASE_TAG }}
+          ref: ${{ github.event.inputs.tag || github.ref }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -43,6 +42,28 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
+
+      - name: Prepare release metadata
+        id: meta
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+            PRERELEASE=false
+          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            TAG="${{ github.event.inputs.tag }}"
+            if [[ "$TAG" == *-* ]]; then PRERELEASE=true; else PRERELEASE=false; fi
+          else
+            VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -n 1 | sed 's/^v//')
+            if [ -z "$VERSION" ]; then VERSION="0.0.0"; fi
+            TAG="v${VERSION}-${GITHUB_SHA:0:7}"
+            PRERELEASE=true
+          fi
+
+          echo "RELEASE_TAG=${TAG}" >> "$GITHUB_ENV"
+          echo "PRERELEASE=${PRERELEASE}" >> "$GITHUB_ENV"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "Prepared tag: ${TAG} (prerelease=${PRERELEASE})"
 
       - name: Build release and debug
         run: ./gradlew :app:assembleRelease :app:assembleDebug --stacktrace
@@ -83,12 +104,20 @@ jobs:
       - name: Generate release notes from commits
         shell: bash
         run: |
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 "${RELEASE_TAG}^" 2>/dev/null || true)
-          if [ -n "$PREVIOUS_TAG" ]; then
-            COMMITS=$(git log --no-merges --pretty=format:"- [%s](https://github.com/${GITHUB_REPOSITORY}/commit/%H) (%h)" "${PREVIOUS_TAG}..${RELEASE_TAG}")
+          CURRENT_TAG=$(git describe --tags --exact-match HEAD 2>/dev/null || true)
+          if [ -n "$CURRENT_TAG" ]; then
+            PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)
           else
-            COMMITS=$(git log --no-merges --pretty=format:"- [%s](https://github.com/${GITHUB_REPOSITORY}/commit/%H) (%h)" "${RELEASE_TAG}")
+            PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD 2>/dev/null || true)
           fi
+
+          if [ -n "$PREVIOUS_TAG" ]; then
+            RANGE="${PREVIOUS_TAG}..HEAD"
+          else
+            RANGE="HEAD"
+          fi
+
+          COMMITS=$(git log --no-merges -n 50 --pretty=format:"- [%s](https://github.com/${GITHUB_REPOSITORY}/commit/%H) (%h)" "$RANGE")
 
           {
             echo "## 更新内容"
@@ -99,10 +128,16 @@ jobs:
               echo "$COMMITS"
             fi
             echo
+            echo "## 构建信息"
+            echo
+            echo "- 触发方式：<code>${GITHUB_EVENT_NAME}</code>"
+            echo "- 提交：<code>${GITHUB_SHA:0:7}</code>"
+            echo "- Release：<code>${RELEASE_TAG}</code>"
+            echo
             echo "## 构建产物"
             echo
-            echo "- \`BJTUSelfService-${RELEASE_TAG#v}_arm64-v8a.apk\`：release，已签名"
-            echo "- \`BJTUSelfService-${RELEASE_TAG#v}_arm64-v8a-debug.apk\`：debug，使用 debug 签名"
+            echo "- <code>BJTUSelfService-${RELEASE_TAG#v}_arm64-v8a.apk</code>：release，已签名"
+            echo "- <code>BJTUSelfService-${RELEASE_TAG#v}_arm64-v8a-debug.apk</code>：debug，使用 debug 签名"
           } > release_notes.md
 
           cat release_notes.md
@@ -119,10 +154,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
+          target_commitish: ${{ github.sha }}
           name: 交大自由行 ${{ env.RELEASE_TAG }}
           body_path: release_notes.md
           files: release-assets/*.apk
-          prerelease: ${{ contains(env.RELEASE_TAG, '-') }}
-          make_latest: true
+          prerelease: ${{ env.PRERELEASE == 'true' }}
+          make_latest: ${{ env.PRERELEASE == 'false' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
