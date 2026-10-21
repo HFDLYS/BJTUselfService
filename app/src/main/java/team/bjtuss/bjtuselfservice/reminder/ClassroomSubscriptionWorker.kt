@@ -28,7 +28,7 @@ class ClassroomSubscriptionWorker(
         val slot = currentSlotIndex()
         if (slot < 0) return Result.success()
 
-        val map = NetworkRepository.getClassroomMap()
+        val map = runCatching { NetworkRepository.getClassroomMap() }.getOrNull()
 
         subscriptions.filter { it.day == day && it.slot == slot }.forEach { subscription ->
             val slots = map?.get(subscription.room)?.takeIf { it.isNotEmpty() }
