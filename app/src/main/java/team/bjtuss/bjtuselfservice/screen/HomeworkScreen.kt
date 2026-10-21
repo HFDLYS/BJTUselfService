@@ -468,8 +468,8 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 10.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .padding(vertical = 5.dp)
+            .clip(RoundedCornerShape(18.dp))
             .clickable(
                 indication = rememberRipple(
                     bounded = true,
@@ -483,14 +483,15 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
             containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = 3.dp,
-            pressedElevation = 6.dp
+            defaultElevation = 1.dp,
+            pressedElevation = 3.dp
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp),
         ) {
             // 顶部状态标签
             Row(
@@ -541,61 +542,65 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
             // 作业标题
             Text(
                 text = homework.title,
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.SemiBold
                 ),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 信息部分
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                // 左侧信息栏
-                Column(
-                    modifier = Modifier.weight(0.7f),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // 时间信息
-                    InfoItem(
-                        icon = Icons.Filled.Schedule,
-                        primaryText = "开放时间: ${homework.openDate}",
-                        secondaryText = "截止时间: ${homework.endTime}",
-                        isWarning = isDDLSoon
+                Icon(
+                    imageVector = Icons.Filled.Schedule,
+                    contentDescription = null,
+                    tint = if (isDDLSoon) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(15.dp),
+                )
+                Spacer(modifier = Modifier.width(5.dp))
+                Text(
+                    text = "截止 " + homework.endTime.drop(5),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isDDLSoon) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+                if (isDDLSoon) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "即将截止",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Medium,
                     )
-
-                    // 提交状态
-                    InfoItem(
-                        icon = Icons.Rounded.People,
-                        primaryText = "提交人数: ${homework.submitCount}/${homework.allCount}",
-                        showDivider = true
-                    )
-
-
-
-                    InfoItem(
-                        icon = Icons.Rounded.Check,
-                        primaryText = "批改状态: ${if (homework.scoreId != 0) "已批改" else "未批改"}",
-                        showDivider = true
-                    )
-
-                    if (homework.scoreId != 0) {
-                        InfoItem(
-                            icon = Icons.Rounded.Stars,
-                            primaryText = "分数: ${homework.score}",
-                            showDivider = true
-                        )
-                    }
-
-
                 }
             }
-
-            Spacer(modifier = Modifier.height(20.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.People,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(15.dp),
+                )
+                Spacer(modifier = Modifier.width(5.dp))
+                Text(
+                    text = "已交 " + homework.submitCount + "/" + homework.allCount,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = if (homework.scoreId != 0) "成绩 " + homework.score else "未批改",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             HomeworkActionButtons(
                 homework = homework,
@@ -1245,20 +1250,17 @@ fun HomeworkActionButtons(
 
     Column {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // 上传作业按钮
             FilledTonalButton(
                 onClick = onUploadClick,
                 enabled = appState.canDownloadAndUpload(),
                 modifier = Modifier.weight(1f),
-                elevation = ButtonDefaults.buttonElevation(
-                    defaultElevation = 3.dp,
-                ),
-                shape = RoundedCornerShape(24.dp),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+                shape = RoundedCornerShape(12.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                 colors = ButtonDefaults.filledTonalButtonColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -1267,7 +1269,7 @@ fun HomeworkActionButtons(
                 )
             ) {
                 Text(
-                    "上传作业",
+                    "上传",
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -1337,10 +1339,9 @@ fun MaterialHomeworkDownloadButton(
                     }
                 }
             },
-            shape = RoundedCornerShape(24.dp), // 胶囊形状
-            elevation = ButtonDefaults.buttonElevation(
-                defaultElevation = 3.dp,
-            ),
+            shape = RoundedCornerShape(12.dp),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
             enabled = !isDownloading && enabled,
             colors = ButtonDefaults.filledTonalButtonColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -1351,7 +1352,7 @@ fun MaterialHomeworkDownloadButton(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                text = if (isDownloading) "正在下载..." else "下载作业",
+                text = if (isDownloading) "下载中" else "附件",
                 overflow = TextOverflow.Ellipsis,
                 maxLines = 1,
                 fontWeight = FontWeight.Medium,
