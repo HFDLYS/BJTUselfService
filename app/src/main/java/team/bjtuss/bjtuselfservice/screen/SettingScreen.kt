@@ -2,8 +2,10 @@ package team.bjtuss.bjtuselfservice.screen
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
@@ -27,6 +30,7 @@ import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Update
@@ -38,12 +42,14 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -66,6 +72,7 @@ import team.bjtuss.bjtuselfservice.MainApplication.Companion.appContext
 import team.bjtuss.bjtuselfservice.R
 import team.bjtuss.bjtuselfservice.StudentAccountManager
 import team.bjtuss.bjtuselfservice.database.AppDatabase
+import team.bjtuss.bjtuselfservice.reminder.ReminderScheduler
 import team.bjtuss.bjtuselfservice.repository.fetchLatestRelease
 import team.bjtuss.bjtuselfservice.statemanager.AppEvent
 import team.bjtuss.bjtuselfservice.statemanager.AppEventManager
@@ -79,6 +86,7 @@ import java.util.Locale
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
@@ -185,6 +193,10 @@ fun SettingScreen(mainViewModel: MainViewModel) {
 
         item {
             CustomBackgroundSettingItem(settingViewModel)
+        }
+
+        item {
+            ReminderSettingsCard(settingViewModel)
         }
 
         // Auto sync settings section
@@ -298,6 +310,136 @@ fun SettingScreen(mainViewModel: MainViewModel) {
             }
         }
     }
+}
+
+@Composable
+fun ReminderSettingsCard(settingViewModel: team.bjtuss.bjtuselfservice.viewmodel.SettingViewModel) {
+    val context = LocalContext.current
+    val courseEnabled by settingViewModel.courseReminderEnabled.collectAsState()
+    val courseLead by settingViewModel.courseReminderLeadMinutes.collectAsState()
+    val examEnabled by settingViewModel.examReminderEnabled.collectAsState()
+    val examLead by settingViewModel.examReminderLeadMinutes.collectAsState()
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { }
+
+    fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.POST_NOTIFICATIONS,
+            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    LaunchedEffect(courseEnabled, courseLead, examEnabled, examLead) {
+        ReminderScheduler.reschedule(context)
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = MaterialTheme.shapes.large,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.NotificationsActive,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(26.dp),
+                )
+                Spacer(Modifier.width(10.dp))
+                Column {
+                    Text("上课与考试提醒", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "通知会以标准安卓通知发出，可由 HyperIsland 转成超级岛",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("课程提醒", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                    Text(
+                        "上课前 " + formatLead(courseLead) + "提醒课程、教室和教师",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = courseEnabled,
+                    onCheckedChange = {
+                        requestNotificationPermission()
+                        settingViewModel.setCourseReminderEnabled(it)
+                    },
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                listOf(5, 10, 15, 30, 60).forEach { minutes ->
+                    FilterChip(
+                        selected = courseLead == minutes,
+                        onClick = {
+                            requestNotificationPermission()
+                            settingViewModel.setCourseReminderLeadMinutes(minutes)
+                        },
+                        label = { Text(formatLead(minutes)) },
+                    )
+                }
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("考试提醒", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+                    Text(
+                        "考试前 " + formatLead(examLead) + "提醒考试和教室",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = examEnabled,
+                    onCheckedChange = {
+                        requestNotificationPermission()
+                        settingViewModel.setExamReminderEnabled(it)
+                    },
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                listOf(30, 60, 360, 1440, 2880).forEach { minutes ->
+                    FilterChip(
+                        selected = examLead == minutes,
+                        onClick = {
+                            requestNotificationPermission()
+                            settingViewModel.setExamReminderLeadMinutes(minutes)
+                        },
+                        label = { Text(formatLead(minutes)) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun formatLead(minutes: Int): String = when {
+    minutes % 1440 == 0 -> (minutes / 1440).toString() + "天"
+    minutes % 60 == 0 -> (minutes / 60).toString() + "小时"
+    else -> minutes.toString() + "分钟"
 }
 
 @Composable

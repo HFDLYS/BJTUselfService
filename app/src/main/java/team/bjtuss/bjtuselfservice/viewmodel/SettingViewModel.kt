@@ -34,6 +34,18 @@ class SettingViewModel : ViewModel() {
     private val _backgroundImageUri = MutableStateFlow("")
     val backgroundImageUri = _backgroundImageUri.asStateFlow()
 
+    private val _courseReminderEnabled = MutableStateFlow(true)
+    val courseReminderEnabled = _courseReminderEnabled.asStateFlow()
+
+    private val _courseReminderLeadMinutes = MutableStateFlow(15)
+    val courseReminderLeadMinutes = _courseReminderLeadMinutes.asStateFlow()
+
+    private val _examReminderEnabled = MutableStateFlow(true)
+    val examReminderEnabled = _examReminderEnabled.asStateFlow()
+
+    private val _examReminderLeadMinutes = MutableStateFlow(1440)
+    val examReminderLeadMinutes = _examReminderLeadMinutes.asStateFlow()
+
 
     init {
         viewModelScope.launch {
@@ -84,6 +96,26 @@ class SettingViewModel : ViewModel() {
                 _backgroundImageUri.value = it
             }
         }
+        viewModelScope.launch {
+            DataStoreRepository.getCourseReminderEnabled().collect {
+                _courseReminderEnabled.value = it
+            }
+        }
+        viewModelScope.launch {
+            DataStoreRepository.getCourseReminderLeadMinutes().collect {
+                _courseReminderLeadMinutes.value = it
+            }
+        }
+        viewModelScope.launch {
+            DataStoreRepository.getExamReminderEnabled().collect {
+                _examReminderEnabled.value = it
+            }
+        }
+        viewModelScope.launch {
+            DataStoreRepository.getExamReminderLeadMinutes().collect {
+                _examReminderLeadMinutes.value = it
+            }
+        }
     }
 
     fun setGradeAutoSyncOption(enabled: Boolean) {
@@ -124,6 +156,30 @@ class SettingViewModel : ViewModel() {
     fun setDynamicColorOption(enabled: Boolean) {
         viewModelScope.launch {
             DataStoreRepository.setDynamicColorOption(enabled)
+        }
+    }
+
+    fun setCourseReminderEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            DataStoreRepository.setCourseReminderEnabled(enabled)
+        }
+    }
+
+    fun setCourseReminderLeadMinutes(minutes: Int) {
+        viewModelScope.launch {
+            DataStoreRepository.setCourseReminderLeadMinutes(minutes)
+        }
+    }
+
+    fun setExamReminderEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            DataStoreRepository.setExamReminderEnabled(enabled)
+        }
+    }
+
+    fun setExamReminderLeadMinutes(minutes: Int) {
+        viewModelScope.launch {
+            DataStoreRepository.setExamReminderLeadMinutes(minutes)
         }
     }
 

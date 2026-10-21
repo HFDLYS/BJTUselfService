@@ -40,6 +40,11 @@ object DataStoreRepository {
 
     private val BACKGROUND_IMAGE_URI_KEY = stringPreferencesKey("background_image_uri")
 
+    private val COURSE_REMINDER_ENABLED_KEY = booleanPreferencesKey("course_reminder_enabled")
+    private val COURSE_REMINDER_LEAD_KEY = stringPreferencesKey("course_reminder_lead_minutes")
+    private val EXAM_REMINDER_ENABLED_KEY = booleanPreferencesKey("exam_reminder_enabled")
+    private val EXAM_REMINDER_LEAD_KEY = stringPreferencesKey("exam_reminder_lead_minutes")
+
 
     suspend fun setCredentials(credentials: Credentials) {
         appContext.dataStore.edit { preferences ->
@@ -256,6 +261,38 @@ object DataStoreRepository {
         appContext.dataStore.edit { preferences ->
             preferences[BACKGROUND_IMAGE_URI_KEY] = uri
         }
+    }
+
+    fun getCourseReminderEnabled(): Flow<Boolean> =
+        appContext.dataStore.data.map { it[COURSE_REMINDER_ENABLED_KEY] ?: true }
+
+    suspend fun setCourseReminderEnabled(enabled: Boolean) {
+        appContext.dataStore.edit { it[COURSE_REMINDER_ENABLED_KEY] = enabled }
+    }
+
+    fun getCourseReminderLeadMinutes(): Flow<Int> =
+        appContext.dataStore.data.map {
+            (it[COURSE_REMINDER_LEAD_KEY] ?: "15").toIntOrNull() ?: 15
+        }
+
+    suspend fun setCourseReminderLeadMinutes(minutes: Int) {
+        appContext.dataStore.edit { it[COURSE_REMINDER_LEAD_KEY] = minutes.toString() }
+    }
+
+    fun getExamReminderEnabled(): Flow<Boolean> =
+        appContext.dataStore.data.map { it[EXAM_REMINDER_ENABLED_KEY] ?: true }
+
+    suspend fun setExamReminderEnabled(enabled: Boolean) {
+        appContext.dataStore.edit { it[EXAM_REMINDER_ENABLED_KEY] = enabled }
+    }
+
+    fun getExamReminderLeadMinutes(): Flow<Int> =
+        appContext.dataStore.data.map {
+            (it[EXAM_REMINDER_LEAD_KEY] ?: "1440").toIntOrNull() ?: 1440
+        }
+
+    suspend fun setExamReminderLeadMinutes(minutes: Int) {
+        appContext.dataStore.edit { it[EXAM_REMINDER_LEAD_KEY] = minutes.toString() }
     }
 
 }

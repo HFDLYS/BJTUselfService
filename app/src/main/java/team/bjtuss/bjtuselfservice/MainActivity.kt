@@ -2,7 +2,10 @@ package team.bjtuss.bjtuselfservice
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -69,6 +72,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
@@ -78,11 +82,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dev.jeziellago.compose.markdowntext.MarkdownText
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import team.bjtuss.bjtuselfservice.reminder.ReminderScheduler
 import kotlinx.coroutines.launch
 import team.bjtuss.bjtuselfservice.MainApplication.Companion.appContext
 import team.bjtuss.bjtuselfservice.RouteManager.ClassroomDetection
 import team.bjtuss.bjtuselfservice.repository.fetchLatestRelease
 import team.bjtuss.bjtuselfservice.screen.BuildingScreen
+import team.bjtuss.bjtuselfservice.screen.RandomClassroomScreen
 import team.bjtuss.bjtuselfservice.screen.ClassroomScreen
 import team.bjtuss.bjtuselfservice.screen.CourseScheduleScreen
 import team.bjtuss.bjtuselfservice.screen.CoursewareScreen
@@ -136,6 +144,16 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 100)
+        }
+        lifecycleScope.launch {
+            delay(4000)
+            ReminderScheduler.reschedule(applicationContext)
+        }
 
 
         setContent {
@@ -301,7 +319,7 @@ fun App(mainViewModel: MainViewModel, hasBackground: Boolean = false) {
             AppNavigation(navController, mainViewModel, hasBackground)
         }
         composable(RouteManager.CourseSchedule) {
-            CourseScheduleScreen(mainViewModel)
+            CourseScheduleScreen(mainViewModel, navController)
         }
         composable(RouteManager.ExamSchedule) {
             ExamScheduleScreen(mainViewModel)
@@ -309,12 +327,22 @@ fun App(mainViewModel: MainViewModel, hasBackground: Boolean = false) {
         composable(RouteManager.Building) {
             BuildingScreen(navController)
         }
+        composable(RouteManager.RandomClassroom) {
+            RandomClassroomScreen(navController, mainViewModel)
+        }
         composable(
             route = ClassroomDetection,
-            arguments = listOf(navArgument("buildingName") { type = NavType.StringType })
+            arguments = listOf(
+                navArgument("buildingName") { type = NavType.StringType },
+                navArgument("room") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+            )
         ) {
             val buildingName = it.arguments?.getString("buildingName") ?: ""
-            ClassroomScreen(buildingName = buildingName, mainViewModel)
+            val room = it.arguments?.getString("room").orEmpty()
+            ClassroomScreen(buildingName = buildingName, mainViewModel, initialRoom = room)
         }
         composable(RouteManager.Grade) {
             GradeScreen(mainViewModel)
@@ -417,7 +445,8 @@ object RouteManager {
     const val Navigation: String = "Navigation"
     const val ExamSchedule: String = "Exam"
     const val Building: String = "Building"
-    const val ClassroomDetection: String = "ClassroomDetection/{buildingName}"
+    const val RandomClassroom: String = "RandomClassroom"
+    const val ClassroomDetection: String = "ClassroomDetection/{buildingName}?room={room}"
     const val Grade: String = "Grade"
     const val CourseSchedule: String = "CourseSchedule"
     const val Email: String = "Email"
