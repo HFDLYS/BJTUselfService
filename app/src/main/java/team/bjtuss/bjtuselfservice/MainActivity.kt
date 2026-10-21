@@ -460,7 +460,7 @@ fun AppNavigation(
                 val isSelected = targetPage == index
                 Box(
                     modifier = Modifier
-                        .size(64.dp)
+                        .size(width = 96.dp, height = 64.dp)
                         .let { 
                             if (hasBackground && LocalHazeState.current != null)
                                 it.hazeChild(LocalHazeState.current!!, shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp), style = HazeStyle(tint = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.05f), blurRadius = 4.dp))

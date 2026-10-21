@@ -362,7 +362,7 @@ fun ClassroomScreen(
                                 Text(
                                     "当前空闲 " + info.ClassroomList.count { classroom ->
                                         if (currentSlot >= 0) classroomMap[classroom.RoomName]?.getOrNull(currentSlot) == 0
-                                        else classroom.Capacity > 0 && classroom.Used < classroom.Capacity
+                                        else classroom.readableUsed != null
                                     } + " 间"
                                 )
                             },
@@ -421,19 +421,14 @@ fun ClassroomScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(bottom = 4.dp),
+                            .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp)
+                            .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         LegendDot(Color(0xFF34A853), "空闲")
                         LegendDot(Color(0xFFEA4335), "占用")
                         LegendDot(Color(0xFFF9AB00), "特殊")
-                        Text(
-                            "圆形描边 = 当前节",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                     }
                 }
                 Row(
@@ -501,7 +496,7 @@ fun ClassroomScreen(
                         val freeNow = if (currentSlot >= 0) {
                             slots?.getOrNull(currentSlot) == 0
                         } else {
-                            classroom.Capacity > 0 && classroom.Used < classroom.Capacity
+                            classroom.readableUsed != null
                         }
                         classroom.Capacity >= minCapacity &&
                             (!onlyCurrentFree || freeNow) &&
@@ -510,13 +505,16 @@ fun ClassroomScreen(
                     filteredClassroomList = when (selectedFilter) {
                         "教室名" -> filteredClassroomList.sortedBy { it.RoomName }
                         "占用率" -> filteredClassroomList.sortedBy {
-                            if (it.Capacity > 0) it.Used.toDouble() / it.Capacity else 0.0
+                            it.occupancyRatio ?: Double.POSITIVE_INFINITY
                         }
-                        "人数" -> filteredClassroomList.sortedBy { it.Used }
+                        "人数" -> filteredClassroomList.sortedBy { it.readableUsed ?: Int.MAX_VALUE }
                         else -> filteredClassroomList
                     }
                     if (sortOrder) {
                         filteredClassroomList = filteredClassroomList.reversed()
+                    }
+                    if (selectedFilter == "占用率" || selectedFilter == "人数") {
+                        filteredClassroomList = filteredClassroomList.sortedBy { it.readableUsed == null }
                     }
                     if (filteredClassroomList.isEmpty()) {
                         item {
@@ -731,9 +729,10 @@ fun ClassroomCard(
     onClick: () -> Unit = {}
 ) {
     val slots = classroomMap[classroom.RoomName]
+    val readableUsed = classroom.readableUsed
     val nowFree = when {
         currentSlot >= 0 -> slots?.getOrNull(currentSlot)?.takeIf { it >= 0 }?.let { it == 0 }
-        classroom.Capacity > 0 -> classroom.Used < classroom.Capacity
+        readableUsed != null -> true
         else -> null
     }
     val statusLabel = when (nowFree) {
@@ -746,9 +745,7 @@ fun ClassroomCard(
         false -> Color(0xFFEA4335)
         null -> MaterialTheme.colorScheme.onSurfaceVariant
     }
-    val ratio = if (classroom.Capacity > 0) {
-        (classroom.Used.toFloat() / classroom.Capacity).coerceIn(0f, 1f)
-    } else 0f
+    val ratio = classroom.occupancyRatio?.toFloat()
 
     ElevatedCard(
         modifier = Modifier
@@ -756,8 +753,10 @@ fun ClassroomCard(
             .clickable { onClick() }
             .padding(vertical = 4.dp),
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.elevatedCardElevation(0.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -789,7 +788,8 @@ fun ClassroomCard(
             Spacer(Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    if (classroom.Capacity > 0) "实时使用 " + classroom.Used + "/" + classroom.Capacity else "实时人数未知",
+                    if (readableUsed != null) "实时使用 $readableUsed/${classroom.Capacity}"
+                    else "无法读取本教室人数",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -800,7 +800,7 @@ fun ClassroomCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (classroom.Capacity > 0) {
+            if (ratio != null) {
                 LinearProgressIndicator(
                     progress = { ratio },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
