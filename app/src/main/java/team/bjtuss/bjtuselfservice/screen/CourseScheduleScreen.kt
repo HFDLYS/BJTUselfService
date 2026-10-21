@@ -160,6 +160,7 @@ fun CourseScheduleScreen(
     val storedCurrentWeek by DataStoreRepository.getCurrentWeek().collectAsState(0)
     LaunchedEffect(Unit) {
         courseScheduleViewModel.syncDataAndClearChange()
+        classroomViewModel.refreshClassroomMap()
     }
     LaunchedEffect(storedCurrentWeek) {
         if (storedCurrentWeek <= 0) {
@@ -327,6 +328,7 @@ fun CourseScheduleScreen(
                         "?room=" + android.net.Uri.encode(room)
                 )
             },
+            classroomMap = classroomMap,
         )
     }
 }
@@ -341,6 +343,7 @@ fun CourseScheduleContent(
     currentSlot: CurrentCourseSlot? = null,
     highlightCurrent: Boolean = false,
     onOpenClassroom: (String) -> Unit = {},
+    classroomMap: Map<String, List<Int>> = emptyMap(),
 ) {
 
     Column(modifier = modifier) {
@@ -439,6 +442,7 @@ fun CourseScheduleContent(
                 currentSlot = currentSlot,
                 highlightCurrent = highlightCurrent,
                 onOpenClassroom = onOpenClassroom,
+                classroomMap = classroomMap,
             )
         }
     }
@@ -451,6 +455,7 @@ fun CourseScheduleGrid(
     currentSlot: CurrentCourseSlot? = null,
     highlightCurrent: Boolean = false,
     onOpenClassroom: (String) -> Unit = {},
+    classroomMap: Map<String, List<Int>> = emptyMap(),
 ) {
     val weekDays: Int = 7
     val courseTimes: Int = 7
@@ -475,6 +480,7 @@ fun CourseScheduleGrid(
                         nowWeek = nowWeek,
                         isCurrent = isCurrent,
                         onOpenClassroom = onOpenClassroom,
+                        classroomMap = classroomMap,
                     )
                 }
             }
@@ -510,6 +516,7 @@ fun CourseCell(
     nowWeek: Int,
     isCurrent: Boolean = false,
     onOpenClassroom: (String) -> Unit = {},
+    classroomMap: Map<String, List<Int>> = emptyMap(),
 ) {
     var showDetailedCourseInformationDialog by remember { mutableStateOf(false) }
     var coursesFiltered: List<CourseEntity>? = null
@@ -617,6 +624,7 @@ fun CourseCell(
                     showDetailedCourseInformationDialog = false
                 },
                 onOpenClassroom = onOpenClassroom,
+                classroomMap = classroomMap,
             )
         }
     }
@@ -629,6 +637,7 @@ fun DetailedCourseInformationDialog(
     courses: List<CourseEntity>,
     onDismissRequest: () -> Unit = {},
     onOpenClassroom: (String) -> Unit = {},
+    classroomMap: Map<String, List<Int>> = emptyMap(),
 ) {
 
     BasicAlertDialog(
@@ -696,7 +705,7 @@ fun DetailedCourseInformationDialog(
                                     course.courseTime,
                                     Icons.Default.Schedule
                                 )
-                                CourseLocationRow(course, onOpenClassroom)
+                                CourseLocationRow(course, classroomMap, onOpenClassroom)
                             }
                         }
                     }
@@ -707,26 +716,36 @@ fun DetailedCourseInformationDialog(
 }
 
 @Composable
-fun CourseLocationRow(course: CourseEntity, onOpenClassroom: (String) -> Unit) {
+fun CourseLocationRow(
+    course: CourseEntity,
+    classroomMap: Map<String, List<Int>>,
+    onOpenClassroom: (String) -> Unit,
+) {
     var expanded by remember { mutableStateOf(false) }
-    val currentWeek by DataStoreRepository.getCurrentWeek().collectAsState(initial = 0)
     val parts = course.coursePlace.split(',', '，').map { it.trim() }.filter { it.isNotBlank() }
     val building = parts.firstOrNull { part ->
         CAMPUS_BUILDINGS.any { part.contains(it) }
     }
     val room = parts.lastOrNull()?.takeIf { it.matches(Regex("[A-Za-z]+\\d+.*")) }
-    val index = course.courseLocationIndex
-    val day = index % 8
-    val slot = index / 8
-    val nowDay = Calendar.getInstance().get(Calendar.DAY_OF_WEEK).let {
-        if (it == Calendar.SUNDAY) 7 else it - 1
+    val currentSlot = getCurrentClassIndex()
+    val slots = room?.let { classroomMap[it] }
+    val freeNow = if (currentSlot >= 0 && slots != null) {
+        slots.getOrNull(currentSlot) == 0
+    } else {
+        null
     }
-    val ongoing = currentWeek > 0 &&
-        currentWeek in parseCourseTime(course.courseTime) &&
-        day == nowDay &&
-        slot == getCurrentClassIndex()
-    val statusColor = if (ongoing) Color(0xFFEA4335) else Color(0xFF34A853)
-    val statusText = if (ongoing) "正在上课" else "当前无课"
+    val statusColor = when {
+        currentSlot < 0 -> MaterialTheme.colorScheme.onSurfaceVariant
+        freeNow == true -> Color(0xFF34A853)
+        freeNow == false -> Color(0xFFEA4335)
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val statusText = when {
+        currentSlot < 0 -> "当前是课间，暂无教室状态"
+        freeNow == true -> "该教室当前空闲"
+        freeNow == false -> "该教室当前有课"
+        else -> "暂无该教室的教室数据"
+    }
 
     Box(modifier = Modifier.fillMaxWidth()) {
         Row(

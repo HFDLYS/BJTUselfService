@@ -330,7 +330,7 @@ fun ClassroomScreen(
         delay(350)
         flashRoom = room.RoomName
         if (index > 0) {
-            listState.animateScrollToItem(index.coerceAtMost(listState.layoutInfo.totalItemsCount.coerceAtLeast(1) - 1))
+            listState.animateScrollToItem(index)
         }
         delay(900)
         if (flashRoom == room.RoomName) flashRoom = null
