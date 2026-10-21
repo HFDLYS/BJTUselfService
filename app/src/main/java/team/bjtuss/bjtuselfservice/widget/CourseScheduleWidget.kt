@@ -191,7 +191,6 @@ fun CourseScheduleWidgetContent(
                 at.isAfter(now.toLocalTime())
             }
             .minByOrNull { it.courseLocationIndex / 8 }
-            ?: todayCourses.minByOrNull { it.courseLocationIndex / 8 }
 
         Column(
             modifier = GlanceModifier
@@ -229,7 +228,7 @@ fun CourseScheduleWidgetContent(
                 )
             } else {
                 Text(
-                    text = "今天没有课",
+                    text = if (todayCourses.isEmpty()) "今天没有课" else "今天课程已结束",
                     style = TextStyle(
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
