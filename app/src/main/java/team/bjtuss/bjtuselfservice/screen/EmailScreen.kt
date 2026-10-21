@@ -28,6 +28,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -35,6 +36,9 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,6 +62,7 @@ fun EmailScreen(navController: NavController) {
     val viewModel: EmailViewModel = viewModel()
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
+    var searchQuery by remember { mutableStateOf("") }
     val refreshState = rememberSwipeRefreshState(isRefreshing = state is EmailUiState.Loading)
 
     Scaffold(
@@ -124,27 +129,47 @@ fun EmailScreen(navController: NavController) {
                 }
 
                 is EmailUiState.Success -> {
-                    SwipeRefresh(
-                        state = refreshState,
-                        onRefresh = viewModel::refresh,
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
-                        if (current.emails.isEmpty()) {
-                            EmptyMailbox()
-                        } else {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                items(current.emails, key = { it.id }) { email ->
-                                    EmailListItem(email) {
-                                        context.startActivity(
-                                            Intent(context, EmailDetailActivity::class.java)
-                                                .putExtra(EmailDetailActivity.EXTRA_MID, email.id)
-                                                .putExtra(EmailDetailActivity.EXTRA_SUBJECT, email.subject)
-                                                .putExtra(EmailDetailActivity.EXTRA_FROM, email.from),
-                                        )
+                    val filteredEmails = if (searchQuery.isBlank()) {
+                        current.emails
+                    } else {
+                        current.emails.filter { email ->
+                            email.subject.contains(searchQuery, ignoreCase = true) ||
+                                email.from.contains(searchQuery, ignoreCase = true) ||
+                                email.date.contains(searchQuery, ignoreCase = true)
+                        }
+                    }
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            label = { Text("搜索发件人、主题或日期") },
+                            singleLine = true,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                        SwipeRefresh(
+                            state = refreshState,
+                            onRefresh = viewModel::refresh,
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            if (filteredEmails.isEmpty()) {
+                                if (searchQuery.isBlank()) EmptyMailbox() else EmptySearchResult()
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    items(filteredEmails, key = { it.id }) { email ->
+                                        EmailListItem(email) {
+                                            context.startActivity(
+                                                Intent(context, EmailDetailActivity::class.java)
+                                                    .putExtra(EmailDetailActivity.EXTRA_MID, email.id)
+                                                    .putExtra(EmailDetailActivity.EXTRA_SUBJECT, email.subject)
+                                                    .putExtra(EmailDetailActivity.EXTRA_FROM, email.from),
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -174,6 +199,21 @@ private fun EmptyMailbox() {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 12.dp),
+        )
+    }
+}
+
+@Composable
+private fun EmptySearchResult() {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = "没有匹配的邮件",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

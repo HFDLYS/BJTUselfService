@@ -22,6 +22,12 @@ data class EmailSummary(
     val size: Long,
 )
 
+data class EmailAttachment(
+    val id: Int,
+    val name: String,
+    val size: Long,
+)
+
 data class EmailDetail(
     val subject: String,
     val from: String,
@@ -29,7 +35,7 @@ data class EmailDetail(
     val date: String,
     val body: String,
     val html: String?,
-    val attachments: List<String>,
+    val attachments: List<EmailAttachment>,
 )
 
 /**
@@ -116,7 +122,12 @@ object EmailRepository {
         val to = varObject.selectFirst("array[name=to] > string")?.text().orEmpty()
         val date = varObject.childDate("sentDate")
         val attachments = varObject.select("array[name=attachments] > object").mapNotNull { attachment ->
-            attachment.childString("name").ifBlank { null }
+            val name = attachment.childString("name")
+            if (name.isBlank()) null else EmailAttachment(
+                id = attachment.childInt("id"),
+                name = name,
+                size = attachment.childLong("size"),
+            )
         }
 
         val htmlPart = varObject.selectFirst("object[name=html]")
@@ -155,6 +166,33 @@ object EmailRepository {
             attachments = attachments,
         )
     }
+
+    suspend fun downloadAttachment(mid: String, attachment: EmailAttachment): ByteArray =
+        withContext(Dispatchers.IO) {
+            val sid = openSession()
+            val url = "$MAIL_HOST/coremail/s".toHttpUrl().newBuilder()
+                .addQueryParameter("sid", sid)
+                .addQueryParameter("func", "mbox:getMessageData")
+                .addQueryParameter("mbox", "1")
+                .addQueryParameter("mid", mid)
+                .addQueryParameter("part", attachment.id.toString())
+                .build()
+            val response = client.newCall(Request.Builder().url(url).build()).execute()
+            response.use {
+                if (!response.isSuccessful) throw IllegalStateException("附件 HTTP " + response.code)
+                val bytes = response.body?.bytes() ?: ByteArray(0)
+                val text = bytes.toString(Charsets.UTF_8)
+                if (text.trimStart().startsWith("<")) {
+                    val root = Jsoup.parse(text, "", Parser.xmlParser())
+                    val encoded = root.selectFirst("string")?.text().orEmpty()
+                    if (encoded.isNotBlank()) {
+                        android.util.Base64.decode(encoded, android.util.Base64.DEFAULT)
+                    } else bytes
+                } else {
+                    bytes
+                }
+            }
+        }
 
     private fun openSession(): String {
         val moduleResponse = client.newCall(

@@ -47,6 +47,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +56,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.FileProvider
+import kotlinx.coroutines.launch
 import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 import team.bjtuss.bjtuselfservice.repository.EmailDetail
 import team.bjtuss.bjtuselfservice.repository.EmailRepository
@@ -64,6 +67,7 @@ import team.bjtuss.bjtuselfservice.utils.SmartLinkAction
 import team.bjtuss.bjtuselfservice.utils.SmartLinkifier
 import team.bjtuss.bjtuselfservice.utils.SmartLinkType
 import team.bjtuss.bjtuselfservice.ui.theme.Theme
+import java.io.File
 
 class EmailDetailActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -146,6 +150,43 @@ private fun copyLinkValue(context: Context, value: String) {
     Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
 }
 
+private fun openAttachment(context: Context, name: String, bytes: ByteArray) {
+    runCatching {
+        val dir = File(context.cacheDir, "attachments").apply { mkdirs() }
+        val safeName = name.substringAfterLast('/').substringAfterLast('\\')
+            .ifBlank { "attachment" }
+        val file = File(dir, safeName)
+        file.writeBytes(bytes)
+        val uri = FileProvider.getUriForFile(
+            context,
+            context.packageName + ".fileprovider",
+            file,
+        )
+        val mime = when (safeName.substringAfterLast('.', "").lowercase()) {
+            "pdf" -> "application/pdf"
+            "png" -> "image/png"
+            "jpg", "jpeg" -> "image/jpeg"
+            "gif" -> "image/gif"
+            "txt", "log" -> "text/plain"
+            "zip" -> "application/zip"
+            "doc" -> "application/msword"
+            "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            "xls" -> "application/vnd.ms-excel"
+            "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            "ppt" -> "application/vnd.ms-powerpoint"
+            "pptx" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            else -> "*/*"
+        }
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, mime)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, "打开附件"))
+    }.onFailure {
+        Toast.makeText(context, "没有可打开附件的应用", Toast.LENGTH_SHORT).show()
+    }
+}
+
 private sealed interface DetailState {
     data object Loading : DetailState
     data class Success(val detail: EmailDetail) : DetailState
@@ -164,6 +205,7 @@ private fun EmailDetailScreen(
     var retryKey by remember { mutableStateOf(0) }
     var linkAction by remember { mutableStateOf<SmartLinkAction?>(null) }
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(mid, retryKey) {
         state = DetailState.Loading
@@ -279,8 +321,27 @@ private fun EmailDetailScreen(
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.SemiBold,
                                 )
-                                detail.attachments.forEach { name ->
-                                    AssistChip(onClick = {}, label = { Text(name) })
+                                detail.attachments.forEach { attachment ->
+                                    AssistChip(
+                                        onClick = {
+                                            scope.launch {
+                                                runCatching {
+                                                    val bytes = EmailRepository.downloadAttachment(
+                                                        mid,
+                                                        attachment,
+                                                    )
+                                                    openAttachment(context, attachment.name, bytes)
+                                                }.onFailure {
+                                                    Toast.makeText(
+                                                        context,
+                                                        "附件下载失败：" + (it.message ?: "未知错误"),
+                                                        Toast.LENGTH_SHORT,
+                                                    ).show()
+                                                }
+                                            }
+                                        },
+                                        label = { Text(attachment.name) },
+                                    )
                                 }
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                             }
