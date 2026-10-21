@@ -220,7 +220,7 @@ private fun currentTimeLabel(): String =
 
 private fun statusColor(status: Int?, fallback: Color): Color = when (status) {
     0 -> Color(0xFF34A853)
-    1, 2, 3, 4, 5 -> Color(0xFF9E9E9E)
+    1, 2, 3, 4, 5 -> Color(0xFFEA4335)
     else -> fallback
 }
 
@@ -451,7 +451,7 @@ fun ClassroomScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         LegendDot(Color(0xFF34A853), "空闲")
-                        LegendDot(Color(0xFF9E9E9E), "已排课")
+                        LegendDot(Color(0xFFEA4335), "已排课")
                         Text(
                             "圆形描边 = 当前节",
                             style = MaterialTheme.typography.labelSmall,
