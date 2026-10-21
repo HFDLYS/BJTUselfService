@@ -21,7 +21,7 @@ public class Network {
         private final HashMap<String, List<Cookie>> cookieStore = new HashMap<>();
 
         @Override
-        public void saveFromResponse(@NonNull HttpUrl url, @NonNull List<Cookie> cookies) {
+        public synchronized void saveFromResponse(@NonNull HttpUrl url, @NonNull List<Cookie> cookies) {
             List<Cookie> oldCookies = cookieStore.get(url.host());
             if (oldCookies != null) {
                 HashMap<String, Cookie> newCookies = new HashMap<>();
@@ -33,16 +33,19 @@ public class Network {
                 }
                 cookieStore.put(url.host(), new ArrayList<>(newCookies.values()));
             } else {
-                cookieStore.put(url.host(), cookies);
+                cookieStore.put(url.host(), new ArrayList<>(cookies));
             }
         }
 
         @NonNull
         @Override
-        public List<Cookie> loadForRequest(@NonNull HttpUrl url) {
+        public synchronized List<Cookie> loadForRequest(@NonNull HttpUrl url) {
             List<Cookie> cookies = cookieStore.get(url.host());
-            return cookies != null ? cookies : new ArrayList<Cookie>();
+            return cookies != null ? new ArrayList<>(cookies) : new ArrayList<Cookie>();
         }
 
+        public synchronized void clear() {
+            cookieStore.clear();
+        }
     }
 }

@@ -21,6 +21,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -30,12 +32,10 @@ import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import team.bjtuss.bjtuselfservice.CaptchaModel;
 import team.bjtuss.bjtuselfservice.StudentAccountManager;
 import team.bjtuss.bjtuselfservice.entity.CourseEntity;
 import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity;
 import team.bjtuss.bjtuselfservice.entity.GradeEntity;
-import team.bjtuss.bjtuselfservice.utils.ImageToTensorConverter;
 import team.bjtuss.bjtuselfservice.utils.Network.WebCallback;
 import team.bjtuss.bjtuselfservice.utils.Utils;
 
@@ -442,6 +442,10 @@ public class MisDataManager {
                                     "数据页响应: code=" + response.code() + ", url=" + response.request().url()
                             );
                             try {
+                                if (response.body() == null) {
+                                    ResCallback.onFailure(1);
+                                    return;
+                                }
                                 Document doc = Jsoup.parse(response.body().string());
                                 Element table = doc.selectFirst("table");
                                 if (table == null) {
@@ -457,38 +461,18 @@ public class MisDataManager {
                                 for (int i = 2; i < rows.size(); i++) {
                                     Element row = rows.get(i);
                                     Elements cols = row.select("td");
+                                    if (cols.isEmpty()) {
+                                        continue;
+                                    }
                                     Element colName = cols.get(0);
                                     String classroomName = colName.text();
                                     classroomName = classroomName.split(" ")[0];
-                                    List<Integer> classroomList = new ArrayList<>();
-                                    for (int j = 0; j < 7; j++) {
-                                        Element col = cols.get(1 + 7 * index + j);
-                                        String style = col.attr("style");
-                                        switch (style) {
-                                            case "background-color: #fff":
-                                                classroomList.add(0);
-                                                break;
-                                            case "background-color: #e46868":
-                                                classroomList.add(1);
-                                                break;
-                                            case "background-color: #9e6868":
-                                                classroomList.add(2);
-                                                break;
-                                            case "background-color: #394ed6":
-                                                classroomList.add(3);
-                                                break;
-                                            case "background-color: #77bf6d":
-                                                classroomList.add(4);
-                                                break;
-                                            case "background-color: #d8cc56":
-                                                classroomList.add(5);
-                                                break;
-                                        }
-                                    }
+                                    List<Integer> classroomList = parseClassroomSlots(cols, index);
                                     classroomMap.put(classroomName, classroomList);
                                 }
                                 ResCallback.onResponse(classroomMap);
-                            } catch (IOException e) {
+                            } catch (Exception e) {
+                                Log.e("ClassroomMap", "Failed to parse classroom table", e);
                                 ResCallback.onFailure(1);
                             }
                         }
@@ -532,6 +516,33 @@ public class MisDataManager {
                 response.close();
             }
         });
+    }
+
+    // Missing cells and unrecognized styles must never be recommended as free rooms.
+    static List<Integer> parseClassroomSlots(Elements cols, int dayIndex) {
+        List<Integer> slots = new ArrayList<>();
+        Pattern colorPattern = Pattern.compile("(?:^|;)\\s*background-color\\s*:\\s*([^;]+)", Pattern.CASE_INSENSITIVE);
+        for (int slot = 0; slot < 7; slot++) {
+            int column = 1 + 7 * dayIndex + slot;
+            int status = -1;
+            if (column >= 1 && column < cols.size()) {
+                Matcher color = colorPattern.matcher(cols.get(column).attr("style"));
+                if (color.find()) {
+                    switch (color.group(1).trim().toLowerCase(java.util.Locale.ROOT)) {
+                        case "#fff":
+                        case "#ffffff": status = 0; break;
+                        case "#e46868": status = 1; break;
+                        case "#9e6868": status = 2; break;
+                        case "#394ed6": status = 3; break;
+                        case "#77bf6d": status = 4; break;
+                        case "#d8cc56": status = 5; break;
+                        default: break;
+                    }
+                }
+            }
+            slots.add(status);
+        }
+        return slots;
     }
 
     private static Map<String, String> getTeachers(OkHttpClient client) throws IOException {

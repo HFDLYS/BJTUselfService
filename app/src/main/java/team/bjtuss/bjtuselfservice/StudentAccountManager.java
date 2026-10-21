@@ -1,6 +1,8 @@
 package team.bjtuss.bjtuselfservice;
 
 
+import android.util.Log;
+
 import androidx.annotation.Nullable;
 import androidx.lifecycle.MutableLiveData;
 
@@ -47,6 +49,7 @@ public class StudentAccountManager {
 
     //    private final javax.net.ssl.SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
     public OkHttpClient client;
+    private final Network.InMemoryCookieJar cookieJar = new Network.InMemoryCookieJar();
     //    private OkHttpClient.Builder builder;
     private StudentInfo stuInfo;
     private String stuId = null;
@@ -99,7 +102,7 @@ public class StudentAccountManager {
         return new OkHttpClient.Builder()
                 .sslSocketFactory(sslContext.getSocketFactory(), (X509TrustManager) trustAllCerts[0])
                 .hostnameVerifier((hostname, session) -> true)
-                .cookieJar(new Network.InMemoryCookieJar()).build();
+                .cookieJar(cookieJar).build();
     }
 
 
@@ -146,8 +149,11 @@ public class StudentAccountManager {
         MisDataManager.login(client, stuId, password, new WebCallback<String>() {
             @Override
             public void onResponse(String code) {
-                setStudentInfoFromCode(code, stuId);
-                loginFuture.complete(true);
+                if (setStudentInfoFromCode(code, stuId)) {
+                    loginFuture.complete(true);
+                } else {
+                    loginFuture.complete(false);
+                }
             }
 
             @Override
@@ -171,13 +177,23 @@ public class StudentAccountManager {
     }
 
     public void clearCookie() {
+        cookieJar.clear();
         client = generateNewClient();
     }
 
-    private void setStudentInfoFromCode(String code, String stuId) {
+    private boolean setStudentInfoFromCode(String code, String stuId) {
+        if (code == null) {
+            Log.e("Authenticator", "MIS returned an empty student info payload");
+            return false;
+        }
         String[] parts = code.split(";");
+        if (parts.length < 3) {
+            Log.e("Authenticator", "Malformed student info payload");
+            return false;
+        }
         setStudentInfo(parts[0], stuId, parts[2], parts[1]);
         setMisLogin(true);
+        return true;
     }
 
     // 登录教务系统
@@ -392,11 +408,14 @@ public class StudentAccountManager {
     }
 
     public String getStuId() {
-        return stuInfo.stuId;
+        if (stuInfo != null && stuInfo.stuId != null) {
+            return stuInfo.stuId;
+        }
+        return stuId != null ? stuId : "";
     }
 
     public String getStuName() {
-        return stuInfo.stuName;
+        return stuInfo != null && stuInfo.stuName != null ? stuInfo.stuName : "";
     }
 
     public MutableLiveData<StudentInfo> getStudentInfo() {
@@ -416,6 +435,7 @@ public class StudentAccountManager {
     }
 
     public void setStudentInfo(String Name, String Id, String Department, String Class) {
+        this.stuId = Id;
         stuInfo = new StudentInfo(Name, Id, Department, Class);
         stuInfoLiveData.postValue(stuInfo);
     }

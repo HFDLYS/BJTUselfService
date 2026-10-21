@@ -136,7 +136,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        CaptchaModel.init(this)
 
 
         setContent {
@@ -321,7 +320,7 @@ fun App(mainViewModel: MainViewModel, hasBackground: Boolean = false) {
             GradeScreen(mainViewModel)
         }
         composable(RouteManager.Email) {
-            EmailScreen()
+            EmailScreen(navController)
         }
         composable(RouteManager.HomeWork) {
             HomeworkScreen(mainViewModel)
@@ -453,7 +452,7 @@ fun AppNavigation(
         androidx.compose.foundation.layout.Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 24.dp, start = 24.dp, end = 24.dp),
+                .padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -461,10 +460,10 @@ fun AppNavigation(
                 val isSelected = targetPage == index
                 Box(
                     modifier = Modifier
-                        .size(72.dp)
+                        .size(64.dp)
                         .let { 
                             if (hasBackground && LocalHazeState.current != null)
-                                it.hazeChild(LocalHazeState.current!!, shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp), style = HazeStyle(tint = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.05f), blurRadius = 8.dp))
+                                it.hazeChild(LocalHazeState.current!!, shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp), style = HazeStyle(tint = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.05f), blurRadius = 4.dp))
                             else it 
                         }
                         .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
@@ -512,7 +511,7 @@ fun AppNavigation(
                         androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = pageItem.title, 
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
                             color = if (hasBackground) {
                                 if (isSelected) androidx.compose.ui.graphics.Color.White else androidx.compose.ui.graphics.Color.White.copy(alpha = 0.6f)
@@ -559,33 +558,24 @@ fun AppNavigation(
 }
 
 
-private const val DEFAULT_ENTER_DURATION = 300
-private const val DEFAULT_EXIT_DURATION = 220
+private const val DEFAULT_ENTER_DURATION = 160
+private const val DEFAULT_EXIT_DURATION = 120
 
 private fun AnimatedContentTransitionScope<NavBackStackEntry>.activityEnterTransition(): EnterTransition {
-    return slideIntoContainer(towards = AnimatedContentTransitionScope.SlideDirection.Start,
-        animationSpec = tween(DEFAULT_ENTER_DURATION, easing = LinearOutSlowInEasing),
-        initialOffset = { it })
+    return fadeIn(tween(DEFAULT_ENTER_DURATION))
 }
 
 @Suppress("UnusedReceiverParameter")
 private fun AnimatedContentTransitionScope<NavBackStackEntry>.activityExitTransition(): ExitTransition {
-    return scaleOut(
-        animationSpec = tween(DEFAULT_ENTER_DURATION), targetScale = 1F
-    )
+    return fadeOut(tween(DEFAULT_EXIT_DURATION))
 }
-
 
 @Suppress("UnusedReceiverParameter")
 private fun AnimatedContentTransitionScope<NavBackStackEntry>.activityPopEnterTransition(): EnterTransition {
-    return scaleIn(
-        animationSpec = tween(DEFAULT_EXIT_DURATION), initialScale = 1F
-    )
+    return fadeIn(tween(DEFAULT_ENTER_DURATION))
 }
 
 private fun AnimatedContentTransitionScope<NavBackStackEntry>.activityPopExitTransition(): ExitTransition {
-    return slideOutOfContainer(towards = AnimatedContentTransitionScope.SlideDirection.End,
-        animationSpec = tween(DEFAULT_EXIT_DURATION, easing = FastOutLinearInEasing),
-        targetOffset = { it })
+    return fadeOut(tween(DEFAULT_EXIT_DURATION))
 }
 

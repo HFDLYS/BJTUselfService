@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -36,6 +37,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -63,11 +65,45 @@ import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 import team.bjtuss.bjtuselfservice.utils.Utils
 import team.bjtuss.bjtuselfservice.viewmodel.DataChange
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
+import kotlinx.coroutines.delay
+import java.util.Calendar
 
 data class MenuItem(
     val content: @Composable () -> Unit,
     val onClick: () -> Unit
 )
+
+private val COURSE_SLOT_RANGES = listOf(
+    "08:00" to "09:50",
+    "10:10" to "12:00",
+    "12:10" to "14:00",
+    "14:10" to "16:00",
+    "16:20" to "18:10",
+    "19:00" to "20:50",
+    "21:00" to "21:50",
+)
+
+data class CurrentCourseSlot(val day: Int, val slot: Int)
+
+private fun cleanCourseName(name: String): String =
+    name.removeSuffix(" [本]")
+        .removeSuffix("[本]")
+        .removeSuffix(" [研]")
+        .removeSuffix("[研]")
+
+internal fun getCurrentCourseSlot(calendar: Calendar = Calendar.getInstance()): CurrentCourseSlot? {
+    val nowMinutes = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
+    val calendarDay = calendar.get(Calendar.DAY_OF_WEEK)
+    val day = if (calendarDay == Calendar.SUNDAY) 7 else calendarDay - 1
+    COURSE_SLOT_RANGES.forEachIndexed { index, (start, end) ->
+        val startMinutes = start.split(":").let { it[0].toInt() * 60 + it[1].toInt() }
+        val endMinutes = end.split(":").let { it[0].toInt() * 60 + it[1].toInt() }
+        if (nowMinutes >= startMinutes && nowMinutes < endMinutes) {
+            return CurrentCourseSlot(day, index)
+        }
+    }
+    return null
+}
 
 @Composable
 fun GradeTopMenu(menuItemList: List<MenuItem>) {
@@ -142,6 +178,14 @@ fun CourseScheduleScreen(
         ?: 0
     var selectedWeek by rememberSaveable { mutableIntStateOf(0) }
     var shouldFollowCurrentWeek by rememberSaveable { mutableStateOf(true) }
+    var nowTick by remember { mutableStateOf(0L) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30_000)
+            nowTick++
+        }
+    }
+    val currentSlot = remember(nowTick) { getCurrentCourseSlot() }
     val courseList by
         if (currentTerm) {
             courseScheduleViewModel.currentTermCourseList.collectAsState()
@@ -255,7 +299,9 @@ fun CourseScheduleScreen(
             courseList = courseList,
             weekDays = weekDays,
             courseTimes = courseTimes,
-            selectedWeek = selectedWeek
+            selectedWeek = selectedWeek,
+            currentSlot = currentSlot,
+            highlightCurrent = !currentTerm && currentWeek > 0 && selectedWeek == currentWeek
         )
     }
 }
@@ -266,10 +312,55 @@ fun CourseScheduleContent(
     courseList: List<List<CourseEntity>>,
     weekDays: List<String>,
     courseTimes: List<String>,
-    selectedWeek: Int
+    selectedWeek: Int,
+    currentSlot: CurrentCourseSlot? = null,
+    highlightCurrent: Boolean = false,
 ) {
 
     Column(modifier = modifier) {
+        val currentCourses = currentSlot?.let { slot ->
+            courseList.getOrNull(slot.slot * weekDays.size + slot.day)
+                ?.filter { course ->
+                    selectedWeek == 0 || parseCourseTime(course.courseTime).contains(selectedWeek)
+                }
+        }.orEmpty()
+        if (highlightCurrent) {
+            val bannerText = when {
+                currentSlot == null -> "当前无课"
+                currentCourses.isEmpty() -> "当前第" + (currentSlot.slot + 1) + "节 无课"
+                else -> "当前第" + (currentSlot.slot + 1) + "节 课程：" +
+                    currentCourses.joinToString("、") { cleanCourseName(it.courseName) }
+            }
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Default.Schedule,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = bannerText,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
         // 表头：星期
         Row(
             modifier = Modifier
@@ -318,7 +409,9 @@ fun CourseScheduleContent(
             // 课程网格
             CourseScheduleGrid(
                 courseList = courseList,
-                nowWeek = selectedWeek
+                nowWeek = selectedWeek,
+                currentSlot = currentSlot,
+                highlightCurrent = highlightCurrent,
             )
         }
     }
@@ -327,8 +420,10 @@ fun CourseScheduleContent(
 @Composable
 fun CourseScheduleGrid(
     courseList: List<List<CourseEntity>>,
-    nowWeek: Int
-    ) {
+    nowWeek: Int,
+    currentSlot: CurrentCourseSlot? = null,
+    highlightCurrent: Boolean = false,
+) {
     val weekDays: Int = 7
     val courseTimes: Int = 7
     Column(modifier = Modifier.fillMaxSize()) {
@@ -341,11 +436,16 @@ fun CourseScheduleGrid(
                 repeat(weekDays) { day ->
                     val index = timeSlot * (weekDays + 1) + (day + 1)
                     val courses = courseList.getOrNull(index)
+                    val isCurrent = highlightCurrent &&
+                        currentSlot != null &&
+                        currentSlot.slot == timeSlot &&
+                        currentSlot.day == day + 1
 
                     CourseCell(
                         courses = courses,
                         modifier = Modifier.weight(1f),
-                        nowWeek = nowWeek
+                        nowWeek = nowWeek,
+                        isCurrent = isCurrent,
                     )
                 }
             }
@@ -379,6 +479,7 @@ fun CourseCell(
     courses: List<CourseEntity>?,
     modifier: Modifier = Modifier,
     nowWeek: Int,
+    isCurrent: Boolean = false,
 ) {
     var showDetailedCourseInformationDialog by remember { mutableStateOf(false) }
     var coursesFiltered: List<CourseEntity>? = null
@@ -390,14 +491,17 @@ fun CourseCell(
     } else {
         courses
     }
+    val hasCurrentCourse = isCurrent && !coursesFiltered.isNullOrEmpty()
     Box(
         modifier = modifier
             .border(
-                width = 0.5.dp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                width = if (hasCurrentCourse) 2.dp else 0.5.dp,
+                color = if (hasCurrentCourse) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
             )
             .background(
                 when {
+                    hasCurrentCourse -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
                     coursesFiltered != null -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
                     else -> Color.Transparent
                 }
@@ -411,47 +515,66 @@ fun CourseCell(
         contentAlignment = Alignment.Center
     ) {
 
-        coursesFiltered?.let {
-            var count = coursesFiltered.size
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxSize()
-            ) {
-                coursesFiltered.forEach {
-                    val backgroundColor = Color(
-                        android.graphics.Color.parseColor(
-                            Utils.generateRandomColor(
-                                it.courseId,
-                                isSystemInDarkTheme()
+        Column(modifier = Modifier.fillMaxSize()) {
+            if (hasCurrentCourse) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(14.dp)
+                        .background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "现在",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 8.sp,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+            coursesFiltered?.let {
+                var count = coursesFiltered.size
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth().weight(1f)
+                ) {
+                    coursesFiltered.forEach {
+                        val backgroundColor = Color(
+                            android.graphics.Color.parseColor(
+                                Utils.generateRandomColor(
+                                    it.courseId,
+                                    isSystemInDarkTheme()
+                                )
                             )
                         )
-                    )
 
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight((1.0/count).toFloat())
-                            .background(backgroundColor),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = it.courseName,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontSize = 10.sp,
-                            textAlign = TextAlign.Center,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = it.coursePlace,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontSize = 8.sp,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .fillMaxHeight((1.0/count).toFloat())
+                                .background(backgroundColor),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = it.courseName,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontSize = 10.sp,
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = it.coursePlace,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontSize = 8.sp,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+                        count--
                     }
-                    count--
                 }
             }
         }

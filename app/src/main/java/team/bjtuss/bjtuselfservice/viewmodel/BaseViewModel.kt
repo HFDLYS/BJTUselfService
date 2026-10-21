@@ -1,7 +1,9 @@
 package team.bjtuss.bjtuselfservice.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -108,13 +110,20 @@ abstract class BaseSyncViewModel<T : BaseEntity>(
     override fun loadDataAndDetectChanges() {
 
         viewModelScope.launch {
-
-            dataLock.withLock {
-                AppStateManager.awaitLoginState()
-                val networkData = fetchNetworkData()
-                val localData = fetchLocalData()
-                val changes = dataSyncManager.detectChanges(networkData, localData)
-                _changeList.value = changes
+            try {
+                dataLock.withLock {
+                    AppStateManager.awaitLoginState()
+                    val networkData = fetchNetworkData()
+                    val localData = fetchLocalData()
+                    val changes = dataSyncManager.detectChanges(networkData, localData)
+                    _changeList.value = changes
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // A parser/network failure must not tear down the whole app after
+                // login. Keep the last good data and let the next refresh retry.
+                Log.e("BaseSyncViewModel", "Failed to load or diff data", e)
             }
         }
 
@@ -123,10 +132,16 @@ abstract class BaseSyncViewModel<T : BaseEntity>(
     // 数据同步与清理变更
     override fun syncDataAndClearChange() {
         viewModelScope.launch {
-            AppStateManager.awaitLoginState()
-            dataLock.withLock {
-                dataSyncManager.applyChanges(_changeList.value)
-                _changeList.value = emptyList()
+            try {
+                AppStateManager.awaitLoginState()
+                dataLock.withLock {
+                    dataSyncManager.applyChanges(_changeList.value)
+                    _changeList.value = emptyList()
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("BaseSyncViewModel", "Failed to apply data changes", e)
             }
         }
     }
