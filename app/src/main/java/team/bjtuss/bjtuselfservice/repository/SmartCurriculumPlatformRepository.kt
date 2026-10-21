@@ -4,7 +4,6 @@ package team.bjtuss.bjtuselfservice.repository
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.FormBody
 import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
@@ -24,9 +23,7 @@ import team.bjtuss.bjtuselfservice.jsonclass.HomeworkJsonType
 import team.bjtuss.bjtuselfservice.jsonclass.SemesterJsonType
 import team.bjtuss.bjtuselfservice.jsonclass.getArticleListJsonType
 import team.bjtuss.bjtuselfservice.statemanager.AppStateManager
-import team.bjtuss.bjtuselfservice.statemanager.AuthenticatorManager
 import team.bjtuss.bjtuselfservice.utils.KotlinUtils
-import team.bjtuss.bjtuselfservice.web.Sm2Crypto
 import java.io.IOException
 
 data class HomeworkAttachment(
@@ -60,7 +57,7 @@ object SmartCurriculumPlatformRepository {
 
 
     suspend fun initClient() {
-        loginLegacyCoursePlatform()
+        openPortalChain()
         getAndSetSessionIdInHeaders()
         val semesterFromJson = getSemesterTypeList()
         courseFromJson =
@@ -68,89 +65,47 @@ object SmartCurriculumPlatformRepository {
     }
 
     /**
-     * The legacy course platform uses CAS, not the new MIS SSO. Follow the
-     * course-platform entry to CAS, submit the same school credentials and
-     * let OkHttp's cookie jar carry the resulting SCP session.
+     * Mirrors the browser sequence:
+     * MIS (already logged in) -> bksy portal -> 智慧课程平台 jump.
+     *
+     * The shared OkHttp cookie jar carries the MIS cookies into the portal and
+     * the portal cookies into the jump endpoint.
      */
-    private suspend fun loginLegacyCoursePlatform() {
-        val credentials = AuthenticatorManager.credentials.value
-        if (!credentials.isValid()) {
-            Log.e("SCP", "CAS login skipped: empty credentials")
-            return
-        }
-        withContext(Dispatchers.IO) {
-            try {
-                client.newCall(
-                    Request.Builder()
-                        .url("https://mis.bjtu.edu.cn/module/module/28/")
-                        .headers(headersBuilder.build())
-                        .build()
-                ).execute().use { response ->
-                    val html = response.body?.string().orEmpty()
-                    val document = Jsoup.parse(html, response.request.url.toString())
-                    val form = document.selectFirst("form#loginForm")
-                    if (form == null) {
-                        Log.e("SCP", "CAS form not found, final=" + response.request.url)
-                        return@use
-                    }
-                    val action = form.absUrl("action").ifBlank {
-                        "https://cas.bjtu.edu.cn/login"
-                    }
-                    val sm2Index = html.indexOf("sm2")
-                    if (sm2Index >= 0) {
-                        Log.d(
-                            "SCP",
-                            "CAS sm2 context=" + html.substring(
-                                (sm2Index - 300).coerceAtLeast(0),
-                                (sm2Index + 900).coerceAtMost(html.length)
-                            ).replace("\n", " ")
-                        )
-                    }
-                    val publicKey = Regex("publicKey\\s*[:=]\\s*[\"']([^\"']+)")
-                        .find(html)
-                        ?.groupValues
-                        ?.get(1)
-                        ?.replace("\\/", "/")
-                    Log.d(
-                        "SCP",
-                        "CAS sm2 key len=" + (publicKey?.length ?: 0)
-                    )
-                    val passwordValue = if (!publicKey.isNullOrBlank()) {
-                        runCatching { Sm2Crypto.encrypt(credentials.password, publicKey) }
-                            .onFailure { Log.e("SCP", "CAS password encryption failed", it) }
-                            .getOrDefault(credentials.password)
-                    } else {
-                        credentials.password
-                    }
-                    val formBody = FormBody.Builder()
-                    form.select("input").forEach { input ->
-                        val name = input.attr("name")
-                        if (name.isBlank() || name == "submit") return@forEach
-                        val value = when (name) {
-                            "username" -> credentials.username
-                            "password" -> passwordValue
-                            else -> input.attr("value")
-                        }
-                        formBody.add(name, value)
-                    }
-                    val loginRequest = Request.Builder()
-                        .url(action)
-                        .headers(headersBuilder.build())
-                        .post(formBody.build())
-                        .build()
-                    client.newCall(loginRequest).execute().use { loginResponse ->
-                        val loginHtml = loginResponse.body?.string().orEmpty()
-                        Log.d(
-                            "SCP",
-                            "CAS login -> " + loginResponse.code + " " +
-                                loginResponse.request.url + " title=" +
-                                Jsoup.parse(loginHtml).title()
-                        )
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("SCP", "CAS login failed", e)
-            }
+    private suspend fun openPortalChain() = withContext(Dispatchers.IO) {
+        visitPortal(
+            url = "https://mis.bjtu.edu.cn/home/",
+            referer = "https://mis.bjtu.edu.cn/",
+            tag = "MIS home",
+        )
+        visitPortal(
+            url = "https://bksy.bjtu.edu.cn/",
+            referer = "https://mis.bjtu.edu.cn/home/",
+            tag = "bksy",
+        )
+        visitPortal(
+            url = "http://bksycenter.bjtu.edu.cn/NoMasterJumpPage.aspx?URL=jwcZhjx&FPC=page:jwcZhjx",
+            referer = "https://bksy.bjtu.edu.cn/",
+            tag = "smart-course jump",
+        )
+    }
+
+    private fun visitPortal(url: String, referer: String, tag: String): String {
+        val headers = Headers.Builder()
+            .add("User-Agent", userAgent)
+            .add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+            .add("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+            .add("Referer", referer)
+            .build()
+        return client.newCall(
+            Request.Builder().url(url).headers(headers).build()
+        ).execute().use { response ->
+            val body = response.body?.string().orEmpty()
+            Log.d(
+                "SCP",
+                tag + " -> " + response.code + " " + response.request.url +
+                    " title=" + Jsoup.parse(body).title()
+            )
+            response.request.url.toString()
         }
     }
 
@@ -424,8 +379,12 @@ object SmartCurriculumPlatformRepository {
     private suspend fun getHomeWorkListByHomeworkType(homeworkType: Int): List<HomeworkEntity> {
         AppStateManager.awaitLoginState()
 
+        val courses = courseFromJson?.courseList
+        if (courses.isNullOrEmpty()) {
+            throw IOException("课程平台会话未建立，无法获取作业")
+        }
         val listFromJson = mutableListOf<HomeworkJsonType>()
-        courseFromJson?.courseList?.forEach {
+        courses.forEach {
             val homeworkFromJson =
                 getHomeworkList(
                     it.id.toString(),

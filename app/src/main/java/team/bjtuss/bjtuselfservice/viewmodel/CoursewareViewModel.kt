@@ -1,5 +1,6 @@
 package team.bjtuss.bjtuselfservice.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
@@ -29,8 +30,16 @@ class CoursewareViewModel() : ViewModel() {
             if (json != "" && json != "[]") {
                 _coursewareRootNodeList.value = gson.fromJson(json, type) ?: mutableListOf()
             }
+            val courses = runCatching { getCourseList() }
+                .onFailure { Log.e("Courseware", "getCourseList failed", it) }
+                .getOrDefault(emptyList())
+            if (courses.isEmpty()) {
+                // Network/session failure must not erase the last good cache.
+                Log.w("Courseware", "course list empty; keeping cached courseware")
+                return@launch
+            }
             val list = mutableListOf<CoursewareNode>()
-            getCourseList().forEach { course ->
+            courses.forEach { course ->
                 list.add(
                     generateCoursewareRootNode(
                         course

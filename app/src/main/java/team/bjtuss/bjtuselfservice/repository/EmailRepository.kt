@@ -10,6 +10,8 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.parser.Parser
 import team.bjtuss.bjtuselfservice.StudentAccountManager
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 data class EmailSummary(
     val id: String,
@@ -63,9 +65,33 @@ object EmailRepository {
         if (code != "S_OK") {
             throw IllegalStateException("Coremail list failed: $code")
         }
-        root.select("result > array[name=var] > object").mapNotNull { item ->
-            parseSummary(item)
+        root.select("result > array[name=var] > object")
+            .mapNotNull { item -> parseSummary(item) }
+            .sortedByDescending { parseEmailDate(it.date) }
+    }
+
+    internal fun parseEmailDate(value: String): Long {
+        val text = value.trim()
+        if (text.isEmpty()) return 0L
+        text.toLongOrNull()?.let { raw ->
+            return if (raw > 100_000_000_000L) raw else raw * 1000L
         }
+        val patterns = listOf(
+            "yyyy-MM-dd HH:mm:ss",
+            "yyyy/M/d HH:mm:ss",
+            "yyyy-MM-dd'T'HH:mm:ssXXX",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy年M月d日 HH:mm",
+            "yyyy年M月d日",
+            "yyyy-MM-dd",
+            "yyyy/M/d",
+        )
+        patterns.forEach { pattern ->
+            runCatching {
+                SimpleDateFormat(pattern, Locale.US).apply { isLenient = false }.parse(text)
+            }.getOrNull()?.let { return it.time }
+        }
+        return 0L
     }
 
     suspend fun loadMessage(mid: String): EmailDetail = withContext(Dispatchers.IO) {

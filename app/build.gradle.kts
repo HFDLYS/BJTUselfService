@@ -80,7 +80,6 @@ dependencies {
     implementation("org.jsoup:jsoup:1.14.3")
     implementation("com.github.jeziellago:compose-markdown:0.5.6")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("io.github.stoyan-vuchev:squircle-shape:2.0.0")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("com.google.dagger:hilt-android:2.51.1")
     kapt("com.google.dagger:hilt-android-compiler:2.51.1")
