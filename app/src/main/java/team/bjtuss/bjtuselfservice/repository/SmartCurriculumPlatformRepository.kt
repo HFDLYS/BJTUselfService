@@ -4,10 +4,11 @@ package team.bjtuss.bjtuselfservice.repository
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
-import okhttp3.ResponseBody.Companion.toResponseBody
 import org.json.JSONObject
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
@@ -47,6 +48,7 @@ object SmartCurriculumPlatformRepository {
 
 
     private var courseFromJson: CourseJsonType? = null
+    private val initializationMutex = Mutex()
 
     var headersBuilder = Headers.Builder()
         .add("User-Agent", userAgent)
@@ -75,8 +77,16 @@ object SmartCurriculumPlatformRepository {
         }
         getAndSetSessionIdInHeaders()
         val semesterFromJson = getSemesterTypeList()
-        courseFromJson =
-            semesterFromJson.result?.get(0)?.xqCode?.let { getCourseTypeList(xqCode = it) }
+        if (semesterFromJson.STATUS != "0") {
+            throw IOException("获取课程平台学期失败")
+        }
+        val semester = semesterFromJson.result?.firstOrNull()
+            ?: throw IOException("课程平台未返回学期信息")
+        val semesterCode = semester.xqCode?.takeIf { it.isNotBlank() }
+            ?: throw IOException("课程平台学期信息不完整")
+        val courses = getCourseTypeList(xqCode = semesterCode)
+        coursesFromResponse(courses)
+        courseFromJson = courses
     }
 
     private suspend fun getSemesterTypeList(): SemesterJsonType {
@@ -130,30 +140,14 @@ object SmartCurriculumPlatformRepository {
 
         val adapter = moshi.adapter(HomeworkJsonType::class.java)
         return withContext(Dispatchers.IO) {
-            RequestKotlin.get(baseUrl, headersBuilder.build()).use { originalResponse ->
-                // 1. 缓存响应体字节（自动关闭原始流）
-                val cachedBytes = originalResponse.body?.bytes() ?: throw IOException("Empty body")
-
-                // 2. 构建可重复读取的副本
-                val copiedBody = cachedBytes.toResponseBody(originalResponse.body?.contentType())
-
-                // 3. 使用缓存数据解析
-                copiedBody.source().use { source ->
-                    try {
-                        // 调试：打印原始JSON
-                        val rawJson = source.buffer.clone().readUtf8()
-//                        println("Raw JSON: $rawJson")
-
-                        adapter.fromJson(source)
-                    } catch (e: Exception) {
-                        // 异常时仍可安全读取缓存
-//                        val errorJson = String(cachedBytes, Charsets.UTF_8)
-//                        println("Parsing failed. Original JSON: $errorJson")
-//                        println("Error: ${e.message}")
-                        null
-                    }
+            RequestKotlin.get(baseUrl, headersBuilder.build()).use { response ->
+                if (!response.isSuccessful) {
+                    throw IOException("获取作业失败，请稍后重试")
                 }
-            } ?: throw IOException("Response body is null")
+                val body = response.body?.string() ?: throw IOException("作业响应为空")
+                val json = body.replace("\"courseNoteList\"\\s*:\\s*\"\"".toRegex(), "\"courseNoteList\": []")
+                adapter.fromJson(json) ?: throw IOException("作业响应为空")
+            }
         }
     }
 
@@ -249,7 +243,10 @@ object SmartCurriculumPlatformRepository {
 
     suspend fun getCourseList(): List<Course> {
         AppStateManager.awaitLoginState()
-        return courseFromJson?.courseList ?: emptyList()
+        return initializationMutex.withLock {
+            if (courseFromJson == null) initializeClient()
+            coursesFromResponse(courseFromJson)
+        }
     }
 
 
@@ -303,41 +300,48 @@ object SmartCurriculumPlatformRepository {
 
             val adapter = moshi.adapter(CourseResourceResponse::class.java)
             val courseWareNodeList = RequestKotlin.get(url,headersBuilder.build()).use { response ->
+                if (!response.isSuccessful) {
+                    throw IOException("获取课件失败，请稍后重试")
+                }
                 val responseContent = response.body?.string()
                 responseContent?.let { str ->
-                    try {
-
-                        val jsonString = str
-                            .replace("\"resList\"\\s*:\\s*\"\"".toRegex(), "\"resList\": []")
-                            .replace("\"bagList\"\\s*:\\s*\"\"".toRegex(), "\"bagList\": []")
-                        val courseResourceResponse = adapter.fromJson(jsonString)
-
-                        // 处理 bagList
-                        val bagNodes = courseResourceResponse?.bagList?.map { bag ->
-                            CoursewareNode(
-                                id = bag.id,
-                                bag = bag,
-                                course = parentNode.course
-                            ).apply {
-                                children = generateChildrenNodeList(this) // 递归生成子节点
-                            }
-                        } ?: emptyList()
-
-                        // 处理 resList
-                        val resNodes = courseResourceResponse?.resList?.map { res ->
-                            CoursewareNode(
-                                id = res.resId, // 假设 Res 类有 resId 字段
-                                res = res,
-                                course = parentNode.course
-                            ) // 资源节点通常没有子节点
-                        } ?: emptyList()
-
-                        bagNodes + resNodes // 合并两类节点
-
-                    } catch (e: Exception) {
-                        println("Failed to parse JSON: ${e.message}")
-                        emptyList()
+                    val jsonString = str
+                        .replace("\"resList\"\\s*:\\s*\"\"".toRegex(), "\"resList\": []")
+                        .replace("\"bagList\"\\s*:\\s*\"\"".toRegex(), "\"bagList\": []")
+                    val courseResourceResponse = adapter.fromJson(jsonString)
+                        ?: throw IOException("课件响应为空")
+                    if (courseResourceResponse.STATUS == "2") {
+                        return@use emptyList<CoursewareNode>()
                     }
+                    if (courseResourceResponse.STATUS != "0") {
+                        throw IOException("获取课件失败，请稍后重试")
+                    }
+                    if (courseResourceResponse.bagList == null && courseResourceResponse.resList == null) {
+                        throw IOException("课件响应不完整")
+                    }
+
+                    // 处理 bagList
+                    val bagNodes = courseResourceResponse.bagList?.map { bag ->
+                        CoursewareNode(
+                            id = bag.id,
+                            bag = bag,
+                            course = parentNode.course
+                        ).apply {
+                            children = generateChildrenNodeList(this) // 递归生成子节点
+                        }
+                    } ?: emptyList()
+
+                    // 处理 resList
+                    val resNodes = courseResourceResponse.resList?.map { res ->
+                        CoursewareNode(
+                            id = res.resId, // 假设 Res 类有 resId 字段
+                            res = res,
+                            course = parentNode.course
+                        ) // 资源节点通常没有子节点
+                    } ?: emptyList()
+
+                    bagNodes + resNodes // 合并两类节点
+
                 } ?: throw IOException("Response body is null")
             }
             courseWareNodeList
@@ -360,6 +364,9 @@ object SmartCurriculumPlatformRepository {
                     it.id.toString(),
                     homeworkType.toString()
                 )
+            if (homeworkFromJson.STATUS != "0" && homeworkFromJson.STATUS != "2") {
+                throw IOException("获取作业失败，请稍后重试")
+            }
             listFromJson.add(homeworkFromJson)
         }
 

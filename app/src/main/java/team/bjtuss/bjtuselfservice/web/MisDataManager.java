@@ -740,6 +740,33 @@ public class MisDataManager {
         });
     }
 
+    // Missing cells and unrecognized styles must never be recommended as free rooms.
+    static List<Integer> parseClassroomSlots(Elements cols, int dayIndex) {
+        List<Integer> slots = new ArrayList<>();
+        Pattern colorPattern = Pattern.compile("(?:^|;)\\s*background-color\\s*:\\s*([^;]+)", Pattern.CASE_INSENSITIVE);
+        for (int slot = 0; slot < 7; slot++) {
+            int column = 1 + 7 * dayIndex + slot;
+            int status = -1;
+            if (column >= 1 && column < cols.size()) {
+                Matcher color = colorPattern.matcher(cols.get(column).attr("style"));
+                if (color.find()) {
+                    switch (color.group(1).trim().toLowerCase(java.util.Locale.ROOT)) {
+                        case "#fff":
+                        case "#ffffff": status = 0; break;
+                        case "#e46868": status = 1; break;
+                        case "#9e6868": status = 2; break;
+                        case "#394ed6": status = 3; break;
+                        case "#77bf6d": status = 4; break;
+                        case "#d8cc56": status = 5; break;
+                        default: break;
+                    }
+                }
+            }
+            slots.add(status);
+        }
+        return slots;
+    }
+
     private static Map<String, String> getTeachers(OkHttpClient client) throws IOException {
         String url = "https://aa.bjtu.edu.cn/course_selection/courseselectabsent/absent_list/";
         Request request = new Request.Builder()

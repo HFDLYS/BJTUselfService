@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
@@ -14,18 +16,18 @@ import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository.generateCoursewareRootNode
 import team.bjtuss.bjtuselfservice.repository.SmartCurriculumPlatformRepository.getCourseList
 
-
-class CoursewareViewModel() : ViewModel() {
-    private var _coursewareRootNodeList: MutableStateFlow<MutableList<CoursewareNode>> =
-        MutableStateFlow(mutableListOf())
+class CoursewareViewModel : ViewModel() {
+    private val _coursewareRootNodeList = MutableStateFlow<List<CoursewareNode>>(emptyList())
     val coursewareRootNodeList = _coursewareRootNodeList.asStateFlow()
-
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading = _isLoading.asStateFlow()
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage = _errorMessage.asStateFlow()
+    private var refreshJob: Job? = null
 
     init {
-        viewModelScope.launch {
-            val gson = Gson()
-            val json = DataStoreRepository.getCoursewareJson().first()
-            val type = object : TypeToken<MutableList<CoursewareNode>>() {}.type
+        refresh()
+    }
 
             if (json != "" && json != "[]") {
                 _coursewareRootNodeList.value = gson.fromJson(json, type) ?: mutableListOf()
@@ -46,11 +48,6 @@ class CoursewareViewModel() : ViewModel() {
                     )
                 )
             }
-            _coursewareRootNodeList.value = list
-
-            DataStoreRepository.setCoursewareJson(
-                gson.toJson(coursewareRootNodeList.value)
-            )
         }
     }
 }

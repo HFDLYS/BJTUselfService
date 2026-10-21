@@ -1,5 +1,6 @@
 package team.bjtuss.bjtuselfservice.web;
 
+import androidx.annotation.Nullable;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -65,6 +66,18 @@ public class ClassroomCapacityService {
             this.RoomName = RoomName;
             this.Capacity = Capacity;
             this.Used = Used;
+        }
+
+        @Nullable
+        public Integer getReadableUsed() {
+            // The upstream uses capacity as a sentinel when the people count is unavailable.
+            return Capacity > 0 && Used >= 0 && Used < Capacity ? Used : null;
+        }
+
+        @Nullable
+        public Double getOccupancyRatio() {
+            Integer used = getReadableUsed();
+            return used != null ? used.doubleValue() / Capacity : null;
         }
     }
 

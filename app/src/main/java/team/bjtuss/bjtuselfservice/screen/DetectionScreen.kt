@@ -770,6 +770,91 @@ fun ClassroomScreen(
                         confirmButton = { TextButton(onClick = { showPlannerDialog = false }) { Text("知道了") } },
                     )
                 }
+                if (showFilterDialog) {
+                    var draftSlots by remember(showFilterDialog) { mutableStateOf(selectedSlots) }
+                    var draftCapacity by remember(showFilterDialog) { mutableStateOf(minCapacity.toString()) }
+                    AlertDialog(
+                        onDismissRequest = { showFilterDialog = false },
+                        title = { Text("筛选空闲教室") },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text("选择节次（可多选，要求这些节次全部空闲）", style = MaterialTheme.typography.bodySmall)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                ) {
+                                    repeat(7) { index ->
+                                        FilterChip(
+                                            selected = index in draftSlots,
+                                            onClick = {
+                                                draftSlots = if (index in draftSlots) draftSlots - index else draftSlots + index
+                                            },
+                                            label = { Text("第" + (index + 1) + "节", style = MaterialTheme.typography.labelSmall) },
+                                        )
+                                    }
+                                }
+                                OutlinedTextField(
+                                    value = draftCapacity,
+                                    onValueChange = { draftCapacity = it.filter(Char::isDigit) },
+                                    label = { Text("最小容量") },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                                Text("当前仅包含今天的课表数据", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                selectedSlots = draftSlots
+                                minCapacity = draftCapacity.toIntOrNull() ?: 0
+                                onlyCurrentFree = false
+                                showFilterDialog = false
+                            }) { Text("应用") }
+                        },
+                        dismissButton = { TextButton(onClick = { showFilterDialog = false }) { Text("取消") } },
+                    )
+                }
+                if (showPlannerDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showPlannerDialog = false },
+                        title = { Text("教室迁移规划") },
+                        text = {
+                            when (val result = plannerResult) {
+                                is PlannerResult.Success -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("按楼层差最小生成路径", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    result.steps.forEach { step ->
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Surface(
+                                                shape = CircleShape,
+                                                color = MaterialTheme.colorScheme.primaryContainer,
+                                                modifier = Modifier.size(28.dp),
+                                            ) {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Text((step.slot + 1).toString(), style = MaterialTheme.typography.labelMedium)
+                                                }
+                                            }
+                                            Spacer(Modifier.width(10.dp))
+                                            Column {
+                                                Text(step.room, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                                                Text(
+                                                    ClassroomPlanner.floorOf(step.room).toString() + " 层 · " + slotLabel(step.slot),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
+                                        }
+                                    }
+                                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                    Text("总换层数：" + result.floorChanges + " 层", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                }
+                                is PlannerResult.Failure -> Text(result.reason, color = MaterialTheme.colorScheme.error)
+                                null -> Text("暂无规划结果")
+                            }
+                        },
+                        confirmButton = { TextButton(onClick = { showPlannerDialog = false }) { Text("知道了") } },
+                    )
+                }
             } ?: run {
                 Box(
                     modifier = Modifier

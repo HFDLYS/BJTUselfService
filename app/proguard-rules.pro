@@ -1,21 +1,11 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# Moshi's Kotlin adapter needs constructor/property metadata. Gson also uses
+# these field names for courseware caches written by previous app versions.
+-keepattributes Signature,InnerClasses,EnclosingMethod,RuntimeVisibleAnnotations,AnnotationDefault
+-keep class team.bjtuss.bjtuselfservice.jsonclass.** { *; }
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Update responses are parsed reflectively by Moshi outside the DTO package.
+-keep class team.bjtuss.bjtuselfservice.repository.GitHubRelease { *; }
+-keep class team.bjtuss.bjtuselfservice.repository.Asset { *; }
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Preserve the existing Gson format for saved grade selections across upgrades.
+-keep class team.bjtuss.bjtuselfservice.entity.GradeSelectionRecord { *; }
