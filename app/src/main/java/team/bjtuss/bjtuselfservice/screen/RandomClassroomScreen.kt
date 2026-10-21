@@ -203,7 +203,12 @@ fun RandomClassroomScreen(
                             Text("换一间")
                         }
                         Button(
-                            onClick = { navController.navigate("ClassroomDetection/" + picked.building) },
+                            onClick = {
+                                navController.navigate(
+                                    "ClassroomDetection/" + android.net.Uri.encode(picked.building) +
+                                        "?room=" + android.net.Uri.encode(picked.classroom.RoomName)
+                                )
+                            },
                             modifier = Modifier.weight(1f),
                         ) {
                             Icon(Icons.Default.Apartment, contentDescription = null)
