@@ -17,8 +17,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -216,10 +220,7 @@ private fun currentTimeLabel(): String =
 
 private fun statusColor(status: Int?, fallback: Color): Color = when (status) {
     0 -> Color(0xFF34A853)
-    1, 2 -> Color(0xFFEA4335)
-    3 -> Color(0xFF1A73E8)
-    4 -> Color(0xFF0F9D58)
-    5 -> Color(0xFFF9AB00)
+    1, 2, 3, 4, 5 -> Color(0xFF9E9E9E)
     else -> fallback
 }
 
@@ -275,8 +276,14 @@ fun ClassroomScreen(
     var minCapacity by remember { mutableStateOf(0) }
     var showFilterDialog by remember { mutableStateOf(false) }
     var showPlannerDialog by remember { mutableStateOf(false) }
+    var showPlanSetup by remember { mutableStateOf(false) }
+    var planSelectedSlots by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    var planCapacity by remember { mutableStateOf(0) }
+    var planError by remember { mutableStateOf<String?>(null) }
     var plannerResult by remember { mutableStateOf<PlannerResult?>(null) }
     var expandedFloors by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    var flashRoom by remember { mutableStateOf<String?>(null) }
+    val listState = rememberLazyListState()
     var nowTick by remember { mutableStateOf(0L) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -296,13 +303,37 @@ fun ClassroomScreen(
     }
     LaunchedEffect(buildingInfo.value, initialRoom) {
         val info = buildingInfo.value ?: return@LaunchedEffect
-        if (initialRoom.isBlank() || selectedClassroom.value.isNotBlank()) return@LaunchedEffect
+        if (initialRoom.isBlank()) return@LaunchedEffect
         val room = info.ClassroomList.firstOrNull {
             it.RoomName.equals(initialRoom, ignoreCase = true)
         } ?: return@LaunchedEffect
-        expandedFloors = expandedFloors + ClassroomPlanner.floorOf(room.RoomName)
-        selectedClassroom.value = room.RoomName
-        showDialog.value = true
+        val targetFloor = ClassroomPlanner.floorOf(room.RoomName)
+        onlyCurrentFree = false
+        selectedSlots = emptySet()
+        minCapacity = 0
+        selectedFilter = "教室名"
+        sortOrder = false
+        expandedFloors = setOf(targetFloor)
+
+        val grouped = info.ClassroomList
+            .sortedBy { it.RoomName }
+            .groupBy { ClassroomPlanner.floorOf(it.RoomName) }
+            .toSortedMap()
+        var index = 0
+        for ((floor, rooms) in grouped) {
+            if (floor == targetFloor) {
+                index += 1 + rooms.indexOfFirst { it.RoomName == room.RoomName }
+                break
+            }
+            index += 1
+        }
+        delay(350)
+        flashRoom = room.RoomName
+        if (index > 0) {
+            listState.animateScrollToItem(index.coerceAtMost(listState.layoutInfo.totalItemsCount.coerceAtLeast(1) - 1))
+        }
+        delay(900)
+        if (flashRoom == room.RoomName) flashRoom = null
     }
     Scaffold(
         modifier = Modifier.fillMaxSize()
@@ -394,27 +425,23 @@ fun ClassroomScreen(
                             label = { Text(if (selectedSlots.isEmpty()) "筛选" else "已选 " + selectedSlots.size + " 节") },
                             leadingIcon = { Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(18.dp)) },
                         )
-                        AssistChip(
-                            onClick = {
-                                val slots = if (selectedSlots.isEmpty()) {
-                                    if (currentSlot >= 0) setOf(currentSlot) else emptySet()
-                                } else selectedSlots
-                                plannerResult = if (slots.isEmpty()) {
-                                    PlannerResult.Failure("当前是课间，请先选择要规划的节次")
-                                } else {
-                                    ClassroomPlanner.plan(
-                                        rooms = info.ClassroomList.map { PlannerRoom(it.RoomName, it.Capacity) },
-                                        slotsByRoom = classroomMap,
-                                        slots = slots.toList(),
-                                        minCapacity = minCapacity,
-                                    )
-                                }
-                                showPlannerDialog = true
-                            },
-                            label = { Text("规划") },
-                            leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                        )
                     }
+                    AssistChip(
+                        onClick = {
+                            val currentHasFreeRoom = currentSlot >= 0 && (
+                                classroomMap.isEmpty() || info.ClassroomList.any { classroom ->
+                                    classroomMap[classroom.RoomName]?.getOrNull(currentSlot) == 0
+                                }
+                            )
+                            planSelectedSlots = if (currentHasFreeRoom) setOf(currentSlot) else emptySet()
+                            planCapacity = 0
+                            planError = null
+                            showPlanSetup = true
+                        },
+                        modifier = Modifier.padding(top = 4.dp),
+                        label = { Text("教室迁移规划 · 选择课时") },
+                        leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                    )
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -424,8 +451,7 @@ fun ClassroomScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         LegendDot(Color(0xFF34A853), "空闲")
-                        LegendDot(Color(0xFFEA4335), "占用")
-                        LegendDot(Color(0xFFF9AB00), "特殊")
+                        LegendDot(Color(0xFF9E9E9E), "已排课")
                         Text(
                             "圆形描边 = 当前节",
                             style = MaterialTheme.typography.labelSmall,
@@ -490,6 +516,7 @@ fun ClassroomScreen(
                 }
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
+                    state = listState,
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
 
@@ -547,7 +574,12 @@ fun ClassroomScreen(
                         }
                         if (floor in expandedFloors) {
                             items(rooms, key = { it.RoomName }) { classroom ->
-                                ClassroomCard(classroom, classroomMap, currentSlot) {
+                                ClassroomCard(
+                                    classroom = classroom,
+                                    classroomMap = classroomMap,
+                                    currentSlot = currentSlot,
+                                    highlighted = flashRoom == classroom.RoomName,
+                                ) {
                                     selectedClassroom.value = classroom.RoomName
                                     showDialog.value = true
                                 }
@@ -576,8 +608,12 @@ fun ClassroomScreen(
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 ) {
                                     repeat(7) { index ->
+                                        val enabled = classroomMap.isEmpty() || info.ClassroomList.any { classroom ->
+                                            classroomMap[classroom.RoomName]?.getOrNull(index) == 0
+                                        }
                                         FilterChip(
                                             selected = index in draftSlots,
+                                            enabled = enabled,
                                             onClick = {
                                                 draftSlots = if (index in draftSlots) draftSlots - index else draftSlots + index
                                             },
@@ -607,6 +643,77 @@ fun ClassroomScreen(
                         dismissButton = { TextButton(onClick = { showFilterDialog = false }) { Text("取消") } },
                     )
                 }
+                if (showPlanSetup) {
+                    val info = buildingInfo.value
+                    if (info != null) {
+                        fun hasFreeRoom(slot: Int): Boolean =
+                            classroomMap.isEmpty() || info.ClassroomList.any { classroom ->
+                                classroomMap[classroom.RoomName]?.getOrNull(slot) == 0
+                            }
+                        AlertDialog(
+                            onDismissRequest = { showPlanSetup = false },
+                            title = { Text("教室迁移规划") },
+                            text = {
+                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Text("选择需要连续空课的节次（可多选）", style = MaterialTheme.typography.bodySmall)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    ) {
+                                        repeat(7) { index ->
+                                            val enabled = hasFreeRoom(index)
+                                            FilterChip(
+                                                selected = index in planSelectedSlots,
+                                                enabled = enabled,
+                                                onClick = {
+                                                    planSelectedSlots = if (index in planSelectedSlots) {
+                                                        planSelectedSlots - index
+                                                    } else {
+                                                        planSelectedSlots + index
+                                                    }
+                                                    planError = null
+                                                },
+                                                label = { Text("第" + (index + 1) + "节", style = MaterialTheme.typography.labelSmall) },
+                                            )
+                                        }
+                                    }
+                                    if (planSelectedSlots.isEmpty()) {
+                                        Text("灰色节次表示该教学楼所有教室都有课，不能选择", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    OutlinedTextField(
+                                        value = planCapacity.toString(),
+                                        onValueChange = { planCapacity = it.filter(Char::isDigit).toIntOrNull() ?: 0 },
+                                        label = { Text("最小容量") },
+                                        singleLine = true,
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                    planError?.let {
+                                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
+                            },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    if (planSelectedSlots.isEmpty()) {
+                                        planError = "请至少选择一个节次"
+                                    } else {
+                                        plannerResult = ClassroomPlanner.plan(
+                                            rooms = info.ClassroomList.map { PlannerRoom(it.RoomName, it.Capacity) },
+                                            slotsByRoom = classroomMap,
+                                            slots = planSelectedSlots.toList(),
+                                            minCapacity = planCapacity,
+                                        )
+                                        showPlanSetup = false
+                                        showPlannerDialog = true
+                                    }
+                                }) { Text("生成规划") }
+                            },
+                            dismissButton = { TextButton(onClick = { showPlanSetup = false }) { Text("取消") } },
+                        )
+                    }
+                }
+
                 if (showPlannerDialog) {
                     AlertDialog(
                         onDismissRequest = { showPlannerDialog = false },
@@ -761,6 +868,7 @@ fun ClassroomCard(
     classroom: ClassroomCapacity,
     classroomMap: Map<String, List<Int>>,
     currentSlot: Int = getCurrentClassIndex(),
+    highlighted: Boolean = false,
     onClick: () -> Unit = {}
 ) {
     val slots = classroomMap[classroom.RoomName]
@@ -782,14 +890,29 @@ fun ClassroomCard(
     val ratio = if (classroom.Capacity > 0) {
         (classroom.Used.toFloat() / classroom.Capacity).coerceIn(0f, 1f)
     } else 0f
+    val cardColor by animateColorAsState(
+        targetValue = if (highlighted) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
+        animationSpec = tween(220),
+        label = "classroom-highlight",
+    )
 
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(vertical = 4.dp),
+            .padding(vertical = 4.dp)
+            .border(
+                width = if (highlighted) 2.dp else 1.dp,
+                color = if (highlighted) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.outlineVariant,
+                shape = MaterialTheme.shapes.large,
+            ),
         shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.elevatedCardColors(containerColor = cardColor),
         elevation = CardDefaults.elevatedCardElevation(0.dp),
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
