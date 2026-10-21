@@ -7,7 +7,9 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -50,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -353,49 +356,66 @@ fun StatusInfo(
     hasBackground: Boolean = false
 ) {
 
-    Column(
-        modifier = Modifier.padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            MailButton({
-                Column {
-                    Text("校内邮箱", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(
-                        text = if (newMailCount == "0") "暂无未读" else "$newMailCount 封未读",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-            }, navController, hasBackground)
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            EcardButton({
-                Column {
-                    Text("校园卡余额", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(ecardBalance, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                }
-            }, hasBackground)
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            NetButton({
-                Column {
-                    Text("校园网余额", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(netBalance, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                }
-            }, hasBackground)
-        }
+        MailButton(
+            content = { CompactStatusContent("邮件", if (newMailCount == "0") "无未读" else newMailCount + " 封") },
+            navController = navController,
+            hasBackground = hasBackground,
+            modifier = Modifier.weight(1f).height(96.dp),
+            compact = true,
+        )
+        EcardButton(
+            content = { CompactStatusContent("校园卡", ecardBalance) },
+            hasBackground = hasBackground,
+            modifier = Modifier.weight(1f).height(96.dp),
+            compact = true,
+        )
+        NetButton(
+            content = { CompactStatusContent("校园网", netBalance) },
+            hasBackground = hasBackground,
+            modifier = Modifier.weight(1f).height(96.dp),
+            compact = true,
+        )
     }
 
 }
 
 @Composable
-fun MailButton(content: @Composable () -> Unit, navController: NavController, hasBackground: Boolean = false) {
+private fun CompactStatusContent(label: String, value: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+fun MailButton(
+    content: @Composable () -> Unit,
+    navController: NavController,
+    hasBackground: Boolean = false,
+    modifier: Modifier = Modifier.fillMaxWidth(),
+    compact: Boolean = false,
+) {
     Button(
         onClick = {
             navController.navigate(RouteManager.Email)
         },
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         shape = MaterialTheme.shapes.large,
         border = if (hasBackground) androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = 0.35f)) else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         colors = ButtonDefaults.buttonColors(
@@ -415,28 +435,34 @@ fun MailButton(content: @Composable () -> Unit, navController: NavController, ha
                 imageVector = Icons.Default.Email,
                 contentDescription = "New Mail",
                 tint = if (hasBackground) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(if (compact) 22.dp else 28.dp)
             )
-            Spacer(modifier = Modifier.width(16.dp))
-            content()
-            Spacer(modifier = Modifier.weight(1f))
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Open",
-                tint = if (hasBackground) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Spacer(modifier = Modifier.width(if (compact) 8.dp else 16.dp))
+            Box(modifier = Modifier.weight(1f)) { content() }
+            if (!compact) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = "Open",
+                    tint = if (hasBackground) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
 
 @Composable
-fun EcardButton(content: @Composable () -> Unit, hasBackground: Boolean = false) {
+fun EcardButton(
+    content: @Composable () -> Unit,
+    hasBackground: Boolean = false,
+    modifier: Modifier = Modifier.fillMaxWidth(),
+    compact: Boolean = false,
+) {
     val context = LocalContext.current
     var showDialog by remember { mutableStateOf(false) }
 
     Button(
         onClick = { showDialog = true },
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         shape = MaterialTheme.shapes.large,
         border = if (hasBackground) androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = 0.35f)) else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         colors = ButtonDefaults.buttonColors(
@@ -456,16 +482,17 @@ fun EcardButton(content: @Composable () -> Unit, hasBackground: Boolean = false)
                 imageVector = Icons.Default.AccountBalanceWallet,
                 contentDescription = "Ecard Balance",
                 tint = if (hasBackground) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(if (compact) 22.dp else 28.dp)
             )
-            Spacer(modifier = Modifier.width(16.dp))
-            content()
-            Spacer(modifier = Modifier.weight(1f))
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Open",
-                tint = if (hasBackground) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Spacer(modifier = Modifier.width(if (compact) 8.dp else 16.dp))
+            Box(modifier = Modifier.weight(1f)) { content() }
+            if (!compact) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = "Open",
+                    tint = if (hasBackground) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 
@@ -514,13 +541,18 @@ fun shareToWeChat(context: Context) {
 }
 
 @Composable
-fun NetButton(content: @Composable () -> Unit, hasBackground: Boolean = false) {
+fun NetButton(
+    content: @Composable () -> Unit,
+    hasBackground: Boolean = false,
+    modifier: Modifier = Modifier.fillMaxWidth(),
+    compact: Boolean = false,
+) {
     val context = LocalContext.current
     var showDialog by remember { mutableStateOf(false) }
 
     Button(
         onClick = { showDialog = true },
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         shape = MaterialTheme.shapes.large,
         border = if (hasBackground) androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = 0.35f)) else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         colors = ButtonDefaults.buttonColors(
@@ -540,16 +572,17 @@ fun NetButton(content: @Composable () -> Unit, hasBackground: Boolean = false) {
                 imageVector = Icons.Default.Wifi,
                 contentDescription = "Net Balance",
                 tint = if (hasBackground) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(28.dp)
+                modifier = Modifier.size(if (compact) 22.dp else 28.dp)
             )
-            Spacer(modifier = Modifier.width(16.dp))
-            content()
-            Spacer(modifier = Modifier.weight(1f))
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Open",
-                tint = if (hasBackground) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Spacer(modifier = Modifier.width(if (compact) 8.dp else 16.dp))
+            Box(modifier = Modifier.weight(1f)) { content() }
+            if (!compact) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = "Open",
+                    tint = if (hasBackground) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 
