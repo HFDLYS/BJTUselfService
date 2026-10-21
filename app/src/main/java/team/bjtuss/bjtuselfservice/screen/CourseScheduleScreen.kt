@@ -60,6 +60,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
+import androidx.navigation.NavController
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
 import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 import team.bjtuss.bjtuselfservice.utils.Utils
@@ -71,6 +72,20 @@ import java.util.Calendar
 data class MenuItem(
     val content: @Composable () -> Unit,
     val onClick: () -> Unit
+)
+
+private val CAMPUS_BUILDINGS = listOf(
+    "第十七号教学楼",
+    "思源楼",
+    "思源西楼",
+    "思源东楼",
+    "第九教学楼",
+    "第八教学楼",
+    "第五教学楼",
+    "逸夫教学楼",
+    "机械楼",
+    "东区二教",
+    "东区一教",
 )
 
 private val COURSE_SLOT_RANGES = listOf(
@@ -138,6 +153,7 @@ fun GradeTopMenu(menuItemList: List<MenuItem>) {
 @Composable
 fun CourseScheduleScreen(
     mainViewModel: MainViewModel,
+    navController: NavController,
 ) {
     val courseScheduleViewModel = mainViewModel.courseScheduleViewModel
     val classroomViewModel = mainViewModel.classroomViewModel
@@ -301,7 +317,16 @@ fun CourseScheduleScreen(
             courseTimes = courseTimes,
             selectedWeek = selectedWeek,
             currentSlot = currentSlot,
-            highlightCurrent = !currentTerm && currentWeek > 0 && selectedWeek == currentWeek
+            highlightCurrent = !currentTerm && currentWeek > 0 && selectedWeek == currentWeek,
+            onOpenClassroom = { target ->
+                val pieces = target.split("|", limit = 2)
+                val building = pieces.getOrNull(0).orEmpty()
+                val room = pieces.getOrNull(1).orEmpty()
+                navController.navigate(
+                    "ClassroomDetection/" + android.net.Uri.encode(building) +
+                        "?room=" + android.net.Uri.encode(room)
+                )
+            },
         )
     }
 }
@@ -315,6 +340,7 @@ fun CourseScheduleContent(
     selectedWeek: Int,
     currentSlot: CurrentCourseSlot? = null,
     highlightCurrent: Boolean = false,
+    onOpenClassroom: (String) -> Unit = {},
 ) {
 
     Column(modifier = modifier) {
@@ -412,6 +438,7 @@ fun CourseScheduleContent(
                 nowWeek = selectedWeek,
                 currentSlot = currentSlot,
                 highlightCurrent = highlightCurrent,
+                onOpenClassroom = onOpenClassroom,
             )
         }
     }
@@ -423,6 +450,7 @@ fun CourseScheduleGrid(
     nowWeek: Int,
     currentSlot: CurrentCourseSlot? = null,
     highlightCurrent: Boolean = false,
+    onOpenClassroom: (String) -> Unit = {},
 ) {
     val weekDays: Int = 7
     val courseTimes: Int = 7
@@ -446,6 +474,7 @@ fun CourseScheduleGrid(
                         modifier = Modifier.weight(1f),
                         nowWeek = nowWeek,
                         isCurrent = isCurrent,
+                        onOpenClassroom = onOpenClassroom,
                     )
                 }
             }
@@ -480,6 +509,7 @@ fun CourseCell(
     modifier: Modifier = Modifier,
     nowWeek: Int,
     isCurrent: Boolean = false,
+    onOpenClassroom: (String) -> Unit = {},
 ) {
     var showDetailedCourseInformationDialog by remember { mutableStateOf(false) }
     var coursesFiltered: List<CourseEntity>? = null
@@ -581,9 +611,13 @@ fun CourseCell(
     }
     if (showDetailedCourseInformationDialog) {
         coursesFiltered?.let {
-            DetailedCourseInformationDialog(courses = it, onDismissRequest = {
-                showDetailedCourseInformationDialog = false
-            })
+            DetailedCourseInformationDialog(
+                courses = it,
+                onDismissRequest = {
+                    showDetailedCourseInformationDialog = false
+                },
+                onOpenClassroom = onOpenClassroom,
+            )
         }
     }
 }
@@ -593,7 +627,8 @@ fun CourseCell(
 @Composable
 fun DetailedCourseInformationDialog(
     courses: List<CourseEntity>,
-    onDismissRequest: () -> Unit = {}
+    onDismissRequest: () -> Unit = {},
+    onOpenClassroom: (String) -> Unit = {},
 ) {
 
     BasicAlertDialog(
@@ -661,7 +696,7 @@ fun DetailedCourseInformationDialog(
                                     course.courseTime,
                                     Icons.Default.Schedule
                                 )
-                                CourseDetailRow("上课地点", course.coursePlace, Icons.Default.Place)
+                                CourseLocationRow(course, onOpenClassroom)
                             }
                         }
                     }
@@ -669,6 +704,88 @@ fun DetailedCourseInformationDialog(
             }
         }
     )
+}
+
+@Composable
+fun CourseLocationRow(course: CourseEntity, onOpenClassroom: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    val currentWeek by DataStoreRepository.getCurrentWeek().collectAsState(initial = 0)
+    val parts = course.coursePlace.split(',', '，').map { it.trim() }.filter { it.isNotBlank() }
+    val building = parts.firstOrNull { part ->
+        CAMPUS_BUILDINGS.any { part.contains(it) }
+    }
+    val room = parts.lastOrNull()?.takeIf { it.matches(Regex("[A-Za-z]+\\d+.*")) }
+    val index = course.courseLocationIndex
+    val day = index % 8
+    val slot = index / 8
+    val nowDay = Calendar.getInstance().get(Calendar.DAY_OF_WEEK).let {
+        if (it == Calendar.SUNDAY) 7 else it - 1
+    }
+    val ongoing = currentWeek > 0 &&
+        currentWeek in parseCourseTime(course.courseTime) &&
+        day == nowDay &&
+        slot == getCurrentClassIndex()
+    val statusColor = if (ongoing) Color(0xFFEA4335) else Color(0xFF34A853)
+    val statusText = if (ongoing) "正在上课" else "当前无课"
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = true },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Place,
+                contentDescription = "上课地点",
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Column {
+                Text(
+                    text = "上课地点",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                )
+                Text(
+                    text = course.coursePlace,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            DropdownMenuItem(
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(9.dp)
+                                .background(statusColor, androidx.compose.foundation.shape.CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(statusText, color = statusColor, fontWeight = FontWeight.Medium)
+                    }
+                },
+                onClick = {
+                    expanded = false
+                    if (building != null) onOpenClassroom(building + "|" + (room ?: ""))
+                },
+            )
+            if (building != null) {
+                DropdownMenuItem(
+                    text = { Text("查看 " + building + " 教室人数评估") },
+                    onClick = {
+                        expanded = false
+                        onOpenClassroom(building + "|" + (room ?: ""))
+                    },
+                )
+            }
+        }
+    }
 }
 
 @Composable
