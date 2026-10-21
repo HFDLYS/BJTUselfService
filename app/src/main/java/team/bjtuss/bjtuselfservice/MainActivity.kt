@@ -86,6 +86,7 @@ import dev.jeziellago.compose.markdowntext.MarkdownText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import team.bjtuss.bjtuselfservice.reminder.ClassroomReservationScheduler
 import team.bjtuss.bjtuselfservice.reminder.ReminderScheduler
 import team.bjtuss.bjtuselfservice.reminder.ClassroomSubscriptionWorker
 import team.bjtuss.bjtuselfservice.reminder.StudyStatusService
@@ -98,6 +99,7 @@ import team.bjtuss.bjtuselfservice.MainApplication.Companion.appContext
 import team.bjtuss.bjtuselfservice.RouteManager.ClassroomDetection
 import team.bjtuss.bjtuselfservice.repository.fetchLatestRelease
 import team.bjtuss.bjtuselfservice.screen.BuildingScreen
+import team.bjtuss.bjtuselfservice.screen.ClassroomReservationsScreen
 import team.bjtuss.bjtuselfservice.screen.RandomClassroomScreen
 import team.bjtuss.bjtuselfservice.screen.ClassroomScreen
 import team.bjtuss.bjtuselfservice.screen.CourseScheduleScreen
@@ -162,6 +164,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             delay(4000)
             ReminderScheduler.reschedule(applicationContext)
+            ClassroomReservationScheduler.rescheduleAll(applicationContext)
             runCatching {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     startForegroundService(Intent(this@MainActivity, StudyStatusService::class.java))
@@ -368,6 +371,9 @@ fun App(mainViewModel: MainViewModel, hasBackground: Boolean = false) {
         composable(RouteManager.RandomClassroom) {
             RandomClassroomScreen(navController, mainViewModel)
         }
+        composable(RouteManager.ClassroomReservations) {
+            ClassroomReservationsScreen(navController)
+        }
         composable(
             route = ClassroomDetection,
             arguments = listOf(
@@ -489,6 +495,7 @@ object RouteManager {
     const val ExamSchedule: String = "Exam"
     const val Building: String = "Building"
     const val RandomClassroom: String = "RandomClassroom"
+    const val ClassroomReservations: String = "ClassroomReservations"
     const val ClassroomDetection: String = "ClassroomDetection/{buildingName}?room={room}"
     const val Grade: String = "Grade"
     const val CourseSchedule: String = "CourseSchedule"

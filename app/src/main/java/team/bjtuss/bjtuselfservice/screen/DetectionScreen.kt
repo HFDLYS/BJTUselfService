@@ -79,6 +79,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import team.bjtuss.bjtuselfservice.R
 import team.bjtuss.bjtuselfservice.component.RotatingImageLoader
+import team.bjtuss.bjtuselfservice.reminder.ClassroomReservation
+import team.bjtuss.bjtuselfservice.reminder.ClassroomReservationScheduler
 import team.bjtuss.bjtuselfservice.reminder.ClassroomSubscription
 import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 import team.bjtuss.bjtuselfservice.utils.ClassroomPlanner
@@ -91,6 +93,8 @@ import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService.getClassroomCapa
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
@@ -854,6 +858,7 @@ fun ClassroomViewDialog(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    var showReservationDialog by remember { mutableStateOf(false) }
     val slot = getCurrentClassIndex()
     val status = if (slot >= 0) classroomMap[classroomName]?.getOrNull(slot) else null
     val statusText = when {
@@ -870,6 +875,9 @@ fun ClassroomViewDialog(
                 Text("教学楼：$buildingName")
                 Text("教室：$classroomName")
                 Text("当前状态：$statusText", color = if (status == 0) Color(0xFF34A853) else MaterialTheme.colorScheme.onSurfaceVariant)
+                Button(onClick = { showReservationDialog = true }) {
+                    Text("预约这间教室")
+                }
                 if (slot >= 0) {
                     Button(onClick = {
                         val calendar = Calendar.getInstance()
@@ -905,6 +913,120 @@ fun ClassroomViewDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) { Text("知道了") }
         }
+    )
+    if (showReservationDialog) {
+        ClassroomReservationDialog(
+            buildingName = buildingName,
+            classroomName = classroomName,
+            classroomMap = classroomMap,
+            onDismiss = { showReservationDialog = false },
+        )
+    }
+}
+
+@Composable
+private fun ClassroomReservationDialog(
+    buildingName: String,
+    classroomName: String,
+    classroomMap: Map<String, List<Int>>,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    var selectedSlots by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val dates = (0..6).map { LocalDate.now().plusDays(it.toLong()) }
+    val slots = classroomMap[classroomName].orEmpty()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("预约教室") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    buildingName + " " + classroomName,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    "选择日期",
+                    style = MaterialTheme.typography.labelLarge,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    dates.forEach { date ->
+                        FilterChip(
+                            selected = selectedDate == date,
+                            onClick = { selectedDate = date; error = null },
+                            label = {
+                                Text(
+                                    when (date) {
+                                        LocalDate.now() -> "今天"
+                                        LocalDate.now().plusDays(1) -> "明天"
+                                        else -> date.format(DateTimeFormatter.ofPattern("MM/dd"))
+                                    }
+                                )
+                            },
+                        )
+                    }
+                }
+                Text("选择节次（按本周课表校验）", style = MaterialTheme.typography.labelLarge)
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    repeat(7) { index ->
+                        val occupied = slots.getOrNull(index) != 0 && slots.isNotEmpty()
+                        FilterChip(
+                            selected = index in selectedSlots,
+                            enabled = !occupied,
+                            onClick = {
+                                selectedSlots = if (index in selectedSlots) {
+                                    selectedSlots - index
+                                } else {
+                                    selectedSlots + index
+                                }
+                                error = null
+                            },
+                            label = { Text("第" + (index + 1) + "节") },
+                        )
+                    }
+                }
+                Text(
+                    "仅保存在本机，不会同步学校预约系统；开始前 10 分钟通过通知提醒。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                error?.let {
+                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                if (selectedSlots.isEmpty()) {
+                    error = "请至少选择一个节次"
+                    return@TextButton
+                }
+                val reservation = ClassroomReservation(
+                    id = System.currentTimeMillis(),
+                    building = buildingName,
+                    room = classroomName,
+                    date = selectedDate.toString(),
+                    slots = selectedSlots.sorted(),
+                )
+                scope.launch {
+                    DataStoreRepository.addClassroomReservation(reservation)
+                    ClassroomReservationScheduler.schedule(context, reservation)
+                    Toast.makeText(context, "已预约，开始前会提醒", Toast.LENGTH_SHORT).show()
+                    onDismiss()
+                }
+            }) { Text("确认预约") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
     )
 }
 

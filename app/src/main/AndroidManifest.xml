@@ -65,6 +65,13 @@
             android:foregroundServiceType="dataSync" />
 
         <receiver
+            android:name=".reminder.ClassroomReservationReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".reminder.ClassroomReservationActionReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".reminder.ReminderReceiver"
             android:exported="false" />
 

@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import team.bjtuss.bjtuselfservice.MainApplication.Companion.appContext
 import team.bjtuss.bjtuselfservice.entity.GradeSelectionRecord
+import team.bjtuss.bjtuselfservice.reminder.ClassroomReservation
 import team.bjtuss.bjtuselfservice.reminder.ClassroomSubscription
 import team.bjtuss.bjtuselfservice.statemanager.Credentials
 
@@ -46,6 +47,7 @@ object DataStoreRepository {
     private val EXAM_REMINDER_ENABLED_KEY = booleanPreferencesKey("exam_reminder_enabled")
     private val EXAM_REMINDER_LEAD_KEY = stringPreferencesKey("exam_reminder_lead_minutes")
     private val CLASSROOM_SUBSCRIPTIONS_KEY = stringPreferencesKey("classroom_subscriptions")
+    private val CLASSROOM_RESERVATIONS_KEY = stringPreferencesKey("classroom_reservations")
 
 
     suspend fun setCredentials(credentials: Credentials) {
@@ -328,6 +330,33 @@ object DataStoreRepository {
             }
         appContext.dataStore.edit {
             it[CLASSROOM_SUBSCRIPTIONS_KEY] = gson.toJson(current)
+        }
+    }
+
+    fun getClassroomReservations(): Flow<List<ClassroomReservation>> =
+        appContext.dataStore.data.map { preferences ->
+            val raw = preferences[CLASSROOM_RESERVATIONS_KEY] ?: return@map emptyList()
+            runCatching {
+                gson.fromJson<List<ClassroomReservation>>(
+                    raw,
+                    object : TypeToken<List<ClassroomReservation>>() {}.type,
+                )
+            }.getOrDefault(emptyList())
+        }
+
+    suspend fun addClassroomReservation(reservation: ClassroomReservation) {
+        val current = getClassroomReservations().first()
+            .filterNot { it.id == reservation.id }
+            .plus(reservation)
+        appContext.dataStore.edit {
+            it[CLASSROOM_RESERVATIONS_KEY] = gson.toJson(current)
+        }
+    }
+
+    suspend fun removeClassroomReservation(id: Long) {
+        val current = getClassroomReservations().first().filterNot { it.id == id }
+        appContext.dataStore.edit {
+            it[CLASSROOM_RESERVATIONS_KEY] = gson.toJson(current)
         }
     }
 

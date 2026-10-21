@@ -103,6 +103,7 @@ class ReminderBootReceiver : BroadcastReceiver() {
         val pending = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             runCatching { ReminderScheduler.reschedule(context.applicationContext) }
+            runCatching { ClassroomReservationScheduler.rescheduleAll(context.applicationContext) }
             pending.finish()
         }
     }
