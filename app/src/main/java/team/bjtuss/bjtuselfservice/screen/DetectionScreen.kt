@@ -12,6 +12,7 @@ import android.webkit.WebViewClient
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,22 +27,35 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Apartment
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -56,6 +70,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -63,14 +79,21 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import team.bjtuss.bjtuselfservice.R
-import team.bjtuss.bjtuselfservice.component.RotatingImageLoader
 import team.bjtuss.bjtuselfservice.constant.ApiConstant.CLASSROOM_VIEW_URL
+import team.bjtuss.bjtuselfservice.component.RotatingImageLoader
+import team.bjtuss.bjtuselfservice.utils.ClassroomPlanner
+import team.bjtuss.bjtuselfservice.utils.PlannerResult
+import team.bjtuss.bjtuselfservice.utils.PlannerRoom
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService.ClassroomCapacity
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService.getClassroomCapacity
+import kotlinx.coroutines.delay
 import java.nio.charset.StandardCharsets
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun BuildingScreen(navController: NavController) {
@@ -108,15 +131,27 @@ fun BuildingScreen(navController: NavController) {
                     modifier = Modifier.padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        modifier = Modifier.fillMaxWidth(),
-                        text = "请择欲往之教学楼",
-                        style = MaterialTheme.typography.headlineLarge.copy(
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold,
-                        ),
-                        textAlign = TextAlign.Center
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Apartment,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(34.dp),
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "教学楼",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                text = "查看实时人数、当前空闲与智能规划",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                 }
             }
             LazyColumn(
@@ -135,17 +170,41 @@ fun BuildingScreen(navController: NavController) {
                             navController.navigate("ClassroomDetection" + "/${buildingList[index]}")
                         }
                     ) {
-                        Box(
-                            modifier = Modifier.padding(16.dp),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(
-                                modifier = Modifier.fillMaxWidth(),
-                                text = buildingList[index],
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    color = MaterialTheme.colorScheme.onSurface
-                                ),
-                                textAlign = TextAlign.Center
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Default.Apartment,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            }
+                            Spacer(Modifier.width(14.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = buildingList[index],
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                                Text(
+                                    text = "实时人数 / 空闲节次 / 智能规划",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Icon(
+                                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -153,6 +212,30 @@ fun BuildingScreen(navController: NavController) {
             }
         }
     }
+}
+
+private val CLASS_TIME_LABELS = listOf(
+    "第1节 08:00-10:00",
+    "第2节 10:00-12:20",
+    "第3节 12:20-14:10",
+    "第4节 14:10-16:10",
+    "第5节 16:10-18:10",
+    "第6节 19:00-21:00",
+    "第7节 21:00-22:00",
+)
+
+private fun slotLabel(index: Int): String = CLASS_TIME_LABELS.getOrNull(index) ?: "课间"
+
+private fun currentTimeLabel(): String =
+    SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+
+private fun statusColor(status: Int?, fallback: Color): Color = when (status) {
+    0 -> Color(0xFF34A853)
+    1, 2 -> Color(0xFFEA4335)
+    3 -> Color(0xFF1A73E8)
+    4 -> Color(0xFF0F9D58)
+    5 -> Color(0xFFF9AB00)
+    else -> fallback
 }
 
 fun getCurrentClassIndex(): Int {
@@ -201,6 +284,20 @@ fun ClassroomScreen(
     var filterExpanded by remember { mutableStateOf(false) }
     var selectedFilter by remember { mutableStateOf("教室名") }
     var sortOrder by remember { mutableStateOf(false) }
+    var onlyCurrentFree by remember { mutableStateOf(false) }
+    var selectedSlots by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    var minCapacity by remember { mutableStateOf(0) }
+    var showFilterDialog by remember { mutableStateOf(false) }
+    var showPlannerDialog by remember { mutableStateOf(false) }
+    var plannerResult by remember { mutableStateOf<PlannerResult?>(null) }
+    var nowTick by remember { mutableStateOf(0L) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30_000)
+            nowTick++
+        }
+    }
+    val currentSlot = remember(nowTick) { getCurrentClassIndex() }
 
     val showDialog = remember { mutableStateOf(false) }
     val selectedClassroom = remember { mutableStateOf<String>("") }
@@ -229,18 +326,16 @@ fun ClassroomScreen(
                     )
                 ) {
                     Text(
-                        text = info.BuildingName,
-                        style = MaterialTheme.typography.headlineLarge.copy(
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold,
-                        ),
+                        text = buildingName,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 1.dp),
                     )
                     Text(
-                        text = "有效期：${info.EffectiveDateStart} 至 ${info.EffectiveDateEnd}",
+                        text = "数据时间 " + info.EffectiveDateStart.take(16),
                         style = MaterialTheme.typography.bodyMedium.copy(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         ),
@@ -249,6 +344,92 @@ fun ClassroomScreen(
                             .fillMaxWidth()
                             .padding(vertical = 8.dp),
                     )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        AssistChip(onClick = {}, label = { Text("现在 " + currentTimeLabel()) })
+                        AssistChip(
+                            onClick = {},
+                            label = { Text(if (currentSlot >= 0) slotLabel(currentSlot) else "课间") },
+                        )
+                        AssistChip(
+                            onClick = {},
+                            label = {
+                                Text(
+                                    "当前空闲 " + info.ClassroomList.count { classroom ->
+                                        if (currentSlot >= 0) classroomMap[classroom.RoomName]?.getOrNull(currentSlot) == 0
+                                        else classroom.readableUsed != null
+                                    } + " 间"
+                                )
+                            },
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(bottom = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        FilterChip(
+                            selected = !onlyCurrentFree && selectedSlots.isEmpty() && minCapacity == 0,
+                            onClick = {
+                                onlyCurrentFree = false
+                                selectedSlots = emptySet()
+                                minCapacity = 0
+                            },
+                            label = { Text("全部") },
+                        )
+                        FilterChip(
+                            selected = onlyCurrentFree,
+                            onClick = {
+                                onlyCurrentFree = !onlyCurrentFree
+                                selectedSlots = emptySet()
+                            },
+                            label = { Text("当前空闲") },
+                        )
+                        AssistChip(
+                            onClick = { showFilterDialog = true },
+                            label = { Text(if (selectedSlots.isEmpty()) "筛选" else "已选 " + selectedSlots.size + " 节") },
+                            leadingIcon = { Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                        )
+                        AssistChip(
+                            onClick = {
+                                val slots = if (selectedSlots.isEmpty()) {
+                                    if (currentSlot >= 0) setOf(currentSlot) else emptySet()
+                                } else selectedSlots
+                                plannerResult = if (slots.isEmpty()) {
+                                    PlannerResult.Failure("当前是课间，请先选择要规划的节次")
+                                } else {
+                                    ClassroomPlanner.plan(
+                                        rooms = info.ClassroomList.map { PlannerRoom(it.RoomName, it.Capacity) },
+                                        slotsByRoom = classroomMap,
+                                        slots = slots.toList(),
+                                        minCapacity = minCapacity,
+                                    )
+                                }
+                                showPlannerDialog = true
+                            },
+                            label = { Text("规划") },
+                            leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp)
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        LegendDot(Color(0xFF34A853), "空闲")
+                        LegendDot(Color(0xFFEA4335), "占用")
+                        LegendDot(Color(0xFFF9AB00), "特殊")
+                    }
                 }
                 Row(
                     modifier = Modifier
@@ -310,18 +491,44 @@ fun ClassroomScreen(
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
 
-                    var filteredClassroomList = when (selectedFilter) {
-                        "教室名" -> info.ClassroomList.sortedBy { it.RoomName }
-                        "占用率" -> info.ClassroomList.sortedBy { it.Used.toDouble() / it.Capacity }
-                        "人数" -> info.ClassroomList.sortedBy { it.Used }
-                        else -> info.ClassroomList
+                    var filteredClassroomList = info.ClassroomList.filter { classroom ->
+                        val slots = classroomMap[classroom.RoomName]
+                        val freeNow = if (currentSlot >= 0) {
+                            slots?.getOrNull(currentSlot) == 0
+                        } else {
+                            classroom.readableUsed != null
+                        }
+                        classroom.Capacity >= minCapacity &&
+                            (!onlyCurrentFree || freeNow) &&
+                            (selectedSlots.isEmpty() || selectedSlots.all { slots?.getOrNull(it) == 0 })
+                    }
+                    filteredClassroomList = when (selectedFilter) {
+                        "教室名" -> filteredClassroomList.sortedBy { it.RoomName }
+                        "占用率" -> filteredClassroomList.sortedBy {
+                            it.occupancyRatio ?: Double.POSITIVE_INFINITY
+                        }
+                        "人数" -> filteredClassroomList.sortedBy { it.readableUsed ?: Int.MAX_VALUE }
+                        else -> filteredClassroomList
                     }
                     if (sortOrder) {
                         filteredClassroomList = filteredClassroomList.reversed()
                     }
-                    items(info.ClassroomList.size) { index ->
+                    if (selectedFilter == "占用率" || selectedFilter == "人数") {
+                        filteredClassroomList = filteredClassroomList.sortedBy { it.readableUsed == null }
+                    }
+                    if (filteredClassroomList.isEmpty()) {
+                        item {
+                            Text(
+                                "没有符合条件的教室，试试减少节次或降低容量要求",
+                                modifier = Modifier.fillMaxWidth().padding(24.dp),
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    items(filteredClassroomList.size) { index ->
                         val classroom = filteredClassroomList[index]
-                        ClassroomCard(classroom, classroomMap) {
+                        ClassroomCard(classroom, classroomMap, currentSlot) {
                             selectedClassroom.value = classroom.RoomName
                             showDialog.value = true
                         }
@@ -332,6 +539,91 @@ fun ClassroomScreen(
                         onDismiss = { showDialog.value = false },
                         buildingName = buildingName,
                         classroomName = selectedClassroom.value
+                    )
+                }
+                if (showFilterDialog) {
+                    var draftSlots by remember(showFilterDialog) { mutableStateOf(selectedSlots) }
+                    var draftCapacity by remember(showFilterDialog) { mutableStateOf(minCapacity.toString()) }
+                    AlertDialog(
+                        onDismissRequest = { showFilterDialog = false },
+                        title = { Text("筛选空闲教室") },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text("选择节次（可多选，要求这些节次全部空闲）", style = MaterialTheme.typography.bodySmall)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                ) {
+                                    repeat(7) { index ->
+                                        FilterChip(
+                                            selected = index in draftSlots,
+                                            onClick = {
+                                                draftSlots = if (index in draftSlots) draftSlots - index else draftSlots + index
+                                            },
+                                            label = { Text("第" + (index + 1) + "节", style = MaterialTheme.typography.labelSmall) },
+                                        )
+                                    }
+                                }
+                                OutlinedTextField(
+                                    value = draftCapacity,
+                                    onValueChange = { draftCapacity = it.filter(Char::isDigit) },
+                                    label = { Text("最小容量") },
+                                    singleLine = true,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                                Text("当前仅包含今天的课表数据", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                selectedSlots = draftSlots
+                                minCapacity = draftCapacity.toIntOrNull() ?: 0
+                                onlyCurrentFree = false
+                                showFilterDialog = false
+                            }) { Text("应用") }
+                        },
+                        dismissButton = { TextButton(onClick = { showFilterDialog = false }) { Text("取消") } },
+                    )
+                }
+                if (showPlannerDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showPlannerDialog = false },
+                        title = { Text("教室迁移规划") },
+                        text = {
+                            when (val result = plannerResult) {
+                                is PlannerResult.Success -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("按楼层差最小生成路径", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    result.steps.forEach { step ->
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Surface(
+                                                shape = CircleShape,
+                                                color = MaterialTheme.colorScheme.primaryContainer,
+                                                modifier = Modifier.size(28.dp),
+                                            ) {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Text((step.slot + 1).toString(), style = MaterialTheme.typography.labelMedium)
+                                                }
+                                            }
+                                            Spacer(Modifier.width(10.dp))
+                                            Column {
+                                                Text(step.room, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                                                Text(
+                                                    ClassroomPlanner.floorOf(step.room).toString() + " 层 · " + slotLabel(step.slot),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
+                                        }
+                                    }
+                                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                                    Text("总换层数：" + result.floorChanges + " 层", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                }
+                                is PlannerResult.Failure -> Text(result.reason, color = MaterialTheme.colorScheme.error)
+                                null -> Text("暂无规划结果")
+                            }
+                        },
+                        confirmButton = { TextButton(onClick = { showPlannerDialog = false }) { Text("知道了") } },
                     )
                 }
             } ?: run {
@@ -348,6 +640,24 @@ fun ClassroomScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun LegendDot(color: Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(9.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -415,113 +725,115 @@ fun ClassroomViewDialog(
 fun ClassroomCard(
     classroom: ClassroomCapacity,
     classroomMap: Map<String, List<Int>>,
+    currentSlot: Int = getCurrentClassIndex(),
     onClick: () -> Unit = {}
 ) {
+    val slots = classroomMap[classroom.RoomName]
+    val readableUsed = classroom.readableUsed
+    val nowFree = when {
+        currentSlot >= 0 -> slots?.getOrNull(currentSlot)?.takeIf { it >= 0 }?.let { it == 0 }
+        readableUsed != null -> true
+        else -> null
+    }
+    val statusLabel = when (nowFree) {
+        true -> "当前空闲"
+        false -> "当前有课"
+        null -> "状态未知"
+    }
+    val tint = when (nowFree) {
+        true -> Color(0xFF34A853)
+        false -> Color(0xFFEA4335)
+        null -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val ratio = classroom.occupancyRatio?.toFloat()
+
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(vertical = 8.dp),
+            .padding(vertical = 4.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(),
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = classroom.RoomName,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                )
-                if (classroom.Used < classroom.Capacity) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "使用：${classroom.Used}/${classroom.Capacity}",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
+                        text = classroom.RoomName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = ClassroomPlanner.floorOf(classroom.RoomName).toString() + " 层 · 容量 " + classroom.Capacity + " 人",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = tint.copy(alpha = 0.12f),
+                ) {
+                    Text(
+                        statusLabel,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = tint,
+                        fontWeight = FontWeight.SemiBold,
                     )
                 }
             }
-
-            val progress = if (classroom.Capacity > 0) {
-                classroom.Used.toFloat() / classroom.Capacity.toFloat()
-            } else {
-                0f
-            }
-
-            if (classroom.Used < classroom.Capacity) {
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, bottom = 8.dp, top = 8.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surface,
-                )
-            } else {
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "无法读取本教室人数",
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = MaterialTheme.colorScheme.error,
-                        fontStyle = FontStyle.Italic,
-                        fontSize = 12.sp
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, bottom = 4.dp),
+                    if (readableUsed != null) "实时使用 $readableUsed/${classroom.Capacity}"
+                    else "无法读取本教室人数",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    if (currentSlot >= 0) slotLabel(currentSlot) else "课间",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-
+            if (ratio != null) {
+                LinearProgressIndicator(
+                    progress = { ratio },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    color = when {
+                        ratio >= 1f -> Color(0xFFEA4335)
+                        ratio >= 0.8f -> Color(0xFFF9AB00)
+                        else -> Color(0xFF34A853)
+                    },
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                )
+            }
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
-                horizontalArrangement = Arrangement.Start
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 repeat(7) { index ->
-                    var color = MaterialTheme.colorScheme.surface
-                    if (classroomMap.contains(classroom.RoomName)) {
-                        when (classroomMap[classroom.RoomName]!![index]) {
-                            0 -> color = MaterialTheme.colorScheme.surface
-                            1 -> color = Color(0xffe46868)
-                            2 -> color = Color(0xff9e6868)
-                            3 -> color = Color(0xff394ed6)
-                            4 -> color = Color(0xff77bf6d)
-                            5 -> color = Color(0xffd8cc56)
-                        }
-                    }
-                    Box(
-                        modifier = Modifier
-                            .size(16.dp)
-                            .clip(CircleShape)
-                            .border(
-                                2.dp,
-                                if (getCurrentClassIndex() == index) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                                CircleShape
-                            )
-                            .padding(4.dp),
-                    ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
+                                .size(18.dp)
                                 .clip(CircleShape)
-                                .background(color)
+                                .background(statusColor(slots?.getOrNull(index), MaterialTheme.colorScheme.surfaceVariant))
+                                .border(
+                                    width = if (currentSlot == index) 2.dp else 0.dp,
+                                    color = if (currentSlot == index) MaterialTheme.colorScheme.error else Color.Transparent,
+                                    shape = CircleShape,
+                                ),
                         )
-                    }
-                    if (index < 6) {
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            (index + 1).toString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }

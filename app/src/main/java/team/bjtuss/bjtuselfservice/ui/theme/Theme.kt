@@ -2,7 +2,9 @@ package team.bjtuss.bjtuselfservice.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -11,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 
 private val lightScheme = lightColorScheme(
     primary = primaryLight,
@@ -268,17 +271,95 @@ fun AppTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        darkTheme -> darkScheme
-        else -> lightScheme
+        darkTheme -> defaultDarkScheme
+        else -> defaultLightScheme
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
         typography = AppTypography,
+        shapes = MiuixShapes,
         content = content
     )
 }
 
+
+// Snapshot of the API 35 emulator palette, matching Material3 dynamic colors.
+private val defaultLightScheme = lightColorScheme(
+    primary = Color(0xFF495D92),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFDAE2FF),
+    onPrimaryContainer = Color(0xFF001849),
+    inversePrimary = Color(0xFFB2C5FF),
+    secondary = Color(0xFF585E71),
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFDDE2F9),
+    onSecondaryContainer = Color(0xFF151B2C),
+    tertiary = Color(0xFF735471),
+    onTertiary = Color(0xFFFFFFFF),
+    tertiaryContainer = Color(0xFFFED6F9),
+    onTertiaryContainer = Color(0xFF2B122B),
+    background = Color(0xFFFAF8FF),
+    onBackground = Color(0xFF1A1B21),
+    surface = Color(0xFFFAF8FF),
+    onSurface = Color(0xFF1A1B21),
+    surfaceVariant = Color(0xFFE1E2EC),
+    onSurfaceVariant = Color(0xFF45464F),
+    inverseSurface = Color(0xFF121318),
+    inverseOnSurface = Color(0xFFE3E2E9),
+    outline = Color(0xFF757780),
+    outlineVariant = Color(0xFFC5C6D0),
+    surfaceBright = Color(0xFFFAF8FF),
+    surfaceDim = Color(0xFFDAD9E0),
+    surfaceContainer = Color(0xFFEEEDF4),
+    surfaceContainerHigh = Color(0xFFE8E7EF),
+    surfaceContainerHighest = Color(0xFFE3E2E9),
+    surfaceContainerLow = Color(0xFFF4F3FA),
+    surfaceContainerLowest = Color(0xFFFFFFFF),
+    surfaceTint = Color(0xFF495D92),
+)
+
+private val defaultDarkScheme = darkColorScheme(
+    primary = Color(0xFFB2C5FF),
+    onPrimary = Color(0xFF182E60),
+    primaryContainer = Color(0xFF314578),
+    onPrimaryContainer = Color(0xFFDAE2FF),
+    inversePrimary = Color(0xFF495D92),
+    secondary = Color(0xFFC0C6DD),
+    onSecondary = Color(0xFF2A3042),
+    secondaryContainer = Color(0xFF414659),
+    onSecondaryContainer = Color(0xFFDDE2F9),
+    tertiary = Color(0xFFE1BBDC),
+    onTertiary = Color(0xFF422741),
+    tertiaryContainer = Color(0xFF5A3D59),
+    onTertiaryContainer = Color(0xFFFED6F9),
+    background = Color(0xFF121318),
+    onBackground = Color(0xFFE3E2E9),
+    surface = Color(0xFF121318),
+    onSurface = Color(0xFFE3E2E9),
+    surfaceVariant = Color(0xFF45464F),
+    onSurfaceVariant = Color(0xFFC5C6D0),
+    inverseSurface = Color(0xFFFAF8FF),
+    inverseOnSurface = Color(0xFF1A1B21),
+    outline = Color(0xFF8F909A),
+    outlineVariant = Color(0xFF45464F),
+    surfaceBright = Color(0xFF38393F),
+    surfaceDim = Color(0xFF121318),
+    surfaceContainer = Color(0xFF1E1F25),
+    surfaceContainerHigh = Color(0xFF292A2F),
+    surfaceContainerHighest = Color(0xFF33343A),
+    surfaceContainerLow = Color(0xFF1A1B21),
+    surfaceContainerLowest = Color(0xFF0D0E13),
+    surfaceTint = Color(0xFFB2C5FF),
+)
+
+private val MiuixShapes = Shapes(
+    extraSmall = RoundedCornerShape(10.dp),
+    small = RoundedCornerShape(14.dp),
+    medium = RoundedCornerShape(20.dp),
+    large = RoundedCornerShape(26.dp),
+    extraLarge = RoundedCornerShape(32.dp),
+)
 
 sealed class Theme(val themeString: String) {
     object Light : Theme("Light")

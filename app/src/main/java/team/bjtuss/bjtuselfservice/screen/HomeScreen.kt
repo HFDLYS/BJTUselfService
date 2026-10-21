@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -122,9 +123,9 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
     ) {
         // Status Info Section
         StatusInfo(
-            ecardBalance = formatEcardBalance(status?.EcardBalance),
-            netBalance = formatNetBalance(status?.NetBalance),
-            newMailCount = formatNewMailCount(status?.NewMailCount),
+            ecardBalance = status?.EcardBalance ?: "未知",
+            netBalance = status?.NetBalance ?: "未知",
+            newMailCount = status?.NewMailCount ?: "0",
             navController = navController,
             hasBackground = hasBackground
         )
@@ -133,14 +134,32 @@ fun HomeScreen(navController: NavController, mainViewModel: MainViewModel) {
         CalendarComponent(mainViewModel)
 
 
-        Text(
-            text = "ATTENTION!!!",
-            style = MaterialTheme.typography.headlineMedium.copy(
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold,
-            ),
-            modifier = Modifier.padding(start = 16.dp, top = 8.dp)
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Notifications,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Column {
+                Text(
+                    text = "今日提醒",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = "作业、成绩与课程变动",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
 
 
 
@@ -340,14 +359,31 @@ fun StatusInfo(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             MailButton({
-                Text(newMailCount, fontSize = 18.sp)
+                Column {
+                    Text("校内邮箱", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = if (newMailCount == "0") "暂无未读" else "$newMailCount 封未读",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
             }, navController, hasBackground)
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            EcardButton({ Text(ecardBalance, fontSize = 18.sp) }, hasBackground)
+            EcardButton({
+                Column {
+                    Text("校园卡余额", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(ecardBalance, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                }
+            }, hasBackground)
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            NetButton({ Text(netBalance, fontSize = 18.sp) }, hasBackground)
+            NetButton({
+                Column {
+                    Text("校园网余额", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(netBalance, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                }
+            }, hasBackground)
         }
     }
 
@@ -360,13 +396,13 @@ fun MailButton(content: @Composable () -> Unit, navController: NavController, ha
             navController.navigate(RouteManager.Email)
         },
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(32.dp),
-        border = if (hasBackground) androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = 0.5f)) else null,
+        shape = MaterialTheme.shapes.large,
+        border = if (hasBackground) androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = 0.35f)) else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (hasBackground) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.primaryContainer,
-            contentColor = if (hasBackground) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onPrimaryContainer
+            containerColor = if (hasBackground) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.surface,
+            contentColor = if (hasBackground) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurface
         ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = if (hasBackground) 0.dp else 2.dp)
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
@@ -387,7 +423,7 @@ fun MailButton(content: @Composable () -> Unit, navController: NavController, ha
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = "Open",
-                tint = if (hasBackground) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                tint = if (hasBackground) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -401,13 +437,13 @@ fun EcardButton(content: @Composable () -> Unit, hasBackground: Boolean = false)
     Button(
         onClick = { showDialog = true },
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(32.dp),
-        border = if (hasBackground) androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = 0.5f)) else null,
+        shape = MaterialTheme.shapes.large,
+        border = if (hasBackground) androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = 0.35f)) else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (hasBackground) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.primaryContainer,
-            contentColor = if (hasBackground) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onPrimaryContainer
+            containerColor = if (hasBackground) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.surface,
+            contentColor = if (hasBackground) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurface
         ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = if (hasBackground) 0.dp else 2.dp)
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
@@ -428,7 +464,7 @@ fun EcardButton(content: @Composable () -> Unit, hasBackground: Boolean = false)
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = "Open",
-                tint = if (hasBackground) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                tint = if (hasBackground) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -485,13 +521,13 @@ fun NetButton(content: @Composable () -> Unit, hasBackground: Boolean = false) {
     Button(
         onClick = { showDialog = true },
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(32.dp),
-        border = if (hasBackground) androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = 0.5f)) else null,
+        shape = MaterialTheme.shapes.large,
+        border = if (hasBackground) androidx.compose.foundation.BorderStroke(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = 0.35f)) else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (hasBackground) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.primaryContainer,
-            contentColor = if (hasBackground) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onPrimaryContainer
+            containerColor = if (hasBackground) androidx.compose.ui.graphics.Color.Transparent else MaterialTheme.colorScheme.surface,
+            contentColor = if (hasBackground) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurface
         ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = if (hasBackground) 0.dp else 2.dp)
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
@@ -512,7 +548,7 @@ fun NetButton(content: @Composable () -> Unit, hasBackground: Boolean = false) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = "Open",
-                tint = if (hasBackground) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                tint = if (hasBackground) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

@@ -99,7 +99,8 @@ import java.net.URLDecoder
 fun CoursewareScreen(mainViewModel: MainViewModel) {
     val coursewareViewModel = mainViewModel.coursewareViewModel
     val coursewareRootNodeList by coursewareViewModel.coursewareRootNodeList.collectAsState()
-    val isLoading = coursewareRootNodeList.isEmpty()
+    val isLoading by coursewareViewModel.isLoading.collectAsState()
+    val errorMessage by coursewareViewModel.errorMessage.collectAsState()
     val scrollState = rememberScrollState()
     val coroutineScope = rememberCoroutineScope()
 
@@ -118,11 +119,20 @@ fun CoursewareScreen(mainViewModel: MainViewModel) {
 
     Scaffold(topBar = {
         TopAppBar(title = {
-            Text(
-                "课程资源库", style = MaterialTheme.typography.headlineSmall.copy(
-                    fontWeight = FontWeight.Bold
+            Column {
+                Text(
+                    "课程资源库", style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.Bold
+                    )
                 )
-            )
+                if (errorMessage != null && coursewareRootNodeList.isNotEmpty()) {
+                    Text("刷新失败，正在显示缓存", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }, actions = {
+            TextButton(onClick = coursewareViewModel::refresh, enabled = !isLoading) {
+                Text(if (errorMessage != null) "重试" else "刷新")
+            }
         })
     }) { paddingValues ->
         Surface(
@@ -132,8 +142,14 @@ fun CoursewareScreen(mainViewModel: MainViewModel) {
             color = MaterialTheme.colorScheme.background
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                if (isLoading) {
+                if (isLoading && coursewareRootNodeList.isEmpty()) {
                     LoadingScreen()
+                } else if (coursewareRootNodeList.isEmpty()) {
+                    Text(
+                        text = errorMessage ?: "本学期暂无课程课件",
+                        modifier = Modifier.align(Alignment.Center).padding(24.dp),
+                        textAlign = TextAlign.Center
+                    )
                 } else {
                     CoursewareTreeView(
                         coursewareRootNodeList = coursewareRootNodeList,
