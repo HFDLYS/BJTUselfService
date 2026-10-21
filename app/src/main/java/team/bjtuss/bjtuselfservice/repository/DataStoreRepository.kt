@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import team.bjtuss.bjtuselfservice.MainApplication.Companion.appContext
 import team.bjtuss.bjtuselfservice.entity.GradeSelectionRecord
+import team.bjtuss.bjtuselfservice.reminder.ClassroomSubscription
 import team.bjtuss.bjtuselfservice.statemanager.Credentials
 
 object DataStoreRepository {
@@ -44,6 +45,7 @@ object DataStoreRepository {
     private val COURSE_REMINDER_LEAD_KEY = stringPreferencesKey("course_reminder_lead_minutes")
     private val EXAM_REMINDER_ENABLED_KEY = booleanPreferencesKey("exam_reminder_enabled")
     private val EXAM_REMINDER_LEAD_KEY = stringPreferencesKey("exam_reminder_lead_minutes")
+    private val CLASSROOM_SUBSCRIPTIONS_KEY = stringPreferencesKey("classroom_subscriptions")
 
 
     suspend fun setCredentials(credentials: Credentials) {
@@ -293,6 +295,40 @@ object DataStoreRepository {
 
     suspend fun setExamReminderLeadMinutes(minutes: Int) {
         appContext.dataStore.edit { it[EXAM_REMINDER_LEAD_KEY] = minutes.toString() }
+    }
+
+    fun getClassroomSubscriptions(): Flow<List<ClassroomSubscription>> =
+        appContext.dataStore.data.map { preferences ->
+            val raw = preferences[CLASSROOM_SUBSCRIPTIONS_KEY] ?: return@map emptyList()
+            runCatching {
+                gson.fromJson<List<ClassroomSubscription>>(
+                    raw,
+                    object : TypeToken<List<ClassroomSubscription>>() {}.type,
+                )
+            }.getOrDefault(emptyList())
+        }
+
+    suspend fun addClassroomSubscription(subscription: ClassroomSubscription) {
+        val current = getClassroomSubscriptions().first().toMutableList()
+        if (current.none {
+                it.room == subscription.room && it.day == subscription.day && it.slot == subscription.slot
+            }
+        ) {
+            current.add(subscription)
+        }
+        appContext.dataStore.edit {
+            it[CLASSROOM_SUBSCRIPTIONS_KEY] = gson.toJson(current)
+        }
+    }
+
+    suspend fun removeClassroomSubscription(subscription: ClassroomSubscription) {
+        val current = getClassroomSubscriptions().first()
+            .filterNot {
+                it.room == subscription.room && it.day == subscription.day && it.slot == subscription.slot
+            }
+        appContext.dataStore.edit {
+            it[CLASSROOM_SUBSCRIPTIONS_KEY] = gson.toJson(current)
+        }
     }
 
 }

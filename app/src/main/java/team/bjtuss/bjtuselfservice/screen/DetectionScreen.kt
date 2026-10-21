@@ -60,6 +60,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,10 +73,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import team.bjtuss.bjtuselfservice.R
 import team.bjtuss.bjtuselfservice.component.RotatingImageLoader
+import team.bjtuss.bjtuselfservice.reminder.ClassroomSubscription
+import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 import team.bjtuss.bjtuselfservice.utils.ClassroomPlanner
 import team.bjtuss.bjtuselfservice.utils.PlannerResult
 import team.bjtuss.bjtuselfservice.utils.PlannerRoom
@@ -84,6 +89,7 @@ import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService.ClassroomCapacity
 import team.bjtuss.bjtuselfservice.web.ClassroomCapacityService.getClassroomCapacity
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -591,7 +597,8 @@ fun ClassroomScreen(
                     ClassroomViewDialog(
                         onDismiss = { showDialog.value = false },
                         buildingName = buildingName,
-                        classroomName = selectedClassroom.value
+                        classroomName = selectedClassroom.value,
+                        classroomMap = classroomMap,
                     )
                 }
                 if (showFilterDialog) {
@@ -842,8 +849,19 @@ private fun LegendDot(color: Color, label: String) {
 fun ClassroomViewDialog(
     onDismiss: () -> Unit,
     buildingName: String,
-    classroomName: String
+    classroomName: String,
+    classroomMap: Map<String, List<Int>>,
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val slot = getCurrentClassIndex()
+    val status = if (slot >= 0) classroomMap[classroomName]?.getOrNull(slot) else null
+    val statusText = when {
+        slot < 0 -> "当前是课间"
+        status == 0 -> "当前空闲"
+        status != null -> "当前有课"
+        else -> "暂无数据"
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("教室详情") },
@@ -851,10 +869,37 @@ fun ClassroomViewDialog(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("教学楼：$buildingName")
                 Text("教室：$classroomName")
-                Text(
-                    "当前版本的教室占用详情需要在网页端查看。",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Text("当前状态：$statusText", color = if (status == 0) Color(0xFF34A853) else MaterialTheme.colorScheme.onSurfaceVariant)
+                if (slot >= 0) {
+                    Button(onClick = {
+                        val calendar = Calendar.getInstance()
+                        val day = if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+                            7
+                        } else {
+                            calendar.get(Calendar.DAY_OF_WEEK) - 1
+                        }
+                        scope.launch {
+                            DataStoreRepository.addClassroomSubscription(
+                                ClassroomSubscription(
+                                    buildingName,
+                                    classroomName,
+                                    day,
+                                    slot,
+                                    classroomMap[classroomName],
+                                )
+                            )
+                            Toast.makeText(context, "已订阅本节空闲提醒", Toast.LENGTH_SHORT).show()
+                        }
+                    }) {
+                        Text("订阅本节空闲提醒")
+                    }
+                } else {
+                    Text(
+                        "课间无法订阅，请在上课节次内操作",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         },
         confirmButton = {
