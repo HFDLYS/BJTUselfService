@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Apartment
 import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.School
@@ -108,6 +109,7 @@ private val spaces = listOf(
     Space("作业", "待办、提交与成绩", Icons.Default.Assignment, RouteManager.HomeWork),
     Space("课件", "课程资源库", Icons.Default.Folder, RouteManager.Courseware),
     Space("教室人数评估", "空闲教室与实时人数", Icons.Default.Apartment, RouteManager.Building),
+    Space("随机自习", "随机挑一间当前空闲教室", Icons.Default.Casino, RouteManager.RandomClassroom),
     Space("其他功能", "校历、成绩单等", Icons.Default.Apps, RouteManager.OtherFunction),
 )
 
