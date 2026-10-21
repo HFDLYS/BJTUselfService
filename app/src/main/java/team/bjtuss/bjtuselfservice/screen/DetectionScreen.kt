@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,6 +26,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -603,6 +605,9 @@ fun ClassroomScreen(
                         buildingName = buildingName,
                         classroomName = selectedClassroom.value,
                         classroomMap = classroomMap,
+                        classroom = buildingInfo.value?.ClassroomList?.firstOrNull {
+                            it.RoomName == selectedClassroom.value
+                        },
                     )
                 }
                 if (showFilterDialog) {
@@ -855,63 +860,180 @@ fun ClassroomViewDialog(
     buildingName: String,
     classroomName: String,
     classroomMap: Map<String, List<Int>>,
+    classroom: ClassroomCapacity? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var showReservationDialog by remember { mutableStateOf(false) }
     val slot = getCurrentClassIndex()
-    val status = if (slot >= 0) classroomMap[classroomName]?.getOrNull(slot) else null
+    val slots = classroomMap[classroomName]
+    val status = if (slot >= 0) slots?.getOrNull(slot) else null
     val statusText = when {
-        slot < 0 -> "当前是课间"
+        slot < 0 -> "课间"
         status == 0 -> "当前空闲"
         status != null -> "当前有课"
         else -> "暂无数据"
     }
+    val statusColor = when {
+        status == 0 -> Color(0xFF34A853)
+        status != null -> Color(0xFFEA4335)
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val reservations by DataStoreRepository.getClassroomReservations().collectAsState(emptyList())
+    val roomReservations = reservations
+        .filter {
+            it.building == buildingName && it.room == classroomName &&
+                runCatching { LocalDate.parse(it.date) >= LocalDate.now() }.getOrDefault(true)
+        }
+        .sortedBy { it.date + "-" + (it.slots.minOrNull() ?: 0) }
+    val periodStarts = listOf("08:00", "10:10", "12:10", "14:10", "16:20", "19:00", "21:00")
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("教室详情") },
+        title = {
+            Column {
+                Text(classroomName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(
+                    buildingName + " · " + ClassroomPlanner.floorOf(classroomName) + " 层",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("教学楼：$buildingName")
-                Text("教室：$classroomName")
-                Text("当前状态：$statusText", color = if (status == 0) Color(0xFF34A853) else MaterialTheme.colorScheme.onSurfaceVariant)
-                Button(onClick = { showReservationDialog = true }) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 520.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(9.dp),
+            ) {
+                classroom?.let {
+                    Text(
+                        "容量 " + it.Capacity + " 人 · 实时 " + it.Used + "/" + it.Capacity,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(statusColor, CircleShape)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "当前：$statusText",
+                        color = statusColor,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    if (status != null) {
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            "第" + (slot + 1) + "节",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                HorizontalDivider()
+                Text("今日各节次", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                repeat(7) { index ->
+                    val state = slots?.getOrNull(index)
+                    val free = state == 0
+                    val isNow = index == slot
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                if (isNow) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                                else Color.Transparent,
+                                RoundedCornerShape(8.dp),
+                            )
+                            .padding(horizontal = 8.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "第" + (index + 1) + "节",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (isNow) FontWeight.SemiBold else FontWeight.Normal,
+                            modifier = Modifier.width(52.dp),
+                        )
+                        Text(
+                            periodStarts[index],
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.width(52.dp),
+                        )
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            when {
+                                state == null -> "暂无数据"
+                                free -> "空闲"
+                                else -> "有课"
+                            },
+                            color = when {
+                                free -> Color(0xFF34A853)
+                                state != null -> Color(0xFFEA4335)
+                                else -> MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                }
+
+                if (roomReservations.isNotEmpty()) {
+                    HorizontalDivider()
+                    Text("我的预约", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    roomReservations.take(3).forEach { reservation ->
+                        Text(
+                            reservation.date.substringAfter("-").replace("-", "/") + " · " +
+                                reservation.slots.sorted().joinToString("、") { "第" + (it + 1) + "节" },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                Button(
+                    onClick = { showReservationDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
                     Text("预约这间教室")
                 }
                 if (slot >= 0) {
-                    Button(onClick = {
-                        val calendar = Calendar.getInstance()
-                        val day = if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
-                            7
-                        } else {
-                            calendar.get(Calendar.DAY_OF_WEEK) - 1
-                        }
-                        scope.launch {
-                            DataStoreRepository.addClassroomSubscription(
-                                ClassroomSubscription(
-                                    buildingName,
-                                    classroomName,
-                                    day,
-                                    slot,
-                                    classroomMap[classroomName],
+                    TextButton(
+                        onClick = {
+                            val calendar = Calendar.getInstance()
+                            val day = if (calendar.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY) {
+                                7
+                            } else {
+                                calendar.get(Calendar.DAY_OF_WEEK) - 1
+                            }
+                            scope.launch {
+                                DataStoreRepository.addClassroomSubscription(
+                                    ClassroomSubscription(
+                                        buildingName,
+                                        classroomName,
+                                        day,
+                                        slot,
+                                        classroomMap[classroomName],
+                                    )
                                 )
-                            )
-                            Toast.makeText(context, "已订阅本节空闲提醒", Toast.LENGTH_SHORT).show()
-                        }
-                    }) {
+                                Toast.makeText(context, "已订阅本节空闲提醒", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
                         Text("订阅本节空闲提醒")
                     }
-                } else {
-                    Text(
-                        "课间无法订阅，请在上课节次内操作",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("知道了") }
+            TextButton(onClick = onDismiss) { Text("关闭") }
         }
     )
     if (showReservationDialog) {
