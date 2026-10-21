@@ -537,8 +537,6 @@ fun HomeworkItemCard(homework: HomeworkEntity) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
             // 作业标题
             Text(
                 text = homework.title,
