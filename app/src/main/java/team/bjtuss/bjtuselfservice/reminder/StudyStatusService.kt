@@ -131,9 +131,15 @@ class StudyStatusService : Service() {
             if (date.dayOfWeek.value != day) continue
             val at = LocalDateTime.of(date, START_TIMES[slot])
             if (!at.isAfter(now)) continue
+            val dayLabel = when (date) {
+                today -> "下一节课"
+                today.plusDays(1) -> "明天第一节课"
+                else -> DAY_NAMES[date.dayOfWeek.value] + "第一节课"
+            }
             val event = StudyEvent(
-                title = "下一节课 · " + course.courseName,
-                detail = at.toLocalTime().format(TIME_FORMAT) + " · " +
+                title = dayLabel + " · " + course.courseName,
+                detail = date.format(DATE_FORMAT) + " " +
+                    at.toLocalTime().format(TIME_FORMAT) + " · " +
                     course.coursePlace + " · " + course.courseTeacher,
                 at = at,
                 primaryLabel = "看课表",
@@ -333,7 +339,9 @@ class StudyStatusService : Service() {
         private val DATE = Regex("""(\d{4})/(\d{1,2})/(\d{1,2})""")
         private val TIME = Regex("""(\d{1,2}):(\d{2})""")
         private val TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm")
+        private val DATE_FORMAT = DateTimeFormatter.ofPattern("MM-dd")
         private val DATETIME_FORMAT = DateTimeFormatter.ofPattern("MM-dd HH:mm")
+        private val DAY_NAMES = listOf("", "周一", "周二", "周三", "周四", "周五", "周六", "周日")
         private fun parseWeeks(courseTime: String): List<Int> = runCatching {
             val text = courseTime.replace("第", "").replace("周", "")
             text.split(",").flatMap { part ->
