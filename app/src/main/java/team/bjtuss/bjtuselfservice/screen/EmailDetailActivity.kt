@@ -1,9 +1,17 @@
 package team.bjtuss.bjtuselfservice.screen
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.text.SpannableString
+import android.text.Spanned
 import android.text.method.LinkMovementMethod
 import android.util.TypedValue
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -16,10 +24,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -31,22 +39,30 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 import team.bjtuss.bjtuselfservice.repository.EmailDetail
 import team.bjtuss.bjtuselfservice.repository.EmailRepository
 import team.bjtuss.bjtuselfservice.ui.theme.AppTheme
 import team.bjtuss.bjtuselfservice.utils.HtmlEmailRenderer
+import team.bjtuss.bjtuselfservice.utils.SmartLinkAction
+import team.bjtuss.bjtuselfservice.utils.SmartLinkifier
+import team.bjtuss.bjtuselfservice.utils.SmartLinkType
 import team.bjtuss.bjtuselfservice.ui.theme.Theme
 
 class EmailDetailActivity : ComponentActivity() {
@@ -61,7 +77,14 @@ class EmailDetailActivity : ComponentActivity() {
         val fallbackFrom = intent.getStringExtra(EXTRA_FROM).orEmpty()
 
         setContent {
-            AppTheme(currentTheme = Theme.System, dynamicColor = false) {
+            val savedTheme by DataStoreRepository.getTheme()
+                .collectAsState(initial = Theme.System.themeString)
+            val theme = when (savedTheme) {
+                Theme.Light.themeString -> Theme.Light
+                Theme.Dark.themeString -> Theme.Dark
+                else -> Theme.System
+            }
+            AppTheme(currentTheme = theme, dynamicColor = false) {
                 EmailDetailScreen(
                     mid = mid,
                     fallbackSubject = fallbackSubject,
@@ -77,6 +100,50 @@ class EmailDetailActivity : ComponentActivity() {
         const val EXTRA_SUBJECT = "email_subject"
         const val EXTRA_FROM = "email_from"
     }
+}
+
+private fun linkTitle(type: SmartLinkType): String = when (type) {
+    SmartLinkType.EMAIL -> "邮箱"
+    SmartLinkType.PHONE -> "电话号码"
+    SmartLinkType.URL -> "链接"
+    SmartLinkType.CODE -> "编号"
+}
+
+private fun linkPrimaryLabel(type: SmartLinkType): String = when (type) {
+    SmartLinkType.EMAIL -> "发邮件"
+    SmartLinkType.PHONE -> "拨号"
+    SmartLinkType.URL -> "打开"
+    SmartLinkType.CODE -> "复制"
+}
+
+private fun performLinkAction(context: Context, action: SmartLinkAction) {
+    val intent = when (action.type) {
+        SmartLinkType.EMAIL -> Intent(
+            Intent.ACTION_SENDTO,
+            Uri.parse("mailto:" + Uri.encode(action.value)),
+        )
+        SmartLinkType.PHONE -> Intent(
+            Intent.ACTION_DIAL,
+            Uri.parse("tel:" + Uri.encode(action.value.filter { it.isDigit() || it == '+' })),
+        )
+        SmartLinkType.URL -> Intent(Intent.ACTION_VIEW, Uri.parse(action.value))
+        SmartLinkType.CODE -> null
+    }
+    if (intent == null) {
+        copyLinkValue(context, action.value)
+        return
+    }
+    runCatching { context.startActivity(intent) }
+        .onFailure {
+            copyLinkValue(context, action.value)
+            Toast.makeText(context, "没有可用应用，内容已复制", Toast.LENGTH_SHORT).show()
+        }
+}
+
+private fun copyLinkValue(context: Context, value: String) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    clipboard.setPrimaryClip(ClipData.newPlainText("邮件内容", value))
+    Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
 }
 
 private sealed interface DetailState {
@@ -95,6 +162,8 @@ private fun EmailDetailScreen(
 ) {
     var state by remember { mutableStateOf<DetailState>(DetailState.Loading) }
     var retryKey by remember { mutableStateOf(0) }
+    var linkAction by remember { mutableStateOf<SmartLinkAction?>(null) }
+    val context = LocalContext.current
 
     LaunchedEffect(mid, retryKey) {
         state = DetailState.Loading
@@ -163,6 +232,13 @@ private fun EmailDetailScreen(
 
                 is DetailState.Success -> {
                     val detail = current.detail
+                    val bodyColor = MaterialTheme.colorScheme.onSurface
+                    val linkColor = MaterialTheme.colorScheme.primary
+                    val bodyArgb = bodyColor.toArgb()
+                    val linkArgb = linkColor.toArgb()
+                    val highlightArgb = MaterialTheme.colorScheme.primaryContainer
+                        .copy(alpha = 0.35f)
+                        .toArgb()
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -209,33 +285,65 @@ private fun EmailDetailScreen(
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                             }
                         }
-                        if (detail.html != null) {
-                            AndroidView(
-                                modifier = Modifier.fillMaxWidth(),
-                                factory = { ctx ->
-                                    TextView(ctx).apply {
-                                        setTextIsSelectable(true)
-                                        setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-                                        setPadding(0, 0, 0, 0)
-                                        movementMethod = LinkMovementMethod.getInstance()
-                                    }
-                                },
-                                update = { textView ->
-                                    textView.text = HtmlEmailRenderer.renderForDisplay(detail.html)
-                                },
-                            )
+                        val bodyContent: Spanned = if (detail.html != null) {
+                            HtmlEmailRenderer.renderForDisplay(detail.html)
                         } else {
-                            SelectionContainer {
-                                Text(
-                                    text = detail.body.ifBlank { "(无正文)" },
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                )
-                            }
+                            SpannableString(detail.body.ifBlank { "(无正文)" })
                         }
+                        AndroidView(
+                            modifier = Modifier.fillMaxWidth(),
+                            factory = { ctx ->
+                                TextView(ctx).apply {
+                                    setTextIsSelectable(true)
+                                    linksClickable = true
+                                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+                                    setTextColor(bodyArgb)
+                                    setLinkTextColor(linkArgb)
+                                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                                    setPadding(0, 0, 0, 0)
+                                    setLineSpacing(0f, 1.25f)
+                                    movementMethod = LinkMovementMethod.getInstance()
+                                }
+                            },
+                            update = { textView ->
+                                textView.setTextColor(bodyArgb)
+                                textView.setLinkTextColor(linkArgb)
+                                textView.text = SmartLinkifier.linkify(
+                                    bodyContent,
+                                    linkArgb,
+                                    highlightArgb,
+                                ) { action -> linkAction = action }
+                            },
+                        )
                     }
                 }
             }
         }
+    }
+
+    linkAction?.let { action ->
+        AlertDialog(
+            onDismissRequest = { linkAction = null },
+            title = { Text(linkTitle(action.type)) },
+            text = { Text(action.value) },
+            confirmButton = {
+                TextButton(onClick = {
+                    performLinkAction(context, action)
+                    linkAction = null
+                }) {
+                    Text(linkPrimaryLabel(action.type))
+                }
+            },
+            dismissButton = {
+                if (action.type == SmartLinkType.CODE) {
+                    TextButton(onClick = { linkAction = null }) { Text("关闭") }
+                } else {
+                    TextButton(onClick = {
+                        copyLinkValue(context, action.value)
+                        linkAction = null
+                    }) { Text("复制") }
+                }
+            },
+        )
     }
 }

@@ -120,7 +120,9 @@ object EmailRepository {
         }
 
         val htmlPart = varObject.selectFirst("object[name=html]")
+            ?.takeIf { it.childInt("id") > 0 }
         val textPart = varObject.selectFirst("object[name=text]")
+            ?.takeIf { it.childInt("id") > 0 }
         val part = htmlPart ?: textPart
         val partId = part?.childInt("id") ?: 0
         var rawHtml: String? = null
@@ -132,8 +134,8 @@ object EmailRepository {
                 .addQueryParameter("mid", mid)
                 .addQueryParameter("part", partId.toString())
                 .build()
-            val raw = execute(bodyUrl)
-            if (htmlPart != null) {
+            val raw = normalizeHtmlPart(execute(bodyUrl))
+            if (htmlPart != null || looksLikeHtml(raw)) {
                 rawHtml = raw
                 Jsoup.parse(raw).text()
             } else {
@@ -185,6 +187,21 @@ object EmailRepository {
             }
             return response.body?.string().orEmpty()
         }
+    }
+
+    private fun normalizeHtmlPart(raw: String): String {
+        val text = raw.trim()
+        if (!text.contains("<") && text.contains("&lt;")) {
+            return Parser.unescapeEntities(text, false)
+        }
+        return text
+    }
+
+    private fun looksLikeHtml(raw: String): Boolean {
+        if (raw.isBlank()) return false
+        val lower = raw.lowercase(Locale.US)
+        if (lower.startsWith("<!doctype") || lower.startsWith("<html")) return true
+        return Regex("<(html|body|div|p|br|table|span|font|style)\\b").containsMatchIn(lower)
     }
 
     private fun parseSummary(item: Element): EmailSummary? {
