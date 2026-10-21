@@ -76,6 +76,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.86")
     implementation("org.pytorch:pytorch_android:2.1.0")
     implementation("org.jsoup:jsoup:1.14.3")
     implementation("com.github.jeziellago:compose-markdown:0.5.6")
