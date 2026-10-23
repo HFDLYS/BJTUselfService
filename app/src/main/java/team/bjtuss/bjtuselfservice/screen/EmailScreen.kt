@@ -1,6 +1,8 @@
 package team.bjtuss.bjtuselfservice.screen
 
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,6 +35,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -54,11 +57,18 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EmailScreen(navController: NavController) {
+fun EmailScreen(navController: NavController, onClose: () -> Unit = {}) {
     val viewModel: EmailViewModel = viewModel()
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     val refreshState = rememberSwipeRefreshState(isRefreshing = state is EmailUiState.Loading)
+    // Re-read server flags on return, including when a detail request was interrupted.
+    val openMessage = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        viewModel.refresh()
+    }
+    DisposableEffect(Unit) {
+        onDispose { onClose() }
+    }
 
     Scaffold(
         topBar = {
@@ -139,7 +149,7 @@ fun EmailScreen(navController: NavController) {
                             ) {
                                 items(current.emails, key = { it.id }) { email ->
                                     EmailListItem(email) {
-                                        context.startActivity(
+                                        openMessage.launch(
                                             Intent(context, EmailDetailActivity::class.java)
                                                 .putExtra(EmailDetailActivity.EXTRA_MID, email.id)
                                                 .putExtra(EmailDetailActivity.EXTRA_SUBJECT, email.subject)

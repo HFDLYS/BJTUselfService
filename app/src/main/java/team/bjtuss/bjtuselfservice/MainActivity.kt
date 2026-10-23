@@ -323,7 +323,7 @@ fun App(mainViewModel: MainViewModel, hasBackground: Boolean = false) {
             GradeScreen(mainViewModel)
         }
         composable(RouteManager.Email) {
-            EmailScreen(navController)
+            EmailScreen(navController, onClose = { mainViewModel.statusViewModel.refreshMailCount() })
         }
         composable(RouteManager.HomeWork) {
             HomeworkScreen(mainViewModel)

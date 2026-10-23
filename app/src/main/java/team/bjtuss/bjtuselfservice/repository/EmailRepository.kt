@@ -156,6 +156,14 @@ object EmailRepository {
         )
     }
 
+    suspend fun markRead(mid: String) = withContext(Dispatchers.IO) {
+        CoremailReadStatus(client).markRead(openSession(), mid)
+    }
+
+    suspend fun unreadCount(): Int = withContext(Dispatchers.IO) {
+        CoremailReadStatus(client).unreadCount(openSession())
+    }
+
     private fun openSession(): String {
         val moduleResponse = client.newCall(
             Request.Builder().url(MIS_MAIL_MODULE).header("Host", "mis.bjtu.edu.cn").build()

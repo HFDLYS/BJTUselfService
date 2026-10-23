@@ -46,6 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -55,6 +56,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import kotlinx.coroutines.CancellationException
 import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 import team.bjtuss.bjtuselfservice.repository.EmailDetail
 import team.bjtuss.bjtuselfservice.repository.EmailRepository
@@ -165,6 +167,8 @@ private fun EmailDetailScreen(
     var state by remember { mutableStateOf<DetailState>(DetailState.Loading) }
     var retryKey by remember { mutableStateOf(0) }
     var linkAction by remember { mutableStateOf<SmartLinkAction?>(null) }
+    var readRetry by remember { mutableIntStateOf(0) }
+    var readSyncFailed by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     LaunchedEffect(mid, retryKey) {
@@ -174,6 +178,20 @@ private fun EmailDetailScreen(
                 onSuccess = { DetailState.Success(it) },
                 onFailure = { DetailState.Error(it.message ?: "邮件读取失败") },
             )
+    }
+
+    val detailLoaded = state is DetailState.Success
+    LaunchedEffect(mid, detailLoaded, readRetry) {
+        readSyncFailed = false
+        if (detailLoaded) {
+            try {
+                EmailRepository.markRead(mid)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                readSyncFailed = true
+            }
+        }
     }
 
     Scaffold(
@@ -247,6 +265,12 @@ private fun EmailDetailScreen(
                             .verticalScroll(rememberScrollState())
                             .padding(horizontal = 20.dp, vertical = 16.dp),
                     ) {
+                        if (readSyncFailed) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("已读状态同步失败", color = MaterialTheme.colorScheme.error)
+                                TextButton(onClick = { readRetry++ }) { Text("重试") }
+                            }
+                        }
                         Text(
                             text = detail.subject.ifBlank { fallbackSubject.ifBlank { "(无主题)" } },
                             style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
