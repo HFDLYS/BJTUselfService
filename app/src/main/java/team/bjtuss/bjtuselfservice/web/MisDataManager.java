@@ -38,6 +38,7 @@ import team.bjtuss.bjtuselfservice.entity.ExamScheduleEntity;
 import team.bjtuss.bjtuselfservice.entity.GradeEntity;
 import team.bjtuss.bjtuselfservice.utils.Network.WebCallback;
 import team.bjtuss.bjtuselfservice.utils.Utils;
+import team.bjtuss.bjtuselfservice.utils.CourseWeeks;
 
 public class MisDataManager {
     private static final long DATA_REQUEST_DELAY_MS = 500L;
@@ -341,9 +342,7 @@ public class MisDataManager {
                                         // 解析课程时间
                                         String courseTime;
                                         try {
-                                            courseTime = child.select("div[style^=max-width]").first().text().split("周")[0] + "周";
-                                            courseTime = courseTime.replace(" ", "")
-                                                    .replace("\n", "");
+                                            courseTime = CourseWeeks.extract(child.select("div[style^=max-width]").first().text());
                                         } catch (Exception e) {
                                             courseTime = "未知";
                                         }

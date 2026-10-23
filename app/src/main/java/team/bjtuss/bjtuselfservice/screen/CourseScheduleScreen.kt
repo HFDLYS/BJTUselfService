@@ -63,6 +63,11 @@ import androidx.compose.ui.window.DialogProperties
 import team.bjtuss.bjtuselfservice.entity.CourseEntity
 import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 import team.bjtuss.bjtuselfservice.utils.Utils
+import team.bjtuss.bjtuselfservice.utils.COURSE_SLOT_RANGES
+import team.bjtuss.bjtuselfservice.utils.CourseWeeks
+import java.time.LocalDate
+import java.time.DayOfWeek
+import java.time.temporal.TemporalAdjusters
 import team.bjtuss.bjtuselfservice.viewmodel.DataChange
 import team.bjtuss.bjtuselfservice.viewmodel.MainViewModel
 import kotlinx.coroutines.delay
@@ -71,16 +76,6 @@ import java.util.Calendar
 data class MenuItem(
     val content: @Composable () -> Unit,
     val onClick: () -> Unit
-)
-
-private val COURSE_SLOT_RANGES = listOf(
-    "08:00" to "09:50",
-    "10:10" to "12:00",
-    "12:10" to "14:00",
-    "14:10" to "16:00",
-    "16:20" to "18:10",
-    "19:00" to "20:50",
-    "21:00" to "21:50",
 )
 
 data class CurrentCourseSlot(val day: Int, val slot: Int)
@@ -172,6 +167,7 @@ fun CourseScheduleScreen(
     var currentTerm by rememberSaveable { mutableStateOf(false) }
     val allWeeks = listOf("全部") + (1..26).map { "第${it}周" }
     var showWeekSelector by rememberSaveable { mutableStateOf(false) }
+    var showCalendarExport by rememberSaveable { mutableStateOf(false) }
     val classroomMap by classroomViewModel.classroomMap.collectAsState()
     val currentWeek = storedCurrentWeek.takeIf { it > 0 }
         ?: classroomMap["nowWeek"]?.firstOrNull()
@@ -247,6 +243,10 @@ fun CourseScheduleScreen(
                                 MenuItem(
                                     content = { Text("选择周数") },
                                     onClick = { showWeekSelector = true }
+                                ),
+                                MenuItem(
+                                    content = { Text("导出课表 (.ics)") },
+                                    onClick = { showCalendarExport = true }
                                 )
                             )
                         )
@@ -304,6 +304,15 @@ fun CourseScheduleScreen(
             highlightCurrent = !currentTerm && currentWeek > 0 && selectedWeek == currentWeek
         )
     }
+    CourseCalendarExport(
+        visible = showCalendarExport,
+        courses = courseList.flatten(),
+        suggestedMonday = if (!currentTerm && currentWeek in 1..53) {
+            LocalDate.now(java.time.ZoneId.of("Asia/Shanghai"))
+                .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).minusWeeks((currentWeek - 1).toLong())
+        } else null,
+        onDismiss = { showCalendarExport = false },
+    )
 }
 
 @Composable
@@ -453,26 +462,7 @@ fun CourseScheduleGrid(
     }
 }
 
-fun parseCourseTime(courseTime: String): List<Int> {
-    try {
-        val courseTime2 = courseTime.replace("第", "").replace("周", "")
-        val courseTimeList = mutableListOf<Int>()
-        val timeList = courseTime2.split(",")
-        for (time in timeList) {
-            if (time.contains("-")) {
-                val timeRange = time.split("-")
-                for (i in timeRange[0].toInt()..timeRange[1].toInt()) {
-                    courseTimeList.add(i)
-                }
-            } else {
-                courseTimeList.add(time.toInt())
-            }
-        }
-        return courseTimeList
-    } catch (e: Exception) {
-        return emptyList()
-    }
-}
+fun parseCourseTime(courseTime: String): List<Int> = CourseWeeks.parse(courseTime).toList()
 
 @Composable
 fun CourseCell(
