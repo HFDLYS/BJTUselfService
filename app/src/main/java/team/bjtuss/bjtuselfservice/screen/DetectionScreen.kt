@@ -95,6 +95,22 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+// Display abbreviations only; requests and navigation continue to use full names.
+private fun buildingAbbreviation(name: String): String = when (name) {
+    "第十七号教学楼" -> "17"
+    "第九教学楼" -> "九"
+    "第八教学楼" -> "八"
+    "第五教学楼" -> "五"
+    "思源楼" -> "SY"
+    "思源西楼" -> "SX"
+    "思源东楼" -> "SD"
+    "逸夫教学楼" -> "YF"
+    "机械楼" -> "JX"
+    "东区一教" -> "D1"
+    "东区二教" -> "D2"
+    else -> name.take(2)
+}
+
 @Composable
 fun BuildingScreen(navController: NavController) {
     val buildingList = listOf(
@@ -181,11 +197,11 @@ fun BuildingScreen(navController: NavController) {
                                     .background(MaterialTheme.colorScheme.surfaceVariant),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Icon(
-                                    Icons.Default.Apartment,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(24.dp),
+                                Text(
+                                    text = buildingAbbreviation(buildingList[index]),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
                                 )
                             }
                             Spacer(Modifier.width(14.dp))
