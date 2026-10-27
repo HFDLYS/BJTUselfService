@@ -21,15 +21,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -48,17 +52,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import team.bjtuss.bjtuselfservice.repository.DataStoreRepository
 import team.bjtuss.bjtuselfservice.repository.EmailDetail
+import team.bjtuss.bjtuselfservice.repository.EmailAttachment
 import team.bjtuss.bjtuselfservice.repository.EmailRepository
 import team.bjtuss.bjtuselfservice.ui.theme.AppTheme
 import team.bjtuss.bjtuselfservice.utils.HtmlEmailRenderer
@@ -170,6 +178,7 @@ private fun EmailDetailScreen(
     var readRetry by remember { mutableIntStateOf(0) }
     var readSyncFailed by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(mid, retryKey) {
         state = DetailState.Loading
@@ -272,7 +281,7 @@ private fun EmailDetailScreen(
                             }
                         }
                         Text(
-                            text = detail.subject.ifBlank { fallbackSubject.ifBlank { "(无主题)" } },
+                            text = detail.subject.ifBlank { fallbackSubject.ifBlank { "无主题" } },
                             style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                         )
                         Spacer(Modifier.padding(top = 12.dp))
@@ -281,18 +290,17 @@ private fun EmailDetailScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(top = 4.dp),
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(top = 6.dp),
                         ) {
                             Text(
-                                text = "发送时间：" + detail.date,
+                                text = "收件人：${detail.to}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            Spacer(Modifier.width(12.dp))
                             Text(
-                                text = detail.to,
+                                text = detail.date,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -300,21 +308,51 @@ private fun EmailDetailScreen(
                         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
                         if (detail.attachments.isNotEmpty()) {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(
-                                    text = "附件",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                                detail.attachments.forEach { name ->
-                                    AssistChip(onClick = {}, label = { Text(name) })
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = "附件",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    Text(
+                                        text = "${detail.attachments.size} 个文件",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
                                 }
+                                detail.attachments.forEach { attachment ->
+                                    EmailAttachmentItem(
+                                        attachment = attachment,
+                                        onDownload = {
+                                            scope.launch {
+                                                runCatching {
+                                                    EmailRepository.downloadAttachment(context, mid, attachment)
+                                                }.onSuccess {
+                                                    Toast.makeText(context, "已添加下载任务", Toast.LENGTH_SHORT).show()
+                                                }.onFailure {
+                                                    if (it is CancellationException) throw it
+                                                    Toast.makeText(context, "附件下载失败：${it.message}", Toast.LENGTH_LONG).show()
+                                                }
+                                            }
+                                        },
+                                    )
+                                }
+                                Text(
+                                    text = "保存至「下载」文件夹",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                             }
                         }
                         val bodyContent: Spanned = if (detail.html != null) {
                             HtmlEmailRenderer.renderForDisplay(detail.html)
                         } else {
-                            SpannableString(detail.body.ifBlank { "(无正文)" })
+                            SpannableString(detail.body.ifBlank { "暂无正文" })
                         }
                         AndroidView(
                             modifier = Modifier.fillMaxWidth(),
@@ -371,5 +409,40 @@ private fun EmailDetailScreen(
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun EmailAttachmentItem(attachment: EmailAttachment, onDownload: () -> Unit) {
+    Card(
+        onClick = onDownload,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
+        Row(
+            modifier = Modifier.heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                Icons.AutoMirrored.Outlined.InsertDriveFile,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp),
+            )
+            Text(
+                text = attachment.name,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                Icons.Outlined.Download,
+                contentDescription = "下载附件",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp),
+            )
+        }
     }
 }

@@ -1,8 +1,14 @@
 package team.bjtuss.bjtuselfservice.repository
 
+import android.app.DownloadManager
+import android.content.Context
+import android.net.Uri
+import android.os.Environment
 import android.util.Log
+import com.google.gson.JsonParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.FormBody
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -29,8 +35,10 @@ data class EmailDetail(
     val date: String,
     val body: String,
     val html: String?,
-    val attachments: List<String>,
+    val attachments: List<EmailAttachment>,
 )
+
+data class EmailAttachment(val id: String, val name: String)
 
 /**
  * Coremail (mail.bjtu.edu.cn) backend used by MIS module 26.
@@ -95,69 +103,68 @@ object EmailRepository {
     }
 
     suspend fun loadMessage(mid: String): EmailDetail = withContext(Dispatchers.IO) {
-        val sid = openSession()
-        val metaUrl = "$MAIL_HOST/coremail/s".toHttpUrl().newBuilder()
+        parseMessage(execute(messageRequest(openSession(), mid)))
+    }
+
+    internal fun messageRequest(sid: String, mid: String): Request {
+        require(sid.isNotBlank() && mid.isNotBlank())
+        val url = "$MAIL_HOST/coremail/XT/jsp/readMessage.jsp".toHttpUrl().newBuilder()
             .addQueryParameter("sid", sid)
-            .addQueryParameter("func", "mbox:readMessage")
-            .addQueryParameter("mbox", "1")
-            .addQueryParameter("mid", mid)
             .build()
-        val metaXml = execute(metaUrl)
-        val root = Jsoup.parse(metaXml, "", Parser.xmlParser())
-        val code = root.selectFirst("result > code")?.text()
-        if (code != "S_OK") {
-            throw IllegalStateException("Coremail read failed: $code")
-        }
-        val varObject = root.selectFirst("result > object[name=var]")
-            ?: throw IllegalStateException("Coremail message metadata missing")
+        val body = FormBody.Builder().add("mid", mid).add("mboxa", "")
+            .add("part", "").add("mailCipherPassword", "").build()
+        return Request.Builder().url(url).post(body).build()
+    }
 
-        val subject = varObject.childString("subject")
-        val from = varObject.selectFirst("array[name=from] > string")?.text().orEmpty()
-        val to = varObject.selectFirst("array[name=to] > string")?.text().orEmpty()
-        val date = varObject.childDate("sentDate")
-        val attachments = varObject.select("array[name=attachments] > object").mapNotNull { attachment ->
-            attachment.childString("name").ifBlank { null }
-        }
-
-        val htmlPart = varObject.selectFirst("object[name=html]")
-            ?.takeIf { it.childInt("id") > 0 }
-        val textPart = varObject.selectFirst("object[name=text]")
-            ?.takeIf { it.childInt("id") > 0 }
-        val part = htmlPart ?: textPart
-        val partId = part?.childInt("id") ?: 0
-        var rawHtml: String? = null
-        val body = if (partId > 0) {
-            val bodyUrl = "$MAIL_HOST/coremail/s".toHttpUrl().newBuilder()
-                .addQueryParameter("sid", sid)
-                .addQueryParameter("func", "mbox:getMessageData")
-                .addQueryParameter("mbox", "1")
-                .addQueryParameter("mid", mid)
-                .addQueryParameter("part", partId.toString())
-                .build()
-            val raw = normalizeHtmlPart(execute(bodyUrl))
-            if (htmlPart != null || looksLikeHtml(raw)) {
-                rawHtml = raw
-                Jsoup.parse(raw).text()
-            } else {
-                raw
-            }
-        } else {
-            ""
-        }
-
-        EmailDetail(
-            subject = subject,
-            from = from,
-            to = to,
-            date = date,
-            body = body,
-            html = rawHtml,
-            attachments = attachments,
+    internal fun parseMessage(raw: String): EmailDetail {
+        val root = JsonParser.parseString(raw).asJsonObject
+        check(root.get("code")?.asString == "S_OK") { "邮件读取失败：${root.get("code")}" }
+        val result = root.getAsJsonObject("var") ?: error("邮件详情缺失")
+        check(result.get("mailCipherEncrypted")?.asBoolean != true) { "暂不支持读取加密邮件" }
+        val mail = result.getAsJsonObject("mail") ?: error("邮件内容缺失")
+        val info = result.getAsJsonObject("mailInfo")
+        val content = normalizeHtmlPart(mail.getAsJsonObject("mainPartData")?.get("content")?.asString.orEmpty())
+        val html = content.takeIf { looksLikeHtml(it) }
+        return EmailDetail(
+            subject = mail.get("subject")?.asString.orEmpty(),
+            from = mail.getAsJsonArray("from")?.joinToString { it.asString }.orEmpty(),
+            to = mail.getAsJsonArray("to")?.joinToString { it.asString }.orEmpty(),
+            date = info?.get("sentDate")?.asString.orEmpty(),
+            body = if (html != null) Jsoup.parse(html).text() else content,
+            html = html,
+            attachments = mail.getAsJsonArray("attachments")?.map { parseAttachment(it.asJsonObject) }.orEmpty(),
         )
+    }
+
+    private fun parseAttachment(item: com.google.gson.JsonObject): EmailAttachment {
+        val id = item.get("id")?.asString.orEmpty()
+        val name = item.get("filename")?.asString.orEmpty()
+        check(id.isNotBlank() && name.isNotBlank()) { "附件信息不完整" }
+        return EmailAttachment(id, name)
     }
 
     suspend fun markRead(mid: String) = withContext(Dispatchers.IO) {
         CoremailReadStatus(client).markRead(openSession(), mid)
+    }
+
+    suspend fun downloadAttachment(context: Context, mid: String, attachment: EmailAttachment) = withContext(Dispatchers.IO) {
+        val sid = openSession()
+        val url = "$MAIL_HOST/coremail/s".toHttpUrl().newBuilder()
+            .addQueryParameter("sid", sid)
+            .addQueryParameter("func", "mbox:getMessageData")
+            .addQueryParameter("mode", "download")
+            .addQueryParameter("mbox", "1")
+            .addQueryParameter("mid", mid)
+            .addQueryParameter("part", attachment.id)
+            .build()
+        val cookies = client.cookieJar.loadForRequest(url).joinToString("; ") { "${it.name}=${it.value}" }
+        val request = DownloadManager.Request(Uri.parse(url.toString()))
+            .setTitle(attachment.name)
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, attachment.name.substringAfterLast('/').substringAfterLast('\\'))
+            .addRequestHeader("Cookie", cookies)
+            .addRequestHeader("User-Agent", StudentAccountManager.getInstance().userAgent)
+        (context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
     }
 
     suspend fun unreadCount(): Int = withContext(Dispatchers.IO) {
@@ -187,8 +194,10 @@ object EmailRepository {
         }
     }
 
-    private fun execute(url: okhttp3.HttpUrl): String {
-        val response = client.newCall(Request.Builder().url(url).build()).execute()
+    private fun execute(url: okhttp3.HttpUrl): String = execute(Request.Builder().url(url).build())
+
+    private fun execute(request: Request): String {
+        val response = client.newCall(request).execute()
         response.use {
             if (!response.isSuccessful) {
                 throw IllegalStateException("Coremail HTTP ${response.code}")
@@ -231,10 +240,6 @@ object EmailRepository {
 
     private fun Element.childDate(name: String): String =
         children().firstOrNull { it.tagName() == "date" && it.attr("name") == name }?.text().orEmpty()
-
-    private fun Element.childInt(name: String): Int =
-        children().firstOrNull { it.tagName() == "int" && it.attr("name") == name }
-            ?.text()?.toIntOrNull() ?: 0
 
     private fun Element.childLong(name: String): Long =
         children().firstOrNull { it.tagName() == "int" && it.attr("name") == name }
